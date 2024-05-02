@@ -7,7 +7,7 @@ import configparser
 configuration = configparser.ConfigParser()
 
 # Read the configuration file
-configuration.read('configuration.cfg')
+configuration.read("configuration.cfg")
 
 # Dictionary of LEVELS
 levels = {}
@@ -21,6 +21,6 @@ for section in configuration.sections():
         levels[section].append({option: value})
 
 # Create .txt file with dictionary
-with open('dicc.txt', 'w') as file:
+with open("dicc.txt", "w") as file:
     file.write(str(levels))
     file.close()
