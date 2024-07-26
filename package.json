@@ -1,0 +1,21 @@
+{
+  "name": "pycefr",
+  "version": "1.0.0",
+  "description": "### What is this project about? The goal of pycefrl is to create a tool capable of obtaining an evaluation inspired by the [''Common European Framework of Reference for Languages''](https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages) for code written in the Python programming language, version 3.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PepeM112/pycefr.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PepeM112/pycefr/issues"
+  },
+  "homepage": "https://github.com/PepeM112/pycefr#readme",
+  "type": "module"
+}

@@ -1,152 +1,87 @@
-//-- PROGRAM TO CREATE A WEB PAGE
+import { readFileSync, writeFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { resolve, dirname, join } from "path";
 
-//-- Import external modules
-const fs = require("fs");
-const path = require("path");
+const dirPath = dirname(fileURLToPath(import.meta.url));
+const basePath = resolve(dirPath, "../");
 
-//-- Define the base path as the root of the project directory
-const basePath = path.resolve(__dirname, "../");
+const TOTAL_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/total_data.json")));
+const SUMMARY_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/summary_data.json")));
 
-//-- Read html file
-const REPO = fs.readFileSync(path.join(__dirname, "repo.html"), "utf-8");
+const REPOSITORY = Object.keys(TOTAL_DATA);
 
-//-- Read index.html
-let INDEX = fs.readFileSync(path.join(__dirname, "main.html"), "utf-8");
 
-//-- Define the path to the JSON files
-const jsonDir = path.join(basePath, "DATA_JSON");
+// region generate index.html
+const BUTTON_HTML = REPOSITORY
+                        .map(repo => 
+                                `<button role='link' onclick="window.location='${repo}.html'">
+                                    Repository ${repo}
+                                </button>
+                                <br/>
+                                <br/>\n
+                                `)
+                        .join('');
 
-//-- Name of the Json files to read
-const JSON_FILE = fs.readFileSync(
-  path.join(jsonDir, "total_data.json"),
-  "utf-8"
-);
-const JSON_FILESUM = fs.readFileSync(
-  path.join(jsonDir, "summary_data.json"),
-  "utf-8"
-);
-const JSON_FILEREPO = fs.readFileSync(
-  path.join(jsonDir, "repo_data.json"),
-  "utf-8"
-);
+const TOTAL_SUMMARY_HTML = (() => {
+    let totalSummary = "";
+    Object.keys(SUMMARY_DATA).forEach((key) => {
+        totalSummary += `<h4>${key.toUpperCase()}:<h4>\n`;
+        Object.keys(SUMMARY_DATA[key]).forEach((subKey) => {
+            totalSummary += `<p>${key} ${subKey}: ${SUMMARY_DATA[key][subKey]}</p>\n`;
+        });
+    });
+    return totalSummary;
+})();
 
-//-- Create the store structure from the contents of the file
-//-- Return us the json structure
-var data_total = JSON.parse(JSON_FILE);
-var data_summary = JSON.parse(JSON_FILESUM);
-var data_repo = JSON.parse(JSON_FILEREPO);
+let indexHTML = readFileSync(join(dirPath, "main.html"), "utf-8");
+indexHTML = indexHTML.replace("BUTTON", BUTTON_HTML);
+indexHTML = indexHTML.replace("SUMMARY", TOTAL_SUMMARY_HTML);
+writeFileSync(join(dirPath, "index.html"), indexHTML);
 
-//-- Variable that is going to have all the buttons available
-let button = "";
+//endregion
 
-//-- Get information
-//-- Get Repository name
-const repository = Object.keys(data_total);
+// region generate directory HTML
+REPOSITORY.forEach((dirName, dirIndex) => {
+    let htmlContent = readFileSync(join(dirPath, "repo.html"), "utf-8");;
+    let totalHTML = "";
 
-//-- Create a button for each repository
-for (let i = 0; i < repository.length; i++) {
-  button +=
-    "<button role='link' onclick=window.location='" +
-    repository[i] +
-    ".html'>Repository " +
-    repository[i] +
-    "</button><br><br>" +
-    "\n";
-}
-INDEX = INDEX.replace("BUTTON", button);
+    Object.keys(TOTAL_DATA[dirName]).forEach((nameFile) => {
+        completeHTML += `<h3>NAME FILE : ${nameFile}<h3>`;
+        const FILE_CONTENT = TOTAL_DATA[dirName][nameFile];
+        totalHTML += "<h4>LEVELS: <h4>\n";
+        
+        Object.keys(FILE_CONTENT["Levels"]).forEach((level) => {
+            totalHTML += `<p>Levels ${level}: ${FILE_CONTENT["Levels"][level]}</p>\n`;
+        });
 
-//-- Write total in new html file
-fs.writeFileSync(path.join(__dirname, "index.html"), INDEX);
+        totalHTML += "<h4>CLASSES: <h4>\n";
+        
+        Object.keys(FILE_CONTENT["Class"]).forEach((cls) => {
+            totalHTML += `<p>Class ${cls}: ${FILE_CONTENT["Class"][cls]}</p>\n`;
+        });
+    });
 
-//-- Obtain information from each repository
-for (let repo = 0; repo < repository.length; repo++) {
-  //-- Assign the value of REPO
-  let content = REPO;
-  //-- Variable total
-  let total = "";
-  let name_repo = "<h2> REPOSITORY: " + repository[repo] + "</h2>" + "\n";
-  //-- Get total content
-  let content_total = data_total[repository[repo]];
+    const SUMMARY_HTML = (() => {
+        const REPO_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/repo_data.json")));
 
-  //-- Get Files names
-  let files = Object.keys(content_total);
+        let summaryHTML = "<h3>Summary of file analysis: <h3>\n";
+        const REPO_NAME = Object.keys(REPO_DATA)[dirIndex];
 
-  for (let file = 0; file < files.length; file++) {
-    //-- Get name
-    let name_file = files[file];
-    total += "<h3>NAME FILE : " + name_file + "<h3>";
-    let content_file = content_total[name_file];
+        Object.keys(REPO_DATA[REPO_NAME]).forEach((key, elem) => {
+            summaryHTML += `<h4>${elem === 0 ? "LEVELS" : "CLASSES"}: <h4>\n`;
 
-    //-- Get levels
-    let levels = content_file["Levels"];
-    total += "<h4>LEVELS: <h4>" + "\n";
-    for (let i = 0; i < Object.keys(levels).length; i++) {
-      let keys = Object.keys(levels);
-      let values = Object.values(levels);
-      total += "<p>Levels " + keys[i] + ": " + values[i] + "</p>" + "\n";
-    }
-    //-- Get classes
-    let clase = content_file["Class"];
-    total += "<h4>CLASSES: <h4> " + "\n";
-    for (let i = 0; i < Object.keys(clase).length; i++) {
-      let keys = Object.keys(clase);
-      let values = Object.values(clase);
-      total += "<p>Class " + keys[i] + ": " + values[i] + "</p>" + "\n";
-    }
-  }
-  let total_repo = repo_summary(repo);
-  content = content.replace("REPO", name_repo);
-  content = content.replace("TOTAL", total);
-  content = content.replace("SUMMARY", total_repo);
+            Object.keys(REPO_DATA[REPO_NAME][key]).forEach((subKey) => {
+                summaryHTML += `<p>${key} ${subKey}: ${REPO_DATA[REPO_NAME][key][subKey]}</p>\n`;
+            });
+        });
 
-  let name_html = path.join(__dirname, repository[repo] + ".html");
+        return summaryHTML;
+    })();
 
-  //-- Write total in new html file
-  fs.writeFileSync(name_html, content);
-}
+    htmlContent = htmlContent.replace("REPO", `<h2> REPOSITORY: ${dirName}</h2>\n`).replace("TOTAL", htmlTotal).replace("SUMMARY", SUMMARY_HTML);
+    writeFileSync(join(dirPath, `${dirName}.html`), htmlContent);
+});
 
-//-- Obtain repository summary information
-function repo_summary(repo) {
-  //-- Variable with the summary of each repository
-  let total_repo = "<h3>Summary of file analysis: <h3>" + "\n";
-  let repos = Object.keys(data_repo);
-  //-- Get repository name
-  let repo_name = repos[repo];
-  //-- Get content of each repository
-  let content = data_repo[repo_name];
-  for (let elem = 0; elem < Object.keys(content).length; elem++) {
-    let keys = Object.keys(content);
-    let values = Object.values(content);
-    if (elem === 0) {
-      total_repo += "<h4>LEVELS: <h4>" + "\n";
-    } else {
-      total_repo += "<h4>CLASSES: <h4>" + "\n";
-    }
-    for (let value = 0; value < Object.keys(values[elem]).length; value++) {
-      let key = Object.keys(values[elem])[value];
-      let val = Object.values(values[elem])[value];
-      total_repo += "<p>" + keys[elem] + " " + key + ": " + val + "</p>" + "\n";
-    }
-  }
-  return total_repo;
-}
-
-//-- Obtain summary information
-let total_summary = "";
-let type = Object.keys(data_summary);
-for (let i = 0; i < type.length; i++) {
-  let key = type[i]; //-- Levels or Class
-  total_summary += "<h4>" + key.toUpperCase() + ":<h4> " + "\n";
-  let content = data_summary[key];
-  for (let elem = 0; elem < Object.keys(content).length; elem++) {
-    let keys = Object.keys(content);
-    let values = Object.values(content);
-    total_summary +=
-      "<p>" + key + " " + keys[elem] + ": " + values[elem] + "</p>" + "\n";
-  }
-}
-INDEX = INDEX.replace("SUMMARY", total_summary);
-//-- Write total in new html file
-fs.writeFileSync(path.join(__dirname, "index.html"), INDEX);
+// endregion
 
 console.log("Website created.");
