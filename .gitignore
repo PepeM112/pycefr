@@ -1,0 +1,9 @@
+data.csv
+data.json
+dict.txt
+__pycache__/
+DATA_CSV/
+DATA_JSON/
+WEB/..html
+WEB/ANEXO.html
+WEB/index.html
