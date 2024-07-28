@@ -2,8 +2,9 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { resolve, dirname, join } from "path";
 
-const dirPath = dirname(fileURLToPath(import.meta.url));
-const basePath = resolve(dirPath, "../");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const basePath = resolve(__dirname, "../");
 
 const TOTAL_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/total_data.json")));
 const SUMMARY_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/summary_data.json")));
@@ -33,16 +34,16 @@ const TOTAL_SUMMARY_HTML = (() => {
     return totalSummary;
 })();
 
-let indexHTML = readFileSync(join(dirPath, "main.html"), "utf-8");
+let indexHTML = readFileSync(join(__dirname, "main.html"), "utf-8");
 indexHTML = indexHTML.replace("BUTTON", BUTTON_HTML);
 indexHTML = indexHTML.replace("SUMMARY", TOTAL_SUMMARY_HTML);
-writeFileSync(join(dirPath, "index.html"), indexHTML);
+writeFileSync(join(__dirname, "index.html"), indexHTML);
 
 //endregion
 
 // region generate directory HTML
 REPOSITORY.forEach((dirName, dirIndex) => {
-    let htmlContent = readFileSync(join(dirPath, "repo.html"), "utf-8");;
+    let htmlContent = readFileSync(join(__dirname, "repo.html"), "utf-8");;
     let htmlTotal = "";
 
     Object.keys(TOTAL_DATA[dirName]).forEach((nameFile) => {
@@ -79,7 +80,7 @@ REPOSITORY.forEach((dirName, dirIndex) => {
     })();
 
     htmlContent = htmlContent.replace("REPO", `<h2> REPOSITORY: ${dirName}</h2>\n`).replace("TOTAL", htmlTotal).replace("SUMMARY", SUMMARY_HTML);
-    writeFileSync(join(dirPath, `${dirName}.html`), htmlContent);
+    writeFileSync(join(__dirname, `${dirName}.html`), htmlContent);
 });
 
 // endregion
