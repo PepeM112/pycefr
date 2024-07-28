@@ -466,13 +466,13 @@ print(mod2.mod3.X)
 
 # Relative import
 # Imports mypkg.string(Searches this package only):
-from . import string
+from ... import string
 
 # Imports names from mypkg.string:
 from .string import name1, name2
 
 # Imports string sibling of mypkg :
-from .. import string
+from .... import string
 
 # Declaraciones
 # __future__
