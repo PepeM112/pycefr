@@ -43,21 +43,21 @@ writeFileSync(join(dirPath, "index.html"), indexHTML);
 // region generate directory HTML
 REPOSITORY.forEach((dirName, dirIndex) => {
     let htmlContent = readFileSync(join(dirPath, "repo.html"), "utf-8");;
-    let totalHTML = "";
+    let htmlTotal = "";
 
     Object.keys(TOTAL_DATA[dirName]).forEach((nameFile) => {
-        completeHTML += `<h3>NAME FILE : ${nameFile}<h3>`;
+        htmlTotal += `<h3>NAME FILE : ${nameFile}<h3>`;
         const FILE_CONTENT = TOTAL_DATA[dirName][nameFile];
-        totalHTML += "<h4>LEVELS: <h4>\n";
+        htmlTotal += "<h4>LEVELS: <h4>\n";
         
         Object.keys(FILE_CONTENT["Levels"]).forEach((level) => {
-            totalHTML += `<p>Levels ${level}: ${FILE_CONTENT["Levels"][level]}</p>\n`;
+            htmlTotal += `<p>Levels ${level}: ${FILE_CONTENT["Levels"][level]}</p>\n`;
         });
 
-        totalHTML += "<h4>CLASSES: <h4>\n";
+        htmlTotal += "<h4>CLASSES: <h4>\n";
         
         Object.keys(FILE_CONTENT["Class"]).forEach((cls) => {
-            totalHTML += `<p>Class ${cls}: ${FILE_CONTENT["Class"][cls]}</p>\n`;
+            htmlTotal += `<p>Class ${cls}: ${FILE_CONTENT["Class"][cls]}</p>\n`;
         });
     });
 
