@@ -47,28 +47,6 @@ ATTRIBUTES = [
 ]
 
 
-def choose_option(option, path):
-    """
-    Choose the appropriate action based on the provided option.
-
-    Args:
-        option: The type of action to perform ('d' for directory, 'r' for repository URL, 'u' for user).
-        path: The path or URL to be processed.
-
-    Raises:
-        SystemExit: If the option is incorrect.
-    """
-    if option == "d":
-        repo = path.split("/")[-1]
-        read_directory(path, repo)
-    elif option == "r":
-        request_url(path)
-    elif option == "u":
-        run_user(path)
-    else:
-        sys.exit("Incorrect Option")
-
-
 def request_url(url):
     """
     Handle a repository URL by splitting it, checking its validity, and analyzing its language content.
@@ -331,11 +309,11 @@ def main():
     args = parser.parse_args()
 
     if args.directory:
-        choose_option("d", args.directory)
+        read_directory(args.directory, args.directory.split("/")[-1])
     elif args.repo:
-        choose_option("r", args.repo)
+        request_url(args.repo)
     elif args.user:
-        choose_option("u", args.user)
+        run_user(args.user)
     else:
         parser.print_help()
         sys.exit("Usage: python3 pycerfl.py [-d directory | -r repo | -u user]")
