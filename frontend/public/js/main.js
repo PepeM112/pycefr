@@ -6,14 +6,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const basePath = resolve(__dirname, "../");
 
-const TOTAL_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/total_data.json")));
-const SUMMARY_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/summary_data.json")));
+const totalData = JSON.parse(readFileSync(join(basePath, "DATA_JSON/total_data.json")));
+const summaryData = JSON.parse(readFileSync(join(basePath, "DATA_JSON/summary_data.json")));
 
-const REPOSITORY = Object.keys(TOTAL_DATA);
+const REPOSITORY = Object.keys(totalData);
 
 
 // region generate index.html
-const BUTTON_HTML = REPOSITORY
+const buttonHtml = REPOSITORY
                         .map(repo => 
                                 `<button role='link' onclick="window.location='${repo}.html'">
                                     Repository ${repo}
@@ -23,20 +23,20 @@ const BUTTON_HTML = REPOSITORY
                                 `)
                         .join('');
 
-const TOTAL_SUMMARY_HTML = (() => {
+const totalSummaryHtml = (() => {
     let totalSummary = "";
-    Object.keys(SUMMARY_DATA).forEach((key) => {
+    Object.keys(summaryData).forEach((key) => {
         totalSummary += `<h4>${key.toUpperCase()}:<h4>\n`;
-        Object.keys(SUMMARY_DATA[key]).forEach((subKey) => {
-            totalSummary += `<p>${key} ${subKey}: ${SUMMARY_DATA[key][subKey]}</p>\n`;
+        Object.keys(summaryData[key]).forEach((subKey) => {
+            totalSummary += `<p>${key} ${subKey}: ${summaryData[key][subKey]}</p>\n`;
         });
     });
     return totalSummary;
 })();
 
 let indexHTML = readFileSync(join(__dirname, "main.html"), "utf-8");
-indexHTML = indexHTML.replace("BUTTON", BUTTON_HTML);
-indexHTML = indexHTML.replace("SUMMARY", TOTAL_SUMMARY_HTML);
+indexHTML = indexHTML.replace("BUTTON", buttonHtml);
+indexHTML = indexHTML.replace("SUMMARY", totalSummaryHtml);
 writeFileSync(join(__dirname, "index.html"), indexHTML);
 
 //endregion
@@ -46,9 +46,9 @@ REPOSITORY.forEach((dirName, dirIndex) => {
     let htmlContent = readFileSync(join(__dirname, "repo.html"), "utf-8");;
     let htmlTotal = "";
 
-    Object.keys(TOTAL_DATA[dirName]).forEach((nameFile) => {
+    Object.keys(totalData[dirName]).forEach((nameFile) => {
         htmlTotal += `<h3>NAME FILE : ${nameFile}<h3>`;
-        const FILE_CONTENT = TOTAL_DATA[dirName][nameFile];
+        const FILE_CONTENT = totalData[dirName][nameFile];
         htmlTotal += "<h4>LEVELS: <h4>\n";
         
         Object.keys(FILE_CONTENT["Levels"]).forEach((level) => {
@@ -62,7 +62,7 @@ REPOSITORY.forEach((dirName, dirIndex) => {
         });
     });
 
-    const SUMMARY_HTML = (() => {
+    const summaryHtml = (() => {
         const REPO_DATA = JSON.parse(readFileSync(join(basePath, "DATA_JSON/repo_data.json")));
 
         let summaryHTML = "<h3>Summary of file analysis: <h3>\n";
@@ -79,7 +79,7 @@ REPOSITORY.forEach((dirName, dirIndex) => {
         return summaryHTML;
     })();
 
-    htmlContent = htmlContent.replace("REPO", `<h2> REPOSITORY: ${dirName}</h2>\n`).replace("TOTAL", htmlTotal).replace("SUMMARY", SUMMARY_HTML);
+    htmlContent = htmlContent.replace("REPO", `<h2> REPOSITORY: ${dirName}</h2>\n`).replace("TOTAL", htmlTotal).replace("SUMMARY", summaryHtml);
     writeFileSync(join(__dirname, `${dirName}.html`), htmlContent);
 });
 

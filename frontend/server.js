@@ -28,7 +28,7 @@ app.post('/run-python', (req, res) => {
     }
 
     // Ejecutar el script de Python
-    exec('python3 backend/process.py', (error, stdout, stderr) => {
+     exec('python3 backend/pycerfl.py', (error, stdout, stderr) => {
       if (error) {
         console.error(`Error al ejecutar el script de Python: ${error.message}`);
         return res.status(500).send('Error al ejecutar el script de Python');
@@ -42,7 +42,7 @@ app.post('/run-python', (req, res) => {
       console.log(`Resultado del script de Python: ${stdout}`);
       
       // Enviar la respuesta al cliente
-      res.send('El script de Python se ejecutó correctamente');
+      res.send(stdout);
     });
   });
 });
@@ -53,5 +53,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Servidor web escuchando en http://localhost:${port}`);
+  console.log(`Listening http://localhost:${port}`);
 });
