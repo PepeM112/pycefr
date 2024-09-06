@@ -232,26 +232,14 @@ def analyse_file(path, dir_name):
         my_code = fp.read()
         try:
             tree = ast.parse(my_code)
-            iterate_list(tree, path, dir_name)
+            # Iterate through and process every attribute
+            for attribute_list in ATTRIBUTES:
+                for attribute in attribute_list:
+                    file = path.split("/")[-1]
+                    IterTree(tree, attribute, file, dir_name)
         except SyntaxError:
             print("There is a syntax error in the code")
             pass
-
-
-def iterate_list(tree, path, dir_name):
-    """
-    Iterate through the list of attributes and process each one.
-
-    Args:
-        tree: The AST of the Python code.
-        path: The path to the Python file.
-        dir_name: The name of the current directory being processed.
-    """
-    print(">>>> iterate_list: ", tree, "|", path, "|", dir_name)
-    for attribute_list in ATTRIBUTES:
-        for attribute in attribute_list:
-            file = path.split("/")[-1]
-            IterTree(tree, attribute, file, dir_name)
 
 
 def summary_Levels():
