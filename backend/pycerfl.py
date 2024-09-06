@@ -6,9 +6,11 @@ import subprocess
 import requests
 import argparse
 from backend.scripts.ClassIterTree import IterTree
-from getjson import read_Json
-from getcsv import read_fileCsv
+from scripts.getjson import read_Json
+from scripts.getcsv import read_FileCsv
+from urllib.parse import urlparse
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 
 # Lists with attributes
 LITERALS = ["ast.List", "ast.Tuple", "ast.Dict"]
@@ -49,94 +51,97 @@ ATTRIBUTES = [
 
 def request_url(url):
     """
-    Handle a repository URL by splitting it, checking its validity, and analyzing its language content.
+    Handle a repository URL by splitting it, checking its validity, and analyzing its language response.
 
     Args:
         url: The URL of the repository to be analyzed.
 
     Raises:
-        SystemExit: 
-            If the URL is incorrectly formatted. For option -r (repository URL), use: 
+        SystemExit:
+            If the URL is incorrectly formatted. For option -r (repository URL), use:
             https://github.com/USER/REPO.git
             If the URL does not use the 'https' protocol.
             If the URL is not from 'github.com'.
             If the repository does not meet the language criteria.
     """
     # Parse the repository URL
-    values = url.split("/")
-    try:
-        protocol = values[0].split(":")[0]
-        type_git = values[2]
-        user = values[3]
-        repo = values[4][:-4]  # Remove the ".git" extension if present
-    except IndexError:
-        sys.exit("ERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git")
+    parsed_url = urlparse(url)
 
-    # Validate the URL's protocol and domain
-    if protocol != "https":
+    if parsed_url.scheme != 'https':
         sys.exit("ERROR: URL must use the 'https' protocol.")
-    if type_git != "github.com":
-        sys.exit("ERROR: URL must be from 'github.com'.")
+    if parsed_url.netloc != 'github.com':
+        sys.exit("ERROR: URL must  be from 'github.com'.")
 
-    check_language(url, protocol, type_git, user, repo)
+    path_segments = parsed_url.path.strip('/').split('/')
+    user = path_segments[0]
+    repo = path_segments[1].replace(".git", "")
+    
+    if not path_segments:
+        sys.exit(
+            "ERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git"
+        )
+
+    if not is_python_language(parsed_url.scheme, parsed_url.netloc, user, repo):
+        sys.exit("ERROR: The repository does not contain at least 50% of Python.")
+
+    cloned_repo = clone_repo(url)
+
+    analyse_directory(cloned_repo, cloned_repo.split("/")[-1])
 
 
-def check_language(url, protocol, type_git, user, repo):
+
+def is_python_language(protocol, type_git, user, repo):
     """
     Check if the repository's primary language is Python and if it constitutes at least 50% of the code.
 
     Args:
-        url: The URL of the repository.
         protocol: The protocol part of the URL.
         type_git: The domain part of the URL.
         user: The GitHub username.
         repo: The repository name.
 
+    Returns:
+        bool: True is repo contains enough Python, False otherwise
+
     Raises:
         SystemExit: If the repository does not meet the language criteria.
     """
-    total_elem = 0
-    python_lang = False
-    python_quantity = 0
-    # Create the URL of the API
-    repo_url = (
-        protocol + "://api." + type_git + "/repos/" + user + "/" + repo + "/languages"
-    )
+    repo_url = f"{protocol}://api.{type_git}/repos/{user}/{repo}/languages"
     print("Analyzing repository languages...\n")
-    # Get content
-    r = requests.get(repo_url)
+
     # Decode JSON response into a Python dict:
-    content = r.json()
-    # Get used languages and their quantity
-    for key in content.keys():
-        print(key + ": " + str(content[key]))
-        if key == "Python":
-            python_lang = True
-            python_quantity = content[key]
-        total_elem += content[key]
-    # Check if Python is 50%
-    if python_lang:
-        amount = total_elem / 2
-        if python_quantity >= amount:
-            print("\nPython >50% OK\n")
-            # Clone the repository
-            run_url(url)
-        else:
-            print("\nThe repository does not contain 50% of Python.\n")
+    response = requests.get(repo_url).json()
+
+    # Calculate total elements and check Python presence
+    total_elem = sum(response.values())
+    python_quantity = response.get("Python", 0)
+
+    return python_quantity >= total_elem / 2
 
 
-def run_url(url):
+def clone_repo(url):
     """
-    Clone the repository from the provided URL and handle the directory.
+    Clone the repository from the provided URL.
 
     Args:
         url: The URL of the repository to be cloned.
+
+    Returns:
+        str: The absolute path to the directory where the repository has been cloned.
     """
-    command_line = shlex.split("git clone " + url)
-    print("Running URL...")
-    # Run in the shell the command_line
+    clone_dir = os.path.join(os.path.dirname(__file__), "tmp")
+    repo_name = url.split("/")[-1].replace(".git", "")
+
+    # Delete folder if already exists
+    if os.path.exists(clone_dir):
+        subprocess.call(["rm", "-rf", clone_dir])
+
+    os.makedirs(clone_dir)
+
+    command_line = shlex.split(f"git clone {url} {os.path.join(clone_dir, repo_name)}")
     subprocess.call(command_line)
-    get_directory(url)
+
+    return os.path.join(clone_dir, repo_name)
 
 
 def run_user(user):
@@ -158,9 +163,9 @@ def run_user(user):
         headers = requests.get(user_url)
         headers.raise_for_status()
         # Decode JSON response into a Python dict:
-        content = headers.json()
+        response = headers.json()
         # Get repository URL
-        repo_url = content["repos_url"]
+        repo_url = response["repos_url"]
     except requests.exceptions.HTTPError:
         sys.exit(f"ERROR: User '{user}' not found. Please check the username.")
     except KeyError:
@@ -174,52 +179,18 @@ def run_user(user):
         names = requests.get(repo_url)
         names.raise_for_status()
         # Decode JSON response into a Python dict:
-        content = names.json()
+        response = names.json()
         # Show repository names
-        for repository in content:
+        for repository in response:
             print("\nRepository: " + str(repository["name"]))
-            url = "https://github.com/" + user + "/" + repository["name"]
-            check_language(url, "https", "github.com", user, repository["name"])
+            is_python_language("https", "github.com", user, repository["name"])
     except requests.exceptions.HTTPError:
-        sys.exit("ERROR: Unable to retrieve repositories. Check if the user has any public repositories.")
+        sys.exit(
+            "ERROR: Unable to retrieve repositories. Check if the user has any public repositories."
+        )
 
 
-
-def get_directory(url):
-    """
-    Determine the name of the directory where the repository has been cloned.
-
-    Args:
-        url: The URL of the cloned repository.
-    """
-    # Get values from the URL
-    values = url.split("/")
-    # Last element in the list
-    name_directory = values[-1]
-    # Remove extension .git
-    if ".git" in str(name_directory):
-        name_directory = name_directory[0:-4]
-    print("The directory is: " + name_directory)
-    get_path(name_directory)
-
-
-def get_path(name_directory):
-    """
-    Get the absolute path to the directory and initiate further processing.
-
-    Args:
-        name_directory: The name of the directory to be processed.
-    """
-    abs_file_path = os.path.abspath(name_directory)
-    # Check if the last element is a file.py
-    fichero = abs_file_path.split("/")[-1]
-    if fichero.endswith(".py"):
-        abs_file_path = abs_file_path.replace("/" + fichero, "")
-    print("This script's absolute path is ", abs_file_path)
-    read_directory(abs_file_path, name_directory)
-
-
-def read_directory(path, dir_name):
+def analyse_directory(path, dir_name):
     """
     Recursively search the directory for Python files and process them.
 
@@ -228,26 +199,19 @@ def read_directory(path, dir_name):
         dir_name: The name of the current directory being processed.
         system.
     """
-    print("Directory: ")
-
     try:
         # List all items in the directory
         items = os.listdir(path)
-        print(items)
-
         # Process each item
         for item in items:
             item_path = os.path.join(path, item)
-
             # Check if the item is a python file"
             if os.path.isfile(item_path) and item.endswith(".py"):
-                print("Python File: " + str(item))
-                read_file(item_path, dir_name)
+                analyse_file(item_path, dir_name)
 
             # Check if the item is a directory
             elif os.path.isdir(item_path):
-                print("\nOpening another directory...\n")
-                read_directory(item_path, item)
+                analyse_directory(item_path, item)
 
     except FileNotFoundError:
         print(f"Directory {path} not found")
@@ -255,14 +219,15 @@ def read_directory(path, dir_name):
         print(f"Permission denied to access {path}")
 
 
-def read_file(path, dir_name):
+def analyse_file(path, dir_name):
     """
-    Read the content of a Python file and parse it into an abstract syntax tree (AST).
+    Read a Python file and parse it into an abstract syntax tree (AST).
 
     Args:
-        pos: The path to the Python file.
+        path: The path to the Python file.
         dir_name: The name of the current directory being processed.
     """
+    print(">> analyze_file: ", path, "|", dir_name)
     with open(path) as fp:
         my_code = fp.read()
         try:
@@ -282,6 +247,7 @@ def iterate_list(tree, path, dir_name):
         path: The path to the Python file.
         dir_name: The name of the current directory being processed.
     """
+    print(">>>> iterate_list: ", tree, "|", path, "|", dir_name)
     for attribute_list in ATTRIBUTES:
         for attribute in attribute_list:
             file = path.split("/")[-1]
@@ -293,7 +259,7 @@ def summary_Levels():
     Provide a summary of the directory levels by reading JSON and CSV files.
     """
     result = read_Json()
-    read_fileCsv()
+    read_FileCsv()
     print(result)
 
 
@@ -309,7 +275,7 @@ def main():
     args = parser.parse_args()
 
     if args.directory:
-        read_directory(args.directory, args.directory.split("/")[-1])
+        analyse_directory(args.directory, args.directory.split("/")[-1])
     elif args.repo:
         request_url(args.repo)
     elif args.user:

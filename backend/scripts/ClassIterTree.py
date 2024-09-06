@@ -39,10 +39,11 @@ class IterTree:
         """Method iterating on the tree."""
         for self.node in ast.walk(self.tree):
             # Find attributes
-            if type(self.node) == eval(self.attrib):
+            node_type = getattr(ast, self.attrib, None)
+            if node_type is not None and isinstance(self.node, node_type):
                 self.level = ""
                 self.clase = ""
-                levels.levels(self)
+                levels.asign_levels(self)
                 self.assign_List()
                 self.assign_Dict()
                 self.read_FileJson()

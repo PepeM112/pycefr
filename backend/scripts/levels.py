@@ -4,29 +4,29 @@ PROGRAM FOR THE LEVELS OF EACH ATTRIBUTE
 
 import ast
 import configparser
+import os
+import json
 
 
-def readConfiguration(file_path):
+def read_configuration(path):
     """
-    Reads the configuration file and returns a dictionary of levels.
+    Reads the configuration JSON file and returns a dictionary of levels.
 
     Args:
-        file_path: path of the configuration file
+        path: path of the JSON configuration file
     """
-    configuration = configparser.ConfigParser()
-    configuration.read(file_path)
-
-    levels = {}
-    for section in configuration.sections():
-        levels[section] = {}
-        for option, value in configuration[section].items():
-            levels[section][option] = value
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"Configuration file not found: {path}")
+    
+    with open(path, 'r') as json_file:
+        levels = json.load(json_file)
+    
     return levels
 
+CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../config/configuration.json'))
+DICT_LEVEL = read_configuration(CONFIG_PATH)
 
-DICT_LEVEL = readConfiguration("configuration.cfg")
-
-def levels(self):
+def asign_levels(self):
     """
     Assign levels to various AST nodes based on their types.
 
@@ -215,10 +215,10 @@ def level_tuple(self):
     for i in self.node.elts:
         num_tuple += str(self.node.elts).count("ast.Tuple")
         if num_tuple > 0:
-            self.level = DICT_LEVEL["Tuple"][1]["nested"]
+            self.level = DICT_LEVEL["Tuple"]["nested"]
             self.clase = f"{num_tuple} Nested Tuple"
         else:
-            self.level = DICT_LEVEL["Tuple"][0]["simple"]
+            self.level = DICT_LEVEL["Tuple"]["simple"]
             self.clase = "Simple Tuple"
 
 
