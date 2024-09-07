@@ -1,9 +1,11 @@
+from datetime import datetime
 import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import ast
+import json
 import shlex
 import subprocess
 import requests
@@ -49,6 +51,9 @@ ATTRIBUTES = [
     CLASS_FUNCTIONS,
 ]
 
+REPO_URL = ""
+REPO_NAME = ""
+API_KEY = ""
 
 def request_url(url):
     """
@@ -65,6 +70,8 @@ def request_url(url):
             If the URL is not from 'github.com'.
             If the repository does not meet the language criteria.
     """
+    global REPO_URL, REPO_NAME, API_KEY
+    API_KEY = get_api_token()
     # Parse the repository URL
     print("Validating URL")
     parsed_url = urlparse(url)
@@ -75,19 +82,22 @@ def request_url(url):
         sys.exit("ERROR: URL must  be from 'github.com'.")
 
     path_segments = parsed_url.path.strip('/').split('/')
-    user = path_segments[0]
-    repo = path_segments[1].replace(".git", "")
+    user_name = path_segments[0]
+    REPO_NAME = path_segments[1].replace(".git", "")
     
+    REPO_URL = url
+
     if not path_segments:
         sys.exit(
             "ERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git"
         )
 
-    if not is_python_language(parsed_url.scheme, parsed_url.netloc, user, repo):
+    if not is_python_language(parsed_url.scheme, parsed_url.netloc, user_name, REPO_NAME):
         sys.exit("ERROR: The repository does not contain at least 50% of Python.")
     
+
     print("Cloning repository")
-    cloned_repo = clone_repo(url)
+    cloned_repo = clone_repo(REPO_URL)
     print("Starting code analysis")
     # Count number of files
     file_count = 0
@@ -98,19 +108,22 @@ def request_url(url):
     
     current_file = [0]
     analyse_directory(cloned_repo, cloned_repo.split("/")[-1], file_count, current_file)
+    repo_info = get_repo_data(user_name, REPO_NAME)
+    print("Saving data...")
+    save_data(repo_info)
     print("\nDone.")
 
 
 
-def is_python_language(protocol, type_git, user, repo):
+def is_python_language(protocol, type_git, user_name, repo_name):
     """
     Check if the repository's primary language is Python and if it constitutes at least 50% of the code.
 
     Args:
         protocol: The protocol part of the URL.
         type_git: The domain part of the URL.
-        user: The GitHub username.
-        repo: The repository name.
+        user_name: The GitHub username.
+        repo_name: The repository name.
 
     Returns:
         bool: True is repo contains enough Python, False otherwise
@@ -118,14 +131,20 @@ def is_python_language(protocol, type_git, user, repo):
     Raises:
         SystemExit: If the repository does not meet the language criteria.
     """
-    repo_url = f"{protocol}://api.{type_git}/repos/{user}/{repo}/languages"
-
+    repo_url = f"{protocol}://api.{type_git}/repos/{user_name}/{repo_name}/languages"
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
     # Decode JSON response into a Python dict:
-    response = requests.get(repo_url).json()
+    response = requests.get(repo_url, headers=headers)
 
+    if response.status_code == 403:
+        print("You've reached the limit of API calls. You can further continue by adding a personal access token or by loging in GitHub")
+    elif response.status_code != 200:
+        sys.exit(f"ERROR validating language [{response.status_code}]")
     # Calculate total elements and check Python presence
-    total_elem = sum(response.values())
-    python_quantity = response.get("Python", 0)
+    total_elem = sum(response.json().values())
+    python_quantity = response.json().get("Python", 0)
 
     return python_quantity >= total_elem / 2
 
@@ -141,8 +160,7 @@ def clone_repo(url):
         str: The absolute path to the directory where the repository has been cloned.
     """
     clone_dir = os.path.join(os.path.dirname(__file__), "tmp")
-    repo_name = url.split("/")[-1].replace(".git", "")
-    clone_path = os.path.join(clone_dir, repo_name)
+    clone_path = os.path.join(clone_dir, REPO_NAME)
 
     # Delete folder if already exists
     if os.path.exists(clone_dir):
@@ -173,12 +191,15 @@ def run_user(user):
     user_url = "https://api.github.com/users/" + user
     print(user_url)
     print("Analyzing user...\n")
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
     try:
         # Extract headers
-        headers = requests.get(user_url)
-        headers.raise_for_status()
+        response = requests.get(user_url, headers=headers)
+        response.raise_for_status()
         # Decode JSON response into a Python dict:
-        response = headers.json()
+        response = response.json()
         # Get repository URL
         repo_url = response["repos_url"]
     except requests.exceptions.HTTPError:
@@ -191,7 +212,7 @@ def run_user(user):
     print("Analyzing repositories...\n")
     # Extract repository names
     try:
-        names = requests.get(repo_url)
+        names = requests.get(repo_url, headers=headers)
         names.raise_for_status()
         # Decode JSON response into a Python dict:
         response = names.json()
@@ -271,6 +292,132 @@ def print_progress(current, total):
     block = int(round(bar_length * current / total))
     progress = "█" * block + "-" * (bar_length - block)
     print(f"\r[{progress}] {percent}%", end="")
+
+
+def get_repo_data(owner, repo):
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
+    # COMMITS INFO
+    url = f"https://api.github.com/repos/{owner}/{repo}/commits"
+    response = requests.get(url, params={'per_page': 100, 'page': 1}, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Warning: there was an error retrieving commits information [{response.status_code}]")
+        return
+
+    response_json = response.json()
+
+    total_commits = int(response.headers.get('X_Total_Count', 0))
+    
+    files_set = set()
+    total_loc = 0
+    commit_dates = []
+
+    print("Processing commits...")
+    for commit in response_json:
+        commit_response = requests.get(commit['url'], headers=headers).json()
+
+        # Number of files modified
+        files = commit_response.get('files', [])
+        for file in files:
+            files_set.add(file['filename'])
+
+        # LOC
+        stats = commit_response.get('stats', {})
+        total_loc += stats.get('additions', 0) + stats.get('deletions', 0)
+
+        # Commit dates
+        commit_date = commit_response['commit']['committer']['date']
+        commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
+        commit_dates.append(commit_timestamp)
+
+    total_files_modified = len(files_set)
+    print("Calculating time...")
+    total_hours = calculate_hours_spent(commit_dates)
+
+    print("Fetching contributors...")
+    # CONTRIBUTORS INFO
+    url = f"https://api.github.com/repos/{owner}/{repo}/contributors"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Warning: there was an error retrieving contributors information [{response.status_code}]")
+        return
+
+    response_json = response.json()
+
+    contributors = []
+    for contributor in response_json:
+        author = {
+            'name': contributor['login'],
+            'commits': contributor['contributions']   
+        }
+        contributors.append(author)
+
+    return {
+        'total_commits': total_commits,
+        'total_loc': total_loc,
+        'total_files_modified': total_files_modified,
+        'total_hours': total_hours,
+        'contributors': contributors
+    }
+
+
+def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_commit_addition_seconds=120*60):
+    """
+    Convert a list of commit timestamps (in seconds since epoch) to an estimate of hours spent.
+
+    Args:
+        commit_dates: List of commit timestamps in seconds since epoch (e.g., [1609459200.0, ...])
+        max_commit_diff_seconds: Maximum allowed time difference between commits to be considered continuous work (in seconds)
+        first_commit_addition_seconds: Time added for the first commit (in seconds)
+
+    Returns: 
+        Estimated hours spent
+    """
+    if len(commit_dates) < 2:
+        return first_commit_addition_seconds / 3600
+
+    # Sort times and compute differences
+    commit_dates.sort()
+    time_diffs = [commit_dates[i] - commit_dates[i-1] for i in range(1, len(commit_dates))]
+
+    # Filter out differences longer than max_commit_diff_seconds
+    continuous_time_diffs = [diff for diff in time_diffs if diff <= max_commit_diff_seconds]
+
+    # Sum up the continuous time differences and add the first commit addition
+    total_seconds = sum(continuous_time_diffs) + first_commit_addition_seconds
+
+    return round(total_seconds / 3600)  # Convert seconds to hours
+
+
+
+def save_data(repo_data):
+    try:
+        with open("data_new.json", "r") as file:
+            data = json.load(file)    
+    except FileNotFoundError:
+        sys.exit("ERROR: Couldn't find data file")
+
+    data.update({"repoInfo": repo_data})
+
+    os.makedirs("data_new", exist_ok=True)
+
+    output_file = f"data_new/{REPO_NAME}.json"
+
+    with open(output_file, "w") as file:
+        json.dump(data, file, indent=4)
+
+
+def get_api_token():
+    try:
+        with open("backend/config/personal.json", "r") as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        sys.exit("ERROR: Couldn't find personal.json")
+
+    return data.get("API-KEY", "")
 
 def main():
     """

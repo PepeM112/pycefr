@@ -26,6 +26,7 @@ class IterTree:
 
     # JSON dictionary
     myDataJson = {}
+    myDataJsonNew = {}
 
     def __init__(self, tree, attrib, file, dir_name):
         """Class constructor."""
@@ -36,6 +37,7 @@ class IterTree:
         self.walk_tree()
         self.write_data_csv()
         self.write_data_json()
+        self.write_data_json_new()
 
 
     def walk_tree(self):
@@ -46,11 +48,12 @@ class IterTree:
                 self.level = ""
                 self.clase = ""
                 levels.asign_levels(self)
-                self.assign_List()
-                self.assign_Dict()                
+                self.to_csv()
+                self.to_json()  
+                self.to_json_new()              
 
 
-    def assign_List(self):
+    def to_csv(self):
         """Create object list."""
         if (self.clase != "") and (self.level != ""):
             self.list = [
@@ -66,7 +69,7 @@ class IterTree:
             self.myDataCsv.append(self.list)
 
 
-    def assign_Dict(self):
+    def to_json(self):
         """Create object dictionary."""
         if (self.clase != "") and (self.level != ""):
             if self.dir_name not in self.myDataJson:
@@ -85,6 +88,32 @@ class IterTree:
                 }
             )
 
+    def to_json_new(self):
+        """Create object dictionary with instance counting."""
+        if self.clase == "" or self.level == "":
+            return
+
+        # Crear la lista global si no existe
+        if "elements" not in self.myDataJsonNew:
+            self.myDataJsonNew["elements"] = []
+        
+        found = False
+        # Buscar si ya existe una entrada con la misma clase y nivel
+        for entry in self.myDataJsonNew["elements"]:
+            if entry["class"] == self.clase and entry["level"] == self.level:
+                entry["numberOfInstances"] += 1
+                found = True
+                break
+
+        # Si no se encontró, agregar un nuevo registro
+        if not found:
+            self.myDataJsonNew["elements"].append({
+                "class": str(self.clase),
+                "level": str(self.level),
+                "numberOfInstances": 1
+            })
+
+
 
     def write_data_csv(self, file_csv=""):
         """Create and add data in the .csv file."""
@@ -102,3 +131,8 @@ class IterTree:
         """Create and add data in the .json file."""
         with open("data.json", "w") as file:
             json.dump(self.myDataJson, file, indent=4)
+
+
+    def write_data_json_new(self):
+        with open("data_new.json", "w") as file:
+            json.dump(self.myDataJsonNew, file, indent=4)
