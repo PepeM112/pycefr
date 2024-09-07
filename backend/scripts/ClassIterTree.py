@@ -27,7 +27,7 @@ class IterTree:
     # JSON dictionary
     myDataJson = {}
 
-    def __init__(self, tree, attrib, file, dir_name, repo_name):
+    def __init__(self, tree, attrib, file, dir_name):
         """Class constructor."""
         self.tree = tree
         self.attrib = attrib

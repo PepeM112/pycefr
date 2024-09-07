@@ -145,7 +145,7 @@ def clone_repo(url):
     clone_path = os.path.join(clone_dir, repo_name)
 
     # Delete folder if already exists
-    if os.path.exists(clone_path):
+    if os.path.exists(clone_dir):
         subprocess.call(["rm", "-rf", clone_dir])
 
     os.makedirs(clone_dir)
