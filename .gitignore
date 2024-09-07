@@ -1,6 +1,7 @@
 __pycache__/
 Analysis_from_results/
 ANEXO/
+backend/data/
 backend/tmp/
 WEB/
 myenv/

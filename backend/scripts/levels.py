@@ -272,10 +272,10 @@ def level_files(self, value):
     elif value in list_file_attr:
         level = DICT_LEVEL["File"]
         for i in range(1, len(level)):
-            keys = DICT_LEVEL["File"][i].keys()
+            keys = DICT_LEVEL["File"].keys()
             for k in keys:
                 if k == value:
-                    self.level = DICT_LEVEL["File"][i][k]
+                    self.level = DICT_LEVEL["File"][k]
                     self.clase = f"Files --> '{value}' call function"
 
 
@@ -598,14 +598,12 @@ def name_modules(self, name):
         name (list): List of module names.
     """
     # List of important modules
-    LIST_MODULES = ["struct", "pickle", "shelve", "dbm", "re", "importlib"]
+    LIST_MODULES = DICT_LEVEL["Modules"].keys()
 
     for module_name in name:
         if module_name in LIST_MODULES:
-            for level in DICT_LEVEL["Modules"]:
-                if module_name in level:
-                    self.level = level[module_name]
-                    self.clase += f" '{module_name}' module"
+            self.level = DICT_LEVEL["Modules"][module_name]
+            self.clase += f" '{module_name}' module"
 
 
 def level_as_extension(self):
@@ -628,7 +626,6 @@ def level_from(self):
     Args:
         self: Object containing the AST node and its attributes.
     """
-    print("Import self: ", self)
     if self.node.level in (1, 2):
         self.level = DICT_LEVEL["Import"]["from-relative"]
         self.clase = "Relative From"
@@ -790,7 +787,8 @@ def special_class_attributes(self):
     LIST_CLASS_ATTRIBUTES = ["__class__", "__dict__"]
 
     if self.node.attr in LIST_CLASS_ATTRIBUTES:
-        for level in DICT_LEVEL["Attributes"][1:]:
+        attributes_values = list(DICT_LEVEL["Attributes"].values())
+        for level in attributes_values:
             if self.node.attr in level:
                 self.level = level[self.node.attr]
                 self.clase = "Special Class Attribute " + str(self.node.attr)

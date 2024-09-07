@@ -1,6 +1,9 @@
-import ast
 import os
 import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import ast
 import shlex
 import subprocess
 import requests
@@ -9,8 +12,6 @@ from backend.scripts.ClassIterTree import IterTree
 from scripts.getjson import read_Json
 from scripts.getcsv import read_FileCsv
 from urllib.parse import urlparse
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 
 # Lists with attributes
 LITERALS = ["ast.List", "ast.Tuple", "ast.Dict"]
@@ -65,6 +66,7 @@ def request_url(url):
             If the repository does not meet the language criteria.
     """
     # Parse the repository URL
+    print("Validating URL")
     parsed_url = urlparse(url)
 
     if parsed_url.scheme != 'https':
@@ -83,10 +85,20 @@ def request_url(url):
 
     if not is_python_language(parsed_url.scheme, parsed_url.netloc, user, repo):
         sys.exit("ERROR: The repository does not contain at least 50% of Python.")
-
+    
+    print("Cloning repository")
     cloned_repo = clone_repo(url)
-
-    analyse_directory(cloned_repo, cloned_repo.split("/")[-1])
+    print("Starting code analysis")
+    # Count number of files
+    file_count = 0
+    for root, dirs, files in os.walk(cloned_repo):
+        for file in files:
+            if file.endswith(".py"):
+                file_count += 1
+    
+    current_file = [0]
+    analyse_directory(cloned_repo, cloned_repo.split("/")[-1], file_count, current_file)
+    print("\nDone.")
 
 
 
@@ -107,7 +119,6 @@ def is_python_language(protocol, type_git, user, repo):
         SystemExit: If the repository does not meet the language criteria.
     """
     repo_url = f"{protocol}://api.{type_git}/repos/{user}/{repo}/languages"
-    print("Analyzing repository languages...\n")
 
     # Decode JSON response into a Python dict:
     response = requests.get(repo_url).json()
@@ -131,17 +142,21 @@ def clone_repo(url):
     """
     clone_dir = os.path.join(os.path.dirname(__file__), "tmp")
     repo_name = url.split("/")[-1].replace(".git", "")
+    clone_path = os.path.join(clone_dir, repo_name)
 
     # Delete folder if already exists
-    if os.path.exists(clone_dir):
+    if os.path.exists(clone_path):
         subprocess.call(["rm", "-rf", clone_dir])
 
     os.makedirs(clone_dir)
 
-    command_line = shlex.split(f"git clone {url} {os.path.join(clone_dir, repo_name)}")
-    subprocess.call(command_line)
+    command_line = shlex.split(f"git clone {url} {clone_path}")
 
-    return os.path.join(clone_dir, repo_name)
+    # Redirigir la salida estándar y la salida de errores a subprocess.PIPE
+    subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
+    return clone_path
+
 
 
 def run_user(user):
@@ -190,7 +205,7 @@ def run_user(user):
         )
 
 
-def analyse_directory(path, dir_name):
+def analyse_directory(path, dir_name, total_length, current_file):
     """
     Recursively search the directory for Python files and process them.
 
@@ -198,6 +213,8 @@ def analyse_directory(path, dir_name):
         path: The absolute path to the directory.
         dir_name: The name of the current directory being processed.
         system.
+        total_length: Number of files inside the directory.
+        current_file: Number of files already checked from the root path.
     """
     try:
         # List all items in the directory
@@ -207,12 +224,12 @@ def analyse_directory(path, dir_name):
             item_path = os.path.join(path, item)
             # Check if the item is a python file"
             if os.path.isfile(item_path) and item.endswith(".py"):
+                print_progress(current_file[0] + 1, total_length)
                 analyse_file(item_path, dir_name)
-
+                current_file[0] += 1
             # Check if the item is a directory
             elif os.path.isdir(item_path):
-                analyse_directory(item_path, item)
-
+                analyse_directory(item_path, item, total_length, current_file)
     except FileNotFoundError:
         print(f"Directory {path} not found")
     except PermissionError:
@@ -227,7 +244,6 @@ def analyse_file(path, dir_name):
         path: The path to the Python file.
         dir_name: The name of the current directory being processed.
     """
-    print(">> analyze_file: ", path, "|", dir_name)
     with open(path) as fp:
         my_code = fp.read()
         try:
@@ -242,14 +258,19 @@ def analyse_file(path, dir_name):
             pass
 
 
-def summary_Levels():
+def print_progress(current, total):
     """
-    Provide a summary of the directory levels by reading JSON and CSV files.
-    """
-    result = read_Json()
-    read_FileCsv()
-    print(result)
+    Print a simple progress bar in the console.
 
+    Args:
+        current: The current progress.
+        total: The total amount of work.
+    """
+    percent = int((current / total) * 100)
+    bar_length = 40
+    block = int(round(bar_length * current / total))
+    progress = "█" * block + "-" * (bar_length - block)
+    print(f"\r[{progress}] {percent}%", end="")
 
 def main():
     """
