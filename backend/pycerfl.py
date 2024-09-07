@@ -73,7 +73,7 @@ def request_url(url):
     global REPO_URL, REPO_NAME, API_KEY
     API_KEY = get_api_token()
     # Parse the repository URL
-    print("Validating URL")
+    print("Validating URL\t\t[ ]", end="")
     parsed_url = urlparse(url)
 
     if parsed_url.scheme != 'https':
@@ -95,10 +95,11 @@ def request_url(url):
     if not is_python_language(parsed_url.scheme, parsed_url.netloc, user_name, REPO_NAME):
         sys.exit("ERROR: The repository does not contain at least 50% of Python.")
     
-
-    print("Cloning repository")
+    print("\rValidating URL\t\t[✓]")
+    print("Cloning repository\t[ ]", end="")
     cloned_repo = clone_repo(REPO_URL)
-    print("Starting code analysis")
+    print("\rCloning repository\t[✓]")
+    print("Code analysis\t\t[ ]", end="")
     # Count number of files
     file_count = 0
     for root, dirs, files in os.walk(cloned_repo):
@@ -108,10 +109,12 @@ def request_url(url):
     
     current_file = [0]
     analyse_directory(cloned_repo, cloned_repo.split("/")[-1], file_count, current_file)
+    print("\n\rCode analysis\t\t[✓]")
     repo_info = get_repo_data(user_name, REPO_NAME)
-    print("Saving data...")
+    print("Saving data\t\t[ ]", end="")
     save_data(repo_info)
-    print("\nDone.")
+    print("\rSaving data\t\t[✓]")
+    print("Success")
 
 
 
@@ -295,6 +298,8 @@ def print_progress(current, total):
 
 
 def get_repo_data(owner, repo):
+    print("Processed commits\t[ ]", end="")
+    sys.stdout.flush() 
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -314,7 +319,6 @@ def get_repo_data(owner, repo):
     total_loc = 0
     commit_dates = []
 
-    print("Processing commits...")
     for commit in response_json:
         commit_response = requests.get(commit['url'], headers=headers).json()
 
@@ -333,11 +337,11 @@ def get_repo_data(owner, repo):
         commit_dates.append(commit_timestamp)
 
     total_files_modified = len(files_set)
-    print("Calculating time...")
     total_hours = calculate_hours_spent(commit_dates)
+    print("\rProcessed commits\t[✓]")
 
-    print("Fetching contributors...")
     # CONTRIBUTORS INFO
+    print("Fetched contributors\t[]", end="")
     url = f"https://api.github.com/repos/{owner}/{repo}/contributors"
     response = requests.get(url, headers=headers)
 
@@ -354,7 +358,7 @@ def get_repo_data(owner, repo):
             'commits': contributor['contributions']   
         }
         contributors.append(author)
-
+    print("\rFetched contributors\t[✓]")
     return {
         'total_commits': total_commits,
         'total_loc': total_loc,
@@ -395,16 +399,16 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
 
 def save_data(repo_data):
     try:
-        with open("data_new.json", "r") as file:
+        with open("backend/tmp/data.json", "r") as file:
             data = json.load(file)    
     except FileNotFoundError:
         sys.exit("ERROR: Couldn't find data file")
 
     data.update({"repoInfo": repo_data})
 
-    os.makedirs("data_new", exist_ok=True)
+    os.makedirs("backend/data", exist_ok=True)
 
-    output_file = f"data_new/{REPO_NAME}.json"
+    output_file = f"backend/data/{REPO_NAME}.json"
 
     with open(output_file, "w") as file:
         json.dump(data, file, indent=4)

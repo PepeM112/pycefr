@@ -37,7 +37,6 @@ class IterTree:
         self.walk_tree()
         self.write_data_csv()
         self.write_data_json()
-        self.write_data_json_new()
 
 
     def walk_tree(self):
@@ -49,8 +48,7 @@ class IterTree:
                 self.clase = ""
                 levels.asign_levels(self)
                 self.to_csv()
-                self.to_json()  
-                self.to_json_new()              
+                self.to_json()              
 
 
     def to_csv(self):
@@ -70,25 +68,6 @@ class IterTree:
 
 
     def to_json(self):
-        """Create object dictionary."""
-        if (self.clase != "") and (self.level != ""):
-            if self.dir_name not in self.myDataJson:
-                self.myDataJson[self.dir_name] = {}
-
-            if self.name not in self.myDataJson[self.dir_name]:
-                self.myDataJson[self.dir_name][self.name] = []
-
-            self.myDataJson[self.dir_name][self.name].append(
-                {
-                    "Class": str(self.clase),
-                    "Start Line": str(self.node.lineno),
-                    "End Line": str(self.node.end_lineno),
-                    "Displacement": str(self.node.col_offset),
-                    "Level": str(self.level),
-                }
-            )
-
-    def to_json_new(self):
         """Create object dictionary with instance counting."""
         if self.clase == "" or self.level == "":
             return
@@ -124,15 +103,9 @@ class IterTree:
         else:
             with open("data.csv", "a", newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(self.list) 
+                writer.writerow(self.list)
 
 
     def write_data_json(self):
-        """Create and add data in the .json file."""
-        with open("data.json", "w") as file:
-            json.dump(self.myDataJson, file, indent=4)
-
-
-    def write_data_json_new(self):
-        with open("data_new.json", "w") as file:
+        with open("backend/tmp/data.json", "w") as file:
             json.dump(self.myDataJsonNew, file, indent=4)
