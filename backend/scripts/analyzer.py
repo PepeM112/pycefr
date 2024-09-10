@@ -1,3 +1,4 @@
+from genericpath import isdir
 import os
 import sys
 
@@ -6,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import ast
 import json
 import shlex
+import shutil
 import subprocess
 import requests
 import argparse
@@ -76,11 +78,27 @@ def request_url(url):
     cloned_repo = clone_repo(REPO_URL)
 
     analyse_project(cloned_repo)
+    remove_dir(cloned_repo)
 
-    repo_info = get_repo_data(USER_NAME, REPO_NAME)
+    repo_info = get_repo_data()
     save_data(repo_info)
 
     print("\nDone.")
+
+
+def remove_dir(path):
+    if not os.path.isdir(path):
+        print(f"ERROR: Not a directory")
+        return
+    if not os.path.isabs(path) or not os.path.exists(path):
+        print(f"ERROR: The directory does not exist: {path}")
+        return
+
+    try:
+        shutil.rmtree(path)
+    except Exception as e:
+        print(f"ERROR: Couldn't remove directory {path}: {e}")
+
 
 
 def validate_repo_url(url):
@@ -310,12 +328,12 @@ def print_progress(current, total):
     print(f"\r[{progress}] {percent}%", end="")
 
 
-def get_repo_data(owner, repo):
+def get_repo_data():
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
     # COMMITS INFO
-    url = f"https://api.github.com/repos/{owner}/{repo}/commits"
+    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/commits"
     response = requests.get(url, params={'per_page': 100, 'page': 1}, headers=headers)
 
     if response.status_code != 200:
@@ -330,7 +348,7 @@ def get_repo_data(owner, repo):
     total_loc = 0
     commit_dates = []
 
-    print("Processing commits...")
+    print("\nProcessing commits...")
     for commit in response_json:
         commit_response = requests.get(commit['url'], headers=headers).json()
 
@@ -354,7 +372,7 @@ def get_repo_data(owner, repo):
 
     print("Fetching contributors...")
     # CONTRIBUTORS INFO
-    url = f"https://api.github.com/repos/{owner}/{repo}/contributors"
+    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/contributors"
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
@@ -419,9 +437,9 @@ def save_data(repo_data):
 
     data.update({"repoInfo": repo_data})
 
-    os.makedirs("data_new", exist_ok=True)
+    os.makedirs("results", exist_ok=True)
 
-    output_file = f"data_new/{REPO_NAME}.json"
+    output_file = f"results/{REPO_NAME}.json"
 
     with open(output_file, "w") as file:
         json.dump(data, file, indent=4)
@@ -435,29 +453,3 @@ def get_api_token():
         sys.exit("ERROR: Couldn't find personal.json")
 
     return data.get("API-KEY", "")
-
-
-def main():
-    """
-    Main function to handle command-line arguments and invoke appropriate actions.
-    """
-    parser = argparse.ArgumentParser(description="Process options.")
-    parser.add_argument("-d", "--directory", type=str, help="Path to the directory")
-    parser.add_argument("-r", "--repo", type=str, help="Repository URL")
-    parser.add_argument("-u", "--user", type=str, help="User identifier")
-
-    args = parser.parse_args()
-
-    if args.directory:
-        analyse_project(args.directory, os.path.basename(args.directory))
-    elif args.repo:
-        request_url(args.repo)
-    elif args.user:
-        run_user(args.user)
-    else:
-        parser.print_help()
-        sys.exit("Usage: python3 pycerfl.py [-d directory | -r repo | -u user]")
-
-
-if __name__ == "__main__":
-    main()

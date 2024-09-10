@@ -72,26 +72,25 @@ class IterTree:
         if self.clase == "" or self.level == "":
             return
 
-        # Crear la lista global si no existe
+        # Create list if not existing
         if "elements" not in self.myDataJsonNew:
             self.myDataJsonNew["elements"] = []
         
-        found = False
-        # Buscar si ya existe una entrada con la misma clase y nivel
+        entry_found = False
+        # Search for entry of that class
         for entry in self.myDataJsonNew["elements"]:
-            if entry["class"] == self.clase and entry["level"] == self.level:
+            if entry["class"] == self.clase:
                 entry["numberOfInstances"] += 1
-                found = True
+                entry_found = True
                 break
 
-        # Si no se encontró, agregar un nuevo registro
-        if not found:
+        # If not found add new entry
+        if not entry_found:
             self.myDataJsonNew["elements"].append({
                 "class": str(self.clase),
                 "level": str(self.level),
                 "numberOfInstances": 1
             })
-
 
 
     def write_data_csv(self, file_csv=""):
