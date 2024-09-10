@@ -1,4 +1,3 @@
-from datetime import datetime
 import os
 import sys
 
@@ -11,8 +10,7 @@ import subprocess
 import requests
 import argparse
 from backend.scripts.ClassIterTree import IterTree
-from scripts.getjson import read_Json
-from scripts.getcsv import read_FileCsv
+from datetime import datetime
 from urllib.parse import urlparse
 
 # Lists with attributes
@@ -53,7 +51,9 @@ ATTRIBUTES = [
 
 REPO_URL = ""
 REPO_NAME = ""
+USER_NAME = ""
 API_KEY = ""
+
 
 def request_url(url):
     """
@@ -70,10 +70,24 @@ def request_url(url):
             If the URL is not from 'github.com'.
             If the repository does not meet the language criteria.
     """
-    global REPO_URL, REPO_NAME, API_KEY
+    
+    validate_repo_url(url)
+
+    cloned_repo = clone_repo(REPO_URL)
+
+    analyse_project(cloned_repo)
+
+    repo_info = get_repo_data(USER_NAME, REPO_NAME)
+    save_data(repo_info)
+
+    print("\nDone.")
+
+
+def validate_repo_url(url):
+    global REPO_URL, REPO_NAME, USER_NAME, API_KEY
     API_KEY = get_api_token()
-    # Parse the repository URL
-    print("Validating URL\t\t[ ]", end="")
+    
+    print("Validating URL")
     parsed_url = urlparse(url)
 
     if parsed_url.scheme != 'https':
@@ -82,7 +96,7 @@ def request_url(url):
         sys.exit("ERROR: URL must  be from 'github.com'.")
 
     path_segments = parsed_url.path.strip('/').split('/')
-    user_name = path_segments[0]
+    USER_NAME = path_segments[0]
     REPO_NAME = path_segments[1].replace(".git", "")
     
     REPO_URL = url
@@ -92,41 +106,17 @@ def request_url(url):
             "ERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git"
         )
 
-    if not is_python_language(parsed_url.scheme, parsed_url.netloc, user_name, REPO_NAME):
+    if not is_python_language(parsed_url.scheme, parsed_url.netloc):
         sys.exit("ERROR: The repository does not contain at least 50% of Python.")
-    
-    print("\rValidating URL\t\t[✓]")
-    print("Cloning repository\t[ ]", end="")
-    cloned_repo = clone_repo(REPO_URL)
-    print("\rCloning repository\t[✓]")
-    print("Code analysis\t\t[ ]", end="")
-    # Count number of files
-    file_count = 0
-    for root, dirs, files in os.walk(cloned_repo):
-        for file in files:
-            if file.endswith(".py"):
-                file_count += 1
-    
-    current_file = [0]
-    analyse_directory(cloned_repo, cloned_repo.split("/")[-1], file_count, current_file)
-    print("\n\rCode analysis\t\t[✓]")
-    repo_info = get_repo_data(user_name, REPO_NAME)
-    print("Saving data\t\t[ ]", end="")
-    save_data(repo_info)
-    print("\rSaving data\t\t[✓]")
-    print("Success")
 
 
-
-def is_python_language(protocol, type_git, user_name, repo_name):
+def is_python_language(protocol, type_git):
     """
     Check if the repository's primary language is Python and if it constitutes at least 50% of the code.
 
     Args:
         protocol: The protocol part of the URL.
         type_git: The domain part of the URL.
-        user_name: The GitHub username.
-        repo_name: The repository name.
 
     Returns:
         bool: True is repo contains enough Python, False otherwise
@@ -134,7 +124,7 @@ def is_python_language(protocol, type_git, user_name, repo_name):
     Raises:
         SystemExit: If the repository does not meet the language criteria.
     """
-    repo_url = f"{protocol}://api.{type_git}/repos/{user_name}/{repo_name}/languages"
+    repo_url = f"{protocol}://api.{type_git}/repos/{USER_NAME}/{REPO_NAME}/languages"
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -162,6 +152,7 @@ def clone_repo(url):
     Returns:
         str: The absolute path to the directory where the repository has been cloned.
     """
+    print("Cloning repository")
     clone_dir = os.path.join(os.path.dirname(__file__), "tmp")
     clone_path = os.path.join(clone_dir, REPO_NAME)
 
@@ -222,11 +213,31 @@ def run_user(user):
         # Show repository names
         for repository in response:
             print("\nRepository: " + str(repository["name"]))
-            is_python_language("https", "github.com", user, repository["name"])
+            is_python_language("https", "github.com")
     except requests.exceptions.HTTPError:
         sys.exit(
             "ERROR: Unable to retrieve repositories. Check if the user has any public repositories."
         )
+
+
+def analyse_project(rootPath):
+    print("Starting code analysis")
+
+    rootPath = os.path.abspath(rootPath)
+
+    if not os.path.exists(rootPath):
+        sys.exit(f"ERROR: Path {rootPath} does not exist")
+    if not os.path.isdir(rootPath):
+        sys.exit(f"ERROR: Path {rootPath} is not a directory")
+    
+    file_count = 0
+    for root, dirs, files in os.walk(rootPath):
+        for file in files:
+            if file.endswith(".py"):
+                file_count += 1
+    
+    current_file = [0]
+    analyse_directory(rootPath, os.path.basename(rootPath), file_count, current_file)
 
 
 def analyse_directory(path, dir_name, total_length, current_file):
@@ -255,9 +266,11 @@ def analyse_directory(path, dir_name, total_length, current_file):
             elif os.path.isdir(item_path):
                 analyse_directory(item_path, item, total_length, current_file)
     except FileNotFoundError:
-        print(f"Directory {path} not found")
+        print(f"ERROR: Directory {path} not found")
     except PermissionError:
-        print(f"Permission denied to access {path}")
+        print(f"ERROR: Permission denied to access {path}")
+    except Exception:
+        print(f"ERROR: Couldn't read {path}")
 
 
 def analyse_file(path, dir_name):
@@ -275,7 +288,7 @@ def analyse_file(path, dir_name):
             # Iterate through and process every attribute
             for attribute_list in ATTRIBUTES:
                 for attribute in attribute_list:
-                    file = path.split("/")[-1]
+                    file = os.path.basename(path)
                     IterTree(tree, attribute, file, dir_name)
         except SyntaxError:
             print("There is a syntax error in the code")
@@ -298,8 +311,6 @@ def print_progress(current, total):
 
 
 def get_repo_data(owner, repo):
-    print("Processed commits\t[ ]", end="")
-    sys.stdout.flush() 
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -319,6 +330,7 @@ def get_repo_data(owner, repo):
     total_loc = 0
     commit_dates = []
 
+    print("Processing commits...")
     for commit in response_json:
         commit_response = requests.get(commit['url'], headers=headers).json()
 
@@ -337,11 +349,11 @@ def get_repo_data(owner, repo):
         commit_dates.append(commit_timestamp)
 
     total_files_modified = len(files_set)
+    print("Calculating time...")
     total_hours = calculate_hours_spent(commit_dates)
-    print("\rProcessed commits\t[✓]")
 
+    print("Fetching contributors...")
     # CONTRIBUTORS INFO
-    print("Fetched contributors\t[]", end="")
     url = f"https://api.github.com/repos/{owner}/{repo}/contributors"
     response = requests.get(url, headers=headers)
 
@@ -358,7 +370,7 @@ def get_repo_data(owner, repo):
             'commits': contributor['contributions']   
         }
         contributors.append(author)
-    print("\rFetched contributors\t[✓]")
+
     return {
         'total_commits': total_commits,
         'total_loc': total_loc,
@@ -398,17 +410,18 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
 
 
 def save_data(repo_data):
+    print("Saving data...")
     try:
-        with open("backend/tmp/data.json", "r") as file:
+        with open("data_new.json", "r") as file:
             data = json.load(file)    
     except FileNotFoundError:
         sys.exit("ERROR: Couldn't find data file")
 
     data.update({"repoInfo": repo_data})
 
-    os.makedirs("backend/data", exist_ok=True)
+    os.makedirs("data_new", exist_ok=True)
 
-    output_file = f"backend/data/{REPO_NAME}.json"
+    output_file = f"data_new/{REPO_NAME}.json"
 
     with open(output_file, "w") as file:
         json.dump(data, file, indent=4)
@@ -423,6 +436,7 @@ def get_api_token():
 
     return data.get("API-KEY", "")
 
+
 def main():
     """
     Main function to handle command-line arguments and invoke appropriate actions.
@@ -435,7 +449,7 @@ def main():
     args = parser.parse_args()
 
     if args.directory:
-        analyse_directory(args.directory, args.directory.split("/")[-1])
+        analyse_project(args.directory, os.path.basename(args.directory))
     elif args.repo:
         request_url(args.repo)
     elif args.user:
