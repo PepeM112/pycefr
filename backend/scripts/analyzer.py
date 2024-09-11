@@ -105,7 +105,7 @@ def validate_repo_url(url):
     global REPO_URL, REPO_NAME, USER_NAME, API_KEY
     API_KEY = get_api_token()
     
-    print("Validating URL")
+    print("[ ] Validating URL", end="")
     parsed_url = urlparse(url)
 
     if parsed_url.scheme != 'https':
@@ -126,6 +126,8 @@ def validate_repo_url(url):
 
     if not is_python_language(parsed_url.scheme, parsed_url.netloc):
         sys.exit("ERROR: The repository does not contain at least 50% of Python.")
+    
+    print("\r[✓] Validating URL")
 
 
 def is_python_language(protocol, type_git):
@@ -172,7 +174,7 @@ def clone_repo(url):
     Returns:
         str: The absolute path to the directory where the repository has been cloned.
     """
-    print("Cloning repository")
+    print("[ ] Cloning repository", end="")
     clone_dir = os.path.join(os.path.dirname(__file__), "tmp")
     clone_path = os.path.join(clone_dir, REPO_NAME)
 
@@ -187,6 +189,7 @@ def clone_repo(url):
     # Redirigir la salida estándar y la salida de errores a subprocess.PIPE
     subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
+    print("\r[✓] Cloning repository")
     return clone_path
 
 
@@ -348,7 +351,7 @@ def get_repo_data():
     total_loc = 0
     commit_dates = []
 
-    print("\nProcessing commits...")
+    print("\n[ ] Fetching commits", end="")
     for commit in response_json:
         commit_response = requests.get(commit['url'], headers=headers).json()
 
@@ -367,10 +370,10 @@ def get_repo_data():
         commit_dates.append(commit_timestamp)
 
     total_files_modified = len(files_set)
-    print("Calculating time...")
+    print("\r[✓] Fetching commits")
     total_hours = calculate_hours_spent(commit_dates)
 
-    print("Fetching contributors...")
+    print("[ ] Fetching contributors", end="")
     # CONTRIBUTORS INFO
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/contributors"
     response = requests.get(url, headers=headers)
@@ -389,6 +392,7 @@ def get_repo_data():
         }
         contributors.append(author)
 
+    print("\r[✓] Fetching contributors")
     return {
         'total_commits': total_commits,
         'total_loc': total_loc,
@@ -428,7 +432,7 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
 
 
 def save_data(repo_data):
-    print("Saving data...")
+    print("[ ] Saving data", end="")
     try:
         with open("data_new.json", "r") as file:
             data = json.load(file)    
@@ -443,6 +447,8 @@ def save_data(repo_data):
 
     with open(output_file, "w") as file:
         json.dump(data, file, indent=4)
+    
+    print("\r[✓] Saving data")
 
 
 def get_api_token():
