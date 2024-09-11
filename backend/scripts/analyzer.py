@@ -439,73 +439,14 @@ def get_repo_data():
             - 'contributors': A list of contributors with their GitHub usernames and number of commits.
     """
 
-    headers = {
-        'Authorization': f'Bearer {API_KEY}'
-    }
-    # COMMITS INFO
-    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/commits"
-    response = requests.get(url, params={'per_page': 100, 'page': 1}, headers=headers)
+    repo_data = get_repo_data2()
+    repo_commits = get_repo_commits()
+    repo_contributors = get_repo_contributors()
 
-    if response.status_code != 200:
-        print(f"Warning: there was an error retrieving commits information [{response.status_code}]")
-        return
-
-    response_json = response.json()
-
-    total_commits = int(response.headers.get('X_Total_Count', 0))
-    
-    files_set = set()
-    total_loc = 0
-    commit_dates = []
-
-    print("\n[ ] Fetching commits", end="")
-    for commit in response_json:
-        commit_response = requests.get(commit['url'], headers=headers).json()
-
-        # Number of files modified
-        files = commit_response.get('files', [])
-        for file in files:
-            files_set.add(file['filename'])
-
-        # LOC
-        stats = commit_response.get('stats', {})
-        total_loc += stats.get('additions', 0) + stats.get('deletions', 0)
-
-        # Commit dates
-        commit_date = commit_response['commit']['committer']['date']
-        commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
-        commit_dates.append(commit_timestamp)
-
-    total_files_modified = len(files_set)
-    print("\r[✓] Fetching commits")
-    total_hours = calculate_hours_spent(commit_dates)
-
-    print("[ ] Fetching contributors", end="")
-    # CONTRIBUTORS INFO
-    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/contributors"
-    response = requests.get(url, headers=headers)
-
-    if response.status_code != 200:
-        print(f"Warning: there was an error retrieving contributors information [{response.status_code}]")
-        return
-
-    response_json = response.json()
-
-    contributors = []
-    for contributor in response_json:
-        author = {
-            'name': contributor['login'],
-            'commits': contributor['contributions']   
-        }
-        contributors.append(author)
-
-    print("\r[✓] Fetching contributors")
     return {
-        'total_commits': total_commits,
-        'total_loc': total_loc,
-        'total_files_modified': total_files_modified,
-        'total_hours': total_hours,
-        'contributors': contributors
+        'data': repo_data,
+        'commits': repo_commits,
+        'contributors': repo_contributors
     }
 
 
@@ -537,6 +478,108 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
     return round(total_seconds / 3600)  # Convert seconds to hours
 
 
+def get_repo_data2():
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
+
+    print("\n[ ] Fetching data", end="")
+    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Warning: there was an error retrieving repository information [{response.status_code}]")
+        return
+    
+    response_json = response.json()
+    print("\r[✓] Fetching data")
+    return {
+        'name' : response_json['name'],
+        'description': response_json['description'],
+        'owner': {
+            'name' : response_json.get('owner')['login'],
+            'avatar' : response_json.get('owner')['avatar_url'],
+            'profile_url' : response_json.get('owner')['html_url']
+        }
+    }
+
+
+def get_repo_commits():
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
+
+    print("\n[ ] Fetching commits", end="")
+    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/commits"
+    response = requests.get(url, params={'per_page': 100, 'page': 1}, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Warning: there was an error retrieving commits information [{response.status_code}]")
+        return
+
+    response_json = response.json()
+
+    total_commits = int(response.headers.get('X_Total_Count', 0))
+    
+    files_set = set()
+    total_loc = 0
+    commit_dates = []
+
+    for commit in response_json:
+        commit_response = requests.get(commit['url'], headers=headers).json()
+
+        # Number of files modified
+        files = commit_response.get('files', [])
+        for file in files:
+            files_set.add(file['filename'])
+
+        # LOC
+        stats = commit_response.get('stats', {})
+        total_loc += stats.get('additions', 0) + stats.get('deletions', 0)
+
+        # Commit dates
+        commit_date = commit_response['commit']['committer']['date']
+        commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
+        commit_dates.append(commit_timestamp)
+
+    total_files_modified = len(files_set)
+    total_hours = calculate_hours_spent(commit_dates)
+    print("\r[✓] Fetching commits")
+
+    return {
+        'total_commits': total_commits,
+        'total_loc': total_loc,
+        'total_files_modified': total_files_modified,
+        'total_hours': total_hours
+    }
+
+
+def get_repo_contributors():
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
+    url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/contributors"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Warning: there was an error retrieving contributors information [{response.status_code}]")
+        return
+
+    response_json = response.json()
+
+    contributors = []
+    for contributor in response_json:
+        author = {
+            'name': contributor['login'],
+            'avatar': contributor['avatar_url'],
+            'profile_url': contributor['html_url'],
+            'commits': contributor['contributions']   
+        }
+        contributors.append(author)
+
+    print("\r[✓] Fetching contributors")
+
+    return contributors
 
 def save_data(repo_data):
     """
