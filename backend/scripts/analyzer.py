@@ -255,17 +255,15 @@ def analyse_project(rootPath):
                 file_count += 1
     
     current_file = [0]
-    analyse_directory(rootPath, os.path.basename(rootPath), file_count, current_file)
+    analyse_directory(rootPath, file_count, current_file)
 
 
-def analyse_directory(path, dir_name, total_length, current_file):
+def analyse_directory(path, total_length=None, current_file=None):
     """
     Recursively search the directory for Python files and process them.
 
     Args:
         path: The absolute path to the directory.
-        dir_name: The name of the current directory being processed.
-        system.
         total_length: Number of files inside the directory.
         current_file: Number of files already checked from the root path.
     """
@@ -278,11 +276,11 @@ def analyse_directory(path, dir_name, total_length, current_file):
             # Check if the item is a python file"
             if os.path.isfile(item_path) and item.endswith(".py"):
                 print_progress(current_file[0] + 1, total_length)
-                analyse_file(item_path, dir_name)
+                analyse_file(item_path)
                 current_file[0] += 1
             # Check if the item is a directory
             elif os.path.isdir(item_path):
-                analyse_directory(item_path, item, total_length, current_file)
+                analyse_directory(item_path, total_length, current_file)
     except FileNotFoundError:
         print(f"ERROR: Directory {path} not found")
     except PermissionError:
@@ -291,13 +289,12 @@ def analyse_directory(path, dir_name, total_length, current_file):
         print(f"ERROR: Couldn't read {path}")
 
 
-def analyse_file(path, dir_name):
+def analyse_file(path):
     """
     Read a Python file and parse it into an abstract syntax tree (AST).
 
     Args:
         path: The path to the Python file.
-        dir_name: The name of the current directory being processed.
     """
     with open(path) as fp:
         my_code = fp.read()
@@ -307,6 +304,7 @@ def analyse_file(path, dir_name):
             for attribute_list in ATTRIBUTES:
                 for attribute in attribute_list:
                     file = os.path.basename(path)
+                    dir_name = os.path.basename(os.path.dirname(path))
                     IterTree(tree, attribute, file, dir_name)
         except SyntaxError:
             print("There is a syntax error in the code")
