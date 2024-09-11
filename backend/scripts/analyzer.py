@@ -10,7 +10,6 @@ import shlex
 import shutil
 import subprocess
 import requests
-import argparse
 from backend.scripts.ClassIterTree import IterTree
 from datetime import datetime
 from urllib.parse import urlparse

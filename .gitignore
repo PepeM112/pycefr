@@ -1,8 +1,13 @@
 __pycache__/
-Analysis_from_results/
-ANEXO/
+backend/config/personal.json
 backend/data/
 backend/tmp/
+results/
 WEB/
 myenv/
+
+# Node generated files
+frontend/node_modules
+frontend/package-lock.json
+
 ast_modules.txt
