@@ -151,8 +151,10 @@ def is_python_language(protocol, type_git):
 
     if response.status_code == 403:
         print("You've reached the limit of API calls. You can further continue by adding a personal access token or by loging in GitHub")
+    elif response.status_code == 404:
+        sys.exit(f"ERROR: Repository doesn't exist [{response.status_code}]")
     elif response.status_code != 200:
-        sys.exit(f"ERROR validating language [{response.status_code}]")
+        sys.exit(f"ERROR: Couldn't validate Python language [{response.status_code}]")
     # Calculate total elements and check Python presence
     total_elem = sum(response.json().values())
     python_quantity = response.json().get("Python", 0)
