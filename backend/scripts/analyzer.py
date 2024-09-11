@@ -174,7 +174,8 @@ def clone_repo(url):
         str: The absolute path to the directory where the repository has been cloned.
     """
     print("[ ] Cloning repository", end="")
-    clone_dir = os.path.join(os.path.dirname(__file__), "tmp")
+    clone_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), 'tmp') # ...backend/tmp
+    print(clone_dir)
     clone_path = os.path.join(clone_dir, REPO_NAME)
 
     # Delete folder if already exists
@@ -495,6 +496,7 @@ def get_repo_data2():
     print("\r[✓] Fetching data")
     return {
         'name' : response_json['name'],
+        'url': response_json['html_url'],
         'description': response_json['description'],
         'owner': {
             'name' : response_json.get('owner')['login'],
@@ -509,7 +511,7 @@ def get_repo_commits():
         'Authorization': f'Bearer {API_KEY}'
     }
 
-    print("\n[ ] Fetching commits", end="")
+    print("[ ] Fetching commits", end="")
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/commits"
     response = requests.get(url, params={'per_page': 100, 'page': 1}, headers=headers)
 
@@ -595,7 +597,7 @@ def save_data(repo_data):
     """
     print("[ ] Saving data", end="")
     try:
-        with open("data_new.json", "r") as file:
+        with open("backend/tmp/data.json", "r") as file:
             data = json.load(file)    
     except FileNotFoundError:
         sys.exit("ERROR: Couldn't find data file")
