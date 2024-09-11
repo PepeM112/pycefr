@@ -20,7 +20,7 @@ def main():
         sys.exit("Usage: python3 pycerfl.py [-d directory | -r repo | -u user]")
 
     if args.directory:
-        analyse_project(args.directory, os.path.basename(args.directory))
+        analyse_project(args.directory)
     elif args.repo:
         request_url(args.repo)
     elif args.user:
