@@ -36,6 +36,48 @@ app.get('/:filename', (req, res, next) => {
 // Load CSS
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 
+// Serve results
+app.get('/results', (req, res) => {
+  const resultsDir = path.join(__dirname, '..', 'results');
+
+  fs.readdir(resultsDir, (err, files) => {
+    if (err) {
+      return res.status(500).send("There was an error trying to read results folder");
+    }
+
+    const jsonFiles = files.filter(file => file.endsWith('.json'));
+    const repoInfoArray = []
+
+    jsonFiles.forEach((file, index) => {
+      const filePath = path.join(resultsDir, file);
+
+      // Read JSON file
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const jsonData = JSON.parse(fileContent);
+
+      // Get repoInfo
+      if (jsonData.repoInfo) {
+        repoInfoArray.push({ ...jsonData.repoInfo })
+      } 
+    })
+
+    res.json(repoInfoArray);
+  })
+})
+
+app.get('/results/:repoName', (req, res) => {
+  const { repoName } = req.params;
+  const filePath = path.join(__dirname, '..', 'results', `${repoName}.json`);
+
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (!err) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('File not found');
+    }
+  });
+});
+
 // Run project
 app.post('/run-python', (req, res) => {
   const configFilePath = path.join(__dirname, 'config', 'config.json');
