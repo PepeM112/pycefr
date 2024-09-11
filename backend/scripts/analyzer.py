@@ -498,6 +498,8 @@ def get_repo_data2():
         'name' : response_json['name'],
         'url': response_json['html_url'],
         'description': response_json['description'],
+        'createdDate': response_json['created_at'],
+        'lastUpdateDate': response_json['updated_at'],
         'owner': {
             'name' : response_json.get('owner')['login'],
             'avatar' : response_json.get('owner')['avatar_url'],
