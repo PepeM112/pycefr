@@ -1,4 +1,3 @@
-import os
 import sys
 import argparse
 from backend.scripts.analyzer import request_url, analyse_project, run_user

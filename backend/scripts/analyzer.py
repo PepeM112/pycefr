@@ -109,9 +109,9 @@ def validate_repo_url(url):
     parsed_url = urlparse(url)
 
     if parsed_url.scheme != 'https':
-        sys.exit("ERROR: URL must use the 'https' protocol.")
+        sys.exit("\nERROR: URL must use the 'https' protocol.")
     if parsed_url.netloc != 'github.com':
-        sys.exit("ERROR: URL must  be from 'github.com'.")
+        sys.exit("\nERROR: URL must  be from 'github.com'.")
 
     path_segments = parsed_url.path.strip('/').split('/')
     USER_NAME = path_segments[0]
@@ -121,11 +121,11 @@ def validate_repo_url(url):
 
     if not path_segments:
         sys.exit(
-            "ERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git"
+            "\nERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git"
         )
 
     if not is_python_language(parsed_url.scheme, parsed_url.netloc):
-        sys.exit("ERROR: The repository does not contain at least 50% of Python.")
+        sys.exit("\nERROR: The repository does not contain at least 50% of Python.")
     
     print("\r[✓] Validating URL")
 
@@ -204,46 +204,138 @@ def run_user(user):
     Raises:
         SystemExit: If the user is not found or if the repositories cannot be analyzed.
     """
-    # Create the URL of the API
+    global API_KEY
+    API_KEY = get_api_token()
+    user_data = fetch_user(user)
+
+    if not bool(user_data.get('public_repos')):
+        print(f"The user { user } has no repositories to analyze")
+        return
+
+    user_repos = fetch_user_repos(user)
+
+    print(f"{user} has {len(user_repos)} public repositories:")
+    
+    for index, repo in enumerate(user_repos, start=1):
+        print(f"  [{index}] {repo.get('name')}")
+
+    repo_url = choose_repo(user_repos)
+
+    request_url(repo_url)    
+
+
+def fetch_user(user):
+    """
+    Fetch data for a given GitHub user.
+
+    This function sends a request to the GitHub API to retrieve data for the specified user.
+
+    Args:
+        user (str): The GitHub username to fetch data for.
+
+    Returns:
+        dict: A dictionary containing the user's information if the request is successful.
+
+    Raises:
+        SystemExit: If the user is not found, or if there is an issue with authentication or the request.
+    """
+    print("[ ] Fetching user", end="")
     user_url = "https://api.github.com/users/" + user
-    print(user_url)
-    print("Analyzing user...\n")
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
-    try:
-        # Extract headers
-        response = requests.get(user_url, headers=headers)
-        response.raise_for_status()
-        # Decode JSON response into a Python dict:
-        response = response.json()
-        # Get repository URL
-        repo_url = response["repos_url"]
-    except requests.exceptions.HTTPError:
-        sys.exit(f"ERROR: User '{user}' not found. Please check the username.")
-    except KeyError:
-        sys.exit("ERROR: Unable to retrieve repository information for the user.")
-    except Exception as e:
-        sys.exit(f"ERROR: An unexpected error occurred: {e}")
+    
+    response = requests.get(user_url, headers=headers)
 
-    print("Analyzing repositories...\n")
-    # Extract repository names
-    try:
-        names = requests.get(repo_url, headers=headers)
-        names.raise_for_status()
-        # Decode JSON response into a Python dict:
-        response = names.json()
-        # Show repository names
-        for repository in response:
-            print("\nRepository: " + str(repository["name"]))
-            is_python_language("https", "github.com")
-    except requests.exceptions.HTTPError:
-        sys.exit(
-            "ERROR: Unable to retrieve repositories. Check if the user has any public repositories."
-        )
+    if response.status_code == 404:
+        sys.exit(f"ERROR: { user } is not a GitHub user")
+    elif response.status_code == 401:
+        sys.exit(f"ERROR: Forbidden")
+    elif response.status_code != 200:
+        sys.exit(f"ERROR: Couldn't fetch user data")
+
+    print("\r[✓] Fetching user")
+    return response.json()
+
+
+def fetch_user_repos(user):
+    """
+    Fetch the public repositories for a given GitHub user.
+
+    This function sends a request to the GitHub API to retrieve the list of public repositories for the specified user.
+
+    Args:
+        user (str): The GitHub username to fetch repositories for.
+
+    Returns:
+        list: A list of dictionaries, each containing data for one of the user's repositories.
+
+    Raises:
+        SystemExit: If the user or repositories are not found, or if the request fails.
+    """
+    print("[ ] Fetching repositories", end="")
+    repos_url = f"https://api.github.com/users/{user}/repos"
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
+    response = requests.get(repos_url, headers=headers)
+
+    if response.status_code == 404:
+        sys.exit(f"ERROR: Couldn't find repository")
+    elif response.status_code != 200:
+        sys.exit(f"ERROR: Couldn't fetch repository data")
+
+    print("\r[✓] Fetching repositories")
+    return response.json()
+
+
+def choose_repo(repos):
+    """
+    Allow the user to select a repository from the list by number or by exact name.
+
+    Args:
+        repos: A list of repositories, each represented as a dictionary with at least 'name' and 'html_url' keys.
+
+    Returns:
+        str: The URL of the selected repository.
+    """
+    while True:
+        repo_input = input("\nSelect which one you want to analyze: ")
+
+        if repo_input.isdigit():
+            repo_pos = int(repo_input) - 1
+            if 0 <= repo_pos < len(repos):
+                selected_repo = repos[repo_pos]
+            else:
+                print("Invalid number. Please try again.")
+                continue
+        else:
+            selected_repo = next((repo for repo in repos if repo.get('name') == repo_input), None)
+            if selected_repo is None:
+                print("Repository name not found. Please try again.")
+                continue
+        
+        # Confirmar la selección
+        confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (y/n) ")
+        if confirm_input.lower() == 'y':
+            return selected_repo.get('html_url')
+        elif confirm_input.lower() != 'n':
+            print("Not valid. Please enter 'y' or 'n'.")
 
 
 def analyse_project(rootPath):
+    """
+    Initiates the analysis of a Python project by recursively traversing the specified directory.
+
+    Args:
+        rootPath: The root directory of the project to be analyzed.
+
+    Returns:
+        None
+    
+    Raises:
+        SystemExit: If the provided path does not exist or is not a directory.
+    """
     print("Starting code analysis")
 
     rootPath = os.path.abspath(rootPath)
@@ -332,6 +424,22 @@ def print_progress(current, total):
 
 
 def get_repo_data():
+    """
+    Fetch data about the repository, including commits, lines of code (LOC), modified files, and contributors.
+
+    This function interacts with the GitHub API to retrieve:
+    - Information about commits, including the total number of commits, modified files, lines of code added or deleted, and timestamps of commits.
+    - Information about contributors, including their names and the number of commits they've made.
+
+    Returns:
+        dict: A dictionary containing:
+            - 'total_commits': Total number of commits.
+            - 'total_loc': Total lines of code (additions and deletions).
+            - 'total_files_modified': Total number of unique files modified across all commits.
+            - 'total_hours': Estimated hours spent on the project, calculated from commit timestamps.
+            - 'contributors': A list of contributors with their GitHub usernames and number of commits.
+    """
+
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -432,6 +540,17 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
 
 
 def save_data(repo_data):
+    """
+    Save the repository data into a JSON file.
+
+    This function loads existing data from `data_new.json`, updates it with the new repository information, and saves it to a new file in the `results/` directory. The new file will be named after the repository.
+
+    Args:
+        repo_data (dict): The repository data to be saved, typically returned from `get_repo_data()`.
+
+    Raises:
+        SystemExit: If the `data_new.json` file cannot be found.
+    """
     print("[ ] Saving data", end="")
     try:
         with open("data_new.json", "r") as file:
@@ -452,6 +571,17 @@ def save_data(repo_data):
 
 
 def get_api_token():
+    """
+    Retrieve the API token from the personal configuration file.
+
+    This function reads the `backend/config/personal.json` file and extracts the GitHub API key used for authentication.
+
+    Returns:
+        str: The API token if found in the configuration file, otherwise an empty string.
+
+    Raises:
+        SystemExit: If the `personal.json` file cannot be found.
+    """
     try:
         with open("backend/config/personal.json", "r") as file:
             data = json.load(file)
