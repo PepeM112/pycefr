@@ -27,7 +27,7 @@ aside.sidebar {
     color: snow;
     min-height: 100vh;
     padding: 1.25rem 0.5rem;
-    width: 260px;
+    min-width: 260px;
 }
 
 aside.sidebar h2 {

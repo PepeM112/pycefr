@@ -1,3 +1,9 @@
+function formatDate(dateString) {
+    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', options);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const repoList = document.getElementById('repo-list');
     const reposSummaryList = document.getElementById('repos-summary-list');
@@ -6,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json())
         .then(data => {
             data.forEach(repo => {
+                console.log(repo)
                 // Crear enlaces de la sidebar
                 const repoLink = document.createElement('a');
                 repoLink.href = repo.data.owner.profile_url;
@@ -36,10 +43,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 repoBlock.appendChild(repoHeader);
 
-                const repoInfo = document.createElement('p');
-                repoInfo.textContent = repo.description || '';
-                repoBlock.appendChild(repoInfo);
+                const description = document.createElement('p');
+                description.textContent = repo.data.description || 'No description available';
+                description.className = 'description';
+                repoBlock.appendChild(description);
 
+                const creationDate = document.createElement('p');
+                creationDate.innerHTML = `Fecha de creación: <span>${formatDate(repo.data.createdDate)}</span>`;
+                repoBlock.appendChild(creationDate);
+
+                const lastUpdateDate = document.createElement('p');
+                lastUpdateDate.innerHTML = `Última actualización: <span>${formatDate(repo.data.lastUpdateDate)}</span>`;
+                repoBlock.appendChild(lastUpdateDate);
+
+                const commits = document.createElement('p');
+                commits.innerHTML = `Commits: <span>${repo.commits.total_commits}</span>`;
+                repoBlock.appendChild(commits);
+
+                // Añadir el enlace "Ver más"
                 const repoLinkMore = document.createElement('a');
                 repoLinkMore.href = `/results/${repo.data.name}`;
                 repoLinkMore.className = 'glb-btn-main';
