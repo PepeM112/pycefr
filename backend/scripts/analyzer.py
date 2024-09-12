@@ -1,6 +1,7 @@
 from genericpath import isdir
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -175,7 +176,6 @@ def clone_repo(url):
     """
     print("[ ] Cloning repository", end="")
     clone_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), 'tmp') # ...backend/tmp
-    print(clone_dir)
     clone_path = os.path.join(clone_dir, REPO_NAME)
 
     # Delete folder if already exists
@@ -513,42 +513,54 @@ def get_repo_commits():
         'Authorization': f'Bearer {API_KEY}'
     }
 
-    print("[ ] Fetching commits", end="")
+    print("[ ] Fetching commits", end="", flush=True)
+    page_counter = 1
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/commits"
-    response = requests.get(url, params={'per_page': 100, 'page': 1}, headers=headers)
+    all_commits = []
 
-    if response.status_code != 200:
-        print(f"Warning: there was an error retrieving commits information [{response.status_code}]")
-        return
+    while True:
+        response = requests.get(url, params={'per_page': 100, 'page': page_counter}, headers=headers)
 
-    response_json = response.json()
+        if response.status_code != 200:
+            print(f"\nWarning: there was an error retrieving commits information [{response.status_code}]")
+            return
+        
+        page_commits = response.json()
+        all_commits.extend(page_commits)
 
-    total_commits = int(response.headers.get('X_Total_Count', 0))
-    
-    files_set = set()
+        if len(page_commits) < 100:
+            break
+        
+        page_counter += 1
+
+    total_commits = len(all_commits)
     total_loc = 0
+    files_set = set()
     commit_dates = []
 
-    for commit in response_json:
-        commit_response = requests.get(commit['url'], headers=headers).json()
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(fetch_commit_details, commit['url'], headers) for commit in all_commits]
 
-        # Number of files modified
-        files = commit_response.get('files', [])
-        for file in files:
-            files_set.add(file['filename'])
+        for future in as_completed(futures):
+            commit_response = future.result()
 
-        # LOC
-        stats = commit_response.get('stats', {})
-        total_loc += stats.get('additions', 0) + stats.get('deletions', 0)
+            # Number of files modified
+            files = commit_response.get('files', [])
+            for file in files:
+                files_set.add(file['filename'])
 
-        # Commit dates
-        commit_date = commit_response['commit']['committer']['date']
-        commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
-        commit_dates.append(commit_timestamp)
+            # LOC
+            stats = commit_response.get('stats', {})
+            total_loc += stats.get('additions', 0) + stats.get('deletions', 0)
+
+            # Commit dates
+            commit_date = commit_response['commit']['committer']['date']
+            commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
+            commit_dates.append(commit_timestamp)
 
     total_files_modified = len(files_set)
     total_hours = calculate_hours_spent(commit_dates)
-    print("\r[✓] Fetching commits")
+    print("\r[✓] Fetching commits", flush=True)
 
     return {
         'total_commits': total_commits,
@@ -557,6 +569,12 @@ def get_repo_commits():
         'total_hours': total_hours
     }
 
+
+
+def fetch_commit_details(commit_url, headers):
+    response = requests.get(commit_url, headers=headers)
+    response.raise_for_status()
+    return response.json()
 
 def get_repo_contributors():
     headers = {
