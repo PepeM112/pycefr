@@ -60,9 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 commits.innerHTML = `Commits: <span>${repo.commits.total_commits}</span>`;
                 repoBlock.appendChild(commits);
 
-                // Añadir el enlace "Ver más"
                 const repoLinkMore = document.createElement('a');
-                repoLinkMore.href = `/results/${repo.data.name}`;
+                repoLinkMore.href = `/${repo.data.name}`;
                 repoLinkMore.className = 'glb-btn-main';
                 repoLinkMore.textContent = 'Ver más';
                 repoBlock.appendChild(repoLinkMore);

@@ -15,6 +15,7 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    height: calc(3*1.25rem);
     text-overflow: ellipsis;
     font-size: 0.875rem;
     margin: 0 0 1.5rem;
