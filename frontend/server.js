@@ -65,7 +65,7 @@ app.get('/results/:repoName', (req, res) => {
 
 app.get('/:filename', (req, res, next) => {
   const { filename } = req.params;
-  const htmlTemplatePath = path.join(__dirname, 'public', 'html', 'precise.html')
+  const htmlTemplatePath = path.join(__dirname, 'public', 'html', 'repo.html')
 
   fs.access(htmlTemplatePath, fs.constants.F_OK, (err) => {
     if (err) {
