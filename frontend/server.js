@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { formatDate } from "./public/js/utils.js";   
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,24 +18,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Routing
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'summary.html'));
+  res.sendFile(path.join(__dirname, 'public', 'html', 'home.html'));
 });
-
-app.get('/:filename', (req, res, next) => {
-  const { filename } = req.params;
-  const filePath = path.join(__dirname, 'public', 'html', `${filename}.html`);
-
-  fs.access(filePath, fs.constants.F_OK, (err) => {
-    if (!err) {
-      res.sendFile(filePath);
-    } else {
-      next();
-    }
-  });
-});
-
-// Load CSS
-app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 
 // Serve results
 app.get('/results', (req, res) => {
@@ -77,6 +62,56 @@ app.get('/results/:repoName', (req, res) => {
     }
   });
 });
+
+app.get('/:filename', (req, res, next) => {
+  const { filename } = req.params;
+  const htmlTemplatePath = path.join(__dirname, 'public', 'html', 'precise.html')
+
+  fs.access(htmlTemplatePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      return next();
+    } 
+    
+    fs.readFile(htmlTemplatePath, 'utf8', (err, htmlContent) => {
+      if (err) {
+        return res.status(500).send('Error reading HTML template')
+      }
+
+      // Substitute placeholders
+      const jsonResultsPath = path.join(__dirname, '..', 'results', `${filename}.json`);
+      
+      fs.access(jsonResultsPath, fs.constants.F_OK, (err) => {
+        if (err) {
+          return res.status(404).send("Couldn't find results file");
+        }
+
+        fs.readFile(jsonResultsPath, 'utf8', (err, jsonData) => {
+          if (err) {
+            return res.status(500).send('Error reading JSON results')
+          }
+
+          const repoInfo = JSON.parse(jsonData).repoInfo;
+          const replacedHTML = htmlContent
+            .replace(/PH_REPO_NAME/g, repoInfo.data.name || 'N/A')
+            .replace(/PH_REPO_DATE/g, formatDate(repoInfo.data.createdDate) || 'N/A')
+            .replace(/PH_TOTAL_FILES/g, repoInfo.data.totalFiles || 'N/A')
+            .replace(/PH_TOTAL_COMMITS/g, repoInfo.commits.total_commits || 'N/A')
+            .replace(/PH_TOTAL_CHANGES/g, repoInfo.commits.total_files_modified || 'N/A')
+            .replace(/PH_TOTAL_HOURS/g, repoInfo.commits.total_hours || 'N/A')
+            .replace(/PH_TOTAL_LINES/g, repoInfo.commits.total_loc || 'N/A');
+
+          res.send(replacedHTML);
+        })
+      })
+    })
+  });
+});
+
+// Serve CSS
+app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
+
+// Serve JS
+app.use('/js', express.static(path.join(__dirname, 'public', 'js')));
 
 // Run project
 app.post('/run-python', (req, res) => {

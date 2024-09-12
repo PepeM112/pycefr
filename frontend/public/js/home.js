@@ -1,8 +1,4 @@
-function formatDate(dateString) {
-    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', options);
-}
+import { formatDate } from "./utils.js";   
 
 document.addEventListener('DOMContentLoaded', () => {
     const repoList = document.getElementById('repo-list');
@@ -12,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json())
         .then(data => {
             data.forEach(repo => {
-                console.log(repo)
                 // Crear enlaces de la sidebar
                 const repoLink = document.createElement('a');
                 repoLink.href = repo.data.owner.profile_url;
