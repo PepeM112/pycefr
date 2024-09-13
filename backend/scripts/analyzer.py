@@ -1,3 +1,5 @@
+import configparser
+from curses.ascii import isdigit
 from genericpath import isdir
 import os
 import sys
@@ -107,7 +109,6 @@ def validate_repo_url(url):
     
     print("[ ] Validating URL", end="")
     parsed_url = urlparse(url)
-
     if parsed_url.scheme != 'https':
         sys.exit("\nERROR: URL must use the 'https' protocol.")
     if parsed_url.netloc != 'github.com':
@@ -116,7 +117,6 @@ def validate_repo_url(url):
     path_segments = parsed_url.path.strip('/').split('/')
     USER_NAME = path_segments[0]
     REPO_NAME = path_segments[1].replace(".git", "")
-    
     REPO_URL = url
 
     if not path_segments:
@@ -316,7 +316,7 @@ def choose_repo(repos):
                 continue
         
         # Confirmar la selección
-        confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (y/n) ")
+        confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (Y/n) ")
         if confirm_input.lower() == 'y':
             return selected_repo.get('html_url')
         elif confirm_input.lower() != 'n':
@@ -336,7 +336,7 @@ def analyse_project(rootPath):
     Raises:
         SystemExit: If the provided path does not exist or is not a directory.
     """
-    print("Starting code analysis")
+    print("[ ] Analysing code", end=" ")
 
     load_settings()
     rootPath = os.path.abspath(rootPath)
@@ -359,7 +359,7 @@ def analyse_project(rootPath):
     
     current_file = [0]
     analyse_directory(rootPath, file_count, current_file)
-    print()
+    print("\r[✓] Analysing code" + " " * 50)
 
 
 def analyse_directory(path, total_length=None, current_file=None):
@@ -459,7 +459,7 @@ def print_progress(current, total):
     bar_length = 40
     block = int(round(bar_length * current / total))
     progress = "█" * block + "-" * (bar_length - block)
-    print(f"\r[{progress}] {percent}%", end="")
+    print(f"\r[ ] Analysing code [{progress}] {percent}%", end="")
 
 
 def get_repo_data():
@@ -517,6 +517,69 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
 
     return round(total_seconds / 3600)  # Convert seconds to hours
 
+
+def run_directory(dir):
+    """
+    Check if the specified directory contains a Git repository.
+    If a Git repository is found, prompt the user to add repository information to the analysis.
+    If the user chooses 'n' or provides invalid input, proceed with analyzing the project.
+    """
+    git_url = get_git_repo_url(dir)
+    print("Found git: ", git_url)
+    if git_url != "":
+        while True:
+            repo_input = input('A valid Git configuration has been detected. Would you like to analyse the origin repository? (Y/n) ').strip().lower()
+            if repo_input == 'y':
+                request_url(git_url)
+                return 
+            elif repo_input == 'n':
+                break  # Exit the loop to continue with analysis
+            else:
+                print('Invalid input. Please enter Y or n.')
+    
+    # Proceed with analyzing the project and saving data
+    analyse_project(dir)
+    save_data(os.path.basename(os.path.abspath(dir)))
+
+
+def get_git_repo_url(dir):
+    """
+    Retrieves the Git repository URL from the .git/config file in the specified directory.
+
+    Args:
+        dir (str): The directory where the .git folder is expected to be located.
+
+    Returns:
+        str: The repository URL in HTTP format if available, or an empty string if no valid URL is found.
+    """
+    git_dir = os.path.join(dir, '.git')
+    
+    if not os.path.isdir(git_dir):
+        return ""
+    
+    config_file = os.path.join(git_dir, 'config')
+    
+    if not os.path.isfile(config_file):
+        return ""
+    
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    
+    if 'remote "origin"' not in config:
+        return ""
+    
+    url = config['remote "origin"'].get('url')
+    
+    if not bool(url):
+        return ""
+    
+    if url.startswith('git@'):
+        url_part = url[4:]  # Skip 'git@'
+        http_url = url_part.replace(':', '/', 1).replace('.git', '')
+        return f'https://{http_url}'
+    
+    return url
+            
 
 def get_repo():
     headers = {
@@ -654,6 +717,7 @@ def save_data(data):
     Raises:
         SystemExit: If the `data_new.json` file cannot be found.
     """
+    global REPO_NAME
     print("[ ] Saving data", end="")
     try:
         with open("backend/tmp/data.json", "r") as file:
@@ -661,17 +725,17 @@ def save_data(data):
     except FileNotFoundError:
         sys.exit("ERROR: Couldn't find data file")
 
-    if all(key in data for key in ['data', 'commit', 'contributors']):
+    if all(key in data for key in ['data', 'commits', 'contributors']):
         file_data.update({"repoInfo": data})
     else:
-        REPO_NAME = data
+        suffix = "_local" if SETTINGS.get("addLocalSuffix", True) else ""
+        REPO_NAME = data + suffix
         file_data.update({"dirInfo": {'name': data}})
 
     os.makedirs("results", exist_ok=True)
 
-    suffix = "_local" if SETTINGS.get("addLocalSuffix", False) else ""
 
-    output_file = f"results/{REPO_NAME}{suffix}.json"
+    output_file = f"results/{REPO_NAME}.json"
 
     with open(output_file, "w") as file:
         json.dump(file_data, file, indent=4)

@@ -1,7 +1,7 @@
 import os
 import sys
 import argparse
-from backend.scripts.analyzer import request_url, analyse_project, run_user, save_data, load_settings
+from backend.scripts.analyzer import request_url, run_directory, run_user
 
 
 def main():
@@ -20,8 +20,7 @@ def main():
         sys.exit("Usage: python3 pycerfl.py [-d directory | -r repo | -u user]")
 
     if args.directory:
-        analyse_project(args.directory)
-        save_data(os.path.basename(os.path.abspath(args.directory)))
+        run_directory(args.directory)
     elif args.repo:
         request_url(args.repo)
     elif args.user:
