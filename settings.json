@@ -1,0 +1,10 @@
+{
+    "ignoreFolders": [
+        "node_modules/",
+        "myenv/",
+        ".git/",
+        "__pycache__/"
+    ],
+    "API-KEY": "",
+    "addLocalSuffix": true
+}

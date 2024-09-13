@@ -55,6 +55,7 @@ REPO_URL = ""
 REPO_NAME = ""
 USER_NAME = ""
 API_KEY = ""
+SETTINGS = {}
 
 
 def request_url(url):
@@ -72,7 +73,6 @@ def request_url(url):
             If the URL is not from 'github.com'.
             If the repository does not meet the language criteria.
     """
-    
     validate_repo_url(url)
 
     cloned_repo = clone_repo(REPO_URL)
@@ -338,6 +338,7 @@ def analyse_project(rootPath):
     """
     print("Starting code analysis")
 
+    load_settings()
     rootPath = os.path.abspath(rootPath)
 
     if not os.path.exists(rootPath):
@@ -345,14 +346,20 @@ def analyse_project(rootPath):
     if not os.path.isdir(rootPath):
         sys.exit(f"ERROR: Path {rootPath} is not a directory")
     
+    ignored_folders = SETTINGS.get("ignoreFolders", [])
+
     file_count = 0
     for root, dirs, files in os.walk(rootPath):
+        dirs[:] = [d for d in dirs if not any(os.path.join(root, d).endswith(ignored_folder)
+                for ignored_folder in ignored_folders
+            )]
         for file in files:
             if file.endswith(".py"):
                 file_count += 1
     
     current_file = [0]
     analyse_directory(rootPath, file_count, current_file)
+    print()
 
 
 def analyse_directory(path, total_length=None, current_file=None):
@@ -370,20 +377,30 @@ def analyse_directory(path, total_length=None, current_file=None):
         # Process each item
         for item in items:
             item_path = os.path.join(path, item)
-            # Check if the item is a python file"
+            # Check if the item is a Python file
             if os.path.isfile(item_path) and item.endswith(".py"):
                 print_progress(current_file[0] + 1, total_length)
                 analyse_file(item_path)
                 current_file[0] += 1
             # Check if the item is a directory
             elif os.path.isdir(item_path):
+                # Skip the directory if it matches any ignored folder
+                if any(
+                    os.path.join(item_path).endswith(ignored_folder)
+                    for ignored_folder in SETTINGS.get("ignoreFolders", [])
+                ):
+                    continue
+                
+                # Recursively analyse the directory if not ignored
                 analyse_directory(item_path, total_length, current_file)
+
     except FileNotFoundError:
         print(f"ERROR: Directory {path} not found")
     except PermissionError:
         print(f"ERROR: Permission denied to access {path}")
     except Exception:
         print(f"ERROR: Couldn't read {path}")
+
 
 
 def analyse_file(path):
@@ -406,6 +423,17 @@ def analyse_file(path):
         except SyntaxError:
             print("There is a syntax error in the code")
             pass
+
+
+def load_settings():
+    """
+    Load settings from the JSON file into the global SETTINGS variable.
+    """
+    global SETTINGS
+    with open('settings.json', 'r') as file:
+        SETTINGS = json.load(file)
+
+    SETTINGS["ignoreFolders"] = [folder.rstrip('/') for folder in SETTINGS.get("ignoreFolders", [])]    # Remove / if included
 
 
 def print_progress(current, total):
@@ -484,7 +512,7 @@ def get_repo_data2():
         'Authorization': f'Bearer {API_KEY}'
     }
 
-    print("\n[ ] Fetching data", end="")
+    print("[ ] Fetching data", end="")
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}"
     response = requests.get(url, headers=headers)
 
@@ -603,14 +631,14 @@ def get_repo_contributors():
 
     return contributors
 
-def save_data(repo_data):
+def save_data(data):
     """
     Save the repository data into a JSON file.
 
     This function loads existing data from `data_new.json`, updates it with the new repository information, and saves it to a new file in the `results/` directory. The new file will be named after the repository.
 
     Args:
-        repo_data (dict): The repository data to be saved, typically returned from `get_repo_data()`.
+        data (dict): The repository data to be saved, typically returned from `get_repo_data()`.
 
     Raises:
         SystemExit: If the `data_new.json` file cannot be found.
@@ -618,18 +646,24 @@ def save_data(repo_data):
     print("[ ] Saving data", end="")
     try:
         with open("backend/tmp/data.json", "r") as file:
-            data = json.load(file)    
+            file_data = json.load(file)    
     except FileNotFoundError:
         sys.exit("ERROR: Couldn't find data file")
 
-    data.update({"repoInfo": repo_data})
+    if all(key in data for key in ['data', 'commit', 'contributors']):
+        file_data.update({"repoInfo": data})
+    else:
+        REPO_NAME = data
+        file_data.update({"dirInfo": {'name': data}})
 
     os.makedirs("results", exist_ok=True)
 
-    output_file = f"results/{REPO_NAME}.json"
+    suffix = "_local" if SETTINGS.get("addLocalSuffix", False) else ""
+
+    output_file = f"results/{REPO_NAME}{suffix}.json"
 
     with open(output_file, "w") as file:
-        json.dump(data, file, indent=4)
+        json.dump(file_data, file, indent=4)
     
     print("\r[✓] Saving data")
 

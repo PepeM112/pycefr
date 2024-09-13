@@ -1,6 +1,7 @@
+import os
 import sys
 import argparse
-from backend.scripts.analyzer import request_url, analyse_project, run_user
+from backend.scripts.analyzer import request_url, analyse_project, run_user, save_data, load_settings
 
 
 def main():
@@ -20,6 +21,7 @@ def main():
 
     if args.directory:
         analyse_project(args.directory)
+        save_data(os.path.basename(os.path.abspath(args.directory)))
     elif args.repo:
         request_url(args.repo)
     elif args.user:
