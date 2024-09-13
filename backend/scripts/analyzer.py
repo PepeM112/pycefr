@@ -428,8 +428,19 @@ def analyse_file(path):
 def load_settings():
     """
     Load settings from the JSON file into the global SETTINGS variable.
+    If the file does not exist, create it with default content.
     """
     global SETTINGS
+    default_settings = {
+        "ignoreFolders": [],
+        "API-KEY": "",
+        "addLocalSuffix": True
+    }
+    
+    if not os.path.isfile('settings.json'):
+        with open('settings.json', 'w') as file:
+            json.dump(default_settings, file, indent=4)
+    
     with open('settings.json', 'r') as file:
         SETTINGS = json.load(file)
 
@@ -468,7 +479,7 @@ def get_repo_data():
             - 'contributors': A list of contributors with their GitHub usernames and number of commits.
     """
 
-    repo_data = get_repo_data2()
+    repo_data = get_repo()
     repo_commits = get_repo_commits()
     repo_contributors = get_repo_contributors()
 
@@ -507,7 +518,7 @@ def calculate_hours_spent(commit_dates, max_commit_diff_seconds=120*60, first_co
     return round(total_seconds / 3600)  # Convert seconds to hours
 
 
-def get_repo_data2():
+def get_repo():
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
