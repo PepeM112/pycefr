@@ -11,79 +11,68 @@ With this tool it is possible to analyze the level of GitHub repositories (and t
 
 ### How to use it?
 
-Execute the file backend/pycerfl.py to run the program. 
+There are 3 ways of running it:
 
-```
-python3 backend/pycerfl.py
-```
 
-There are ways of running it:
-
-1. Analyze a directory
-  ```
-  python3 pycerfl.py [-d | --directory] <dir_path> 
-  ```
-
-2. Analyze a GitHub repository
-  ```
+#### 1. Analyze a GitHub repository
+  ```bash
   python3 pycerfl.py [-r | --repo] <repo_url> 
   ```
 
-3. Analyze a GitHub user
-  ```
+Performs full analysis on a valid GitHub repository and fetches relevant related to the repository.
+
+#### 2. Analyze a GitHub user
+  ```bash
   python3 pycerfl.py [-u | --user] <user_name> 
   ```
 
-### How does it work?
+Retrieves information about a valid GitHub user, asking which of the public projects of such user you would like to perform the analysis on. Once chosen, performs full analysis on a valid GitHub repository and fetches relevant related to the repository.
 
-To put it into operation you have to follow the steps below:
-1. Edit the 'configuration.cfg' file with the level assignment of your choice. If you want to use the default ones (recommended), just go to step 2.
-2. Execute the file 'dict.py' to generate a level dictionary.
-   ```
-   python3 dict.py
-   ```
-3. Execute the main program 'pycerfl.py' in three different ways:
+#### 3. Analyze a local directory
+  ```bash
+  python3 pycerfl.py [-d | --directory] <dir_path> 
+  ```
 
-    * Analyze a directory.
-      ```
-      python3 pycerfl.py directory <name_path>
-      ```
-    * Analyze a GitHub repository.
-      ```
-      python3 pycerfl.py repo <name_urlclone>
-      ```
-    * Analyze a GitHub user.
-      ```
-      python3 pycerfl.py user <name_user>
-      ```
-4. After that, this program will generate two types of formats to view the results:
-    * **JSON**: data.json
-    * **CSV**: data.csv
+Performs full analysis on a directory. If it is detected that the directory is a GitHub project the user is asked if he would like to analyse the origin repository instead of the local files. If yes it analyses the repository as in (1), else it perform analysis on the local files. 
 
-  Both of them including following information:
-  * Repository name
-  * File name
-  * Class of element
-  * Start Line
-  * End Line
-  * Displacement
-  * Level of element
+### After analysis
 
+Once the analysis is done, a json file will be generated in a folder named results/. You can visualize here the results.
 
-5. If you want to visualize the results on a web page:
+However, you can also visualize all your results using Node.js.
 
-    * Run the file 'main.js' to create the page 'index.html'. You will get one web page for each repository.
-      ```
-      node main.js
-      ```
+To install dependencies position yourself inside frontend folder and execute:
 
+```bash
+npm install
+```
 
-## Of Interest
+After that, you can run the local server:
 
-We are trying to obtain a consolidated version of Python levels, for this purpose, we propose this survey is to ask you how you would assign those levels to Python structures.
+```bash
+node server.js
+```
 
-This is the long version of the survey. The time to fill out the survey is approx. 15 minutes. https://forms.gle/pA71ajFx1HVaZMYq9
+### Options
 
-There is a shorter version of the survey (survey time is approx. 5 minutes) here, in case you do not have that much time: https://forms.gle/rFXFmqs5LnnHopUb6 (you can also take first the short version and then the long one if you want).
+There is a settings.json in place in order to setup some configurations:
 
-Thank you very much!
+|Settings | Description |
+|:--------|:-------------:|
+|**ignoreFolders**| Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name |
+|**API-KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api.|
+|**addLocalSuffix**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) a suffix to the results file|
+
+An example of a settings.json could be:
+```json
+{
+    "ignoreFolders": [
+        "node_modules/",
+        "myenv/",
+        ".git/",
+        "__pycache__/"
+    ],
+    "API-KEY": "",
+    "addLocalSuffix": true
+}
+```
