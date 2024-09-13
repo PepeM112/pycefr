@@ -1,4 +1,7 @@
 # **pycefr**
+
+## [OUTDATED]
+
 ## *Identifying Python3 Code Level Using the CERFL Framework as Inspiration*
 
 ### What is this project about?
@@ -6,7 +9,30 @@ The goal of pycefrl is to create a tool capable of obtaining an evaluation inspi
 
 With this tool it is possible to analyze the level of GitHub repositories (and their developers) or code snippets in Python3.
 
+### How to use it?
 
+Execute the file backend/pycerfl.py to run the program. 
+
+```
+python3 backend/pycerfl.py
+```
+
+There are ways of running it:
+
+1. Analyze a directory
+  ```
+  python3 pycerfl.py [-d | --directory] <dir_path> 
+  ```
+
+2. Analyze a GitHub repository
+  ```
+  python3 pycerfl.py [-r | --repo] <repo_url> 
+  ```
+
+3. Analyze a GitHub user
+  ```
+  python3 pycerfl.py [-u | --user] <user_name> 
+  ```
 
 ### How does it work?
 
