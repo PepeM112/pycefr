@@ -35,7 +35,6 @@ class IterTree:
         self.name = file
         self.dir_name = dir_name
         self.walk_tree()
-        self.write_data_csv()
         self.write_data_json()
 
 
@@ -47,24 +46,7 @@ class IterTree:
                 self.level = ""
                 self.clase = ""
                 levels.asign_levels(self)
-                self.to_csv()
                 self.to_json()              
-
-
-    def to_csv(self):
-        """Create object list."""
-        if (self.clase != "") and (self.level != ""):
-            self.list = [
-                self.dir_name,
-                self.name,
-                self.clase,
-                self.node.lineno,
-                self.node.end_lineno,
-                self.node.col_offset,
-                self.level,
-            ]
-
-            self.myDataCsv.append(self.list)
 
 
     def to_json(self):
@@ -91,18 +73,6 @@ class IterTree:
                 "level": str(self.level),
                 "numberOfInstances": 1
             })
-
-
-    def write_data_csv(self, file_csv=""):
-        """Create and add data in the .csv file."""
-        if not file_csv:
-            with open("data.csv", "w") as f:
-                writer = csv.writer(f)
-                writer.writerows(self.myDataCsv)
-        else:
-            with open("data.csv", "a", newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(self.list)
 
 
     def write_data_json(self):
