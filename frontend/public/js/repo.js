@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
+    
+    const container = document.querySelector('.container');
+    const isLocal = container.getAttribute('data-is-local') === 'true';
+
+    if (isLocal) {
+        container.style.display = 'none'; // Hide info block if isLocal
+    }
+
     const table = document.getElementById('properties-table');
     const theaders = table.querySelectorAll('th');
     const tbody = table.querySelector('tbody');
@@ -27,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch(`/results/${repoName}`);
         const data = await response.json();
         elements = data.elements;
-        originalData = [...elements]; // Keep a copy of the original data
+        originalData = [...elements]; // Still pointing to original data
         loadTableData(elements);
     }
 

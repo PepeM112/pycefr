@@ -9,10 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             data.forEach(repo => {
                 // Crear enlaces de la sidebar
-                const repoLink = document.createElement('a');
+                /* const repoLink = document.createElement('a');
                 repoLink.href = repo.data.owner.profile_url;
                 repoLink.textContent = repo.data.name;
-                repoList.appendChild(repoLink);
+                repoList.appendChild(repoLink); */
+
+                const isLocal = !repo.data;
 
                 const repoBlock = document.createElement('div');
                 repoBlock.className = 'container repos-summary-list-block';
@@ -22,15 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 repoHeader.className = 'repos-summary-list-block-header';
 
                 const avatarImg = document.createElement('img');
-                avatarImg.src = repo.data.owner.avatar;
-                avatarImg.alt = `${repo.data.owner.name}'s avatar`;
+                avatarImg.src = !isLocal ? repo.data.owner.avatar : '../assets/img/default_avatar.jpg';
+                avatarImg.alt = !isLocal ? `${repo.data.owner.name}'s avatar` : 'avatar';
                 repoHeader.appendChild(avatarImg);
 
                 const headerText = document.createElement('div');
                 const repoName = document.createElement('h3');
-                repoName.textContent = repo.data.name;
+                repoName.textContent = !isLocal ? repo.data.name : repo.name;
                 const ownerName = document.createElement('span');
-                ownerName.textContent = repo.data.owner.name;
+                ownerName.textContent = !isLocal ? repo.data.owner.name : 'Local';
 
                 headerText.appendChild(repoName);
                 headerText.appendChild(ownerName);
@@ -39,24 +41,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 repoBlock.appendChild(repoHeader);
 
                 const description = document.createElement('p');
-                description.textContent = repo.data.description || 'No description available';
+                description.textContent = !isLocal ? repo.data.description || 'No description available' : 'Repositorio local';
                 description.className = 'description';
                 repoBlock.appendChild(description);
 
-                const creationDate = document.createElement('p');
-                creationDate.innerHTML = `Fecha de creación: <span>${formatDate(repo.data.createdDate)}</span>`;
-                repoBlock.appendChild(creationDate);
-
-                const lastUpdateDate = document.createElement('p');
-                lastUpdateDate.innerHTML = `Última actualización: <span>${formatDate(repo.data.lastUpdateDate)}</span>`;
-                repoBlock.appendChild(lastUpdateDate);
-
-                const commits = document.createElement('p');
-                commits.innerHTML = `Commits: <span>${repo.commits.total_commits}</span>`;
-                repoBlock.appendChild(commits);
+                if (!isLocal) {
+                    const creationDate = document.createElement('p');
+                    creationDate.innerHTML = `Fecha de creación: <span>${formatDate(repo.data.createdDate)}</span>`;
+                    repoBlock.appendChild(creationDate);
+    
+                    const lastUpdateDate = document.createElement('p');
+                    lastUpdateDate.innerHTML = `Última actualización: <span>${formatDate(repo.data.lastUpdateDate)}</span>`;
+                    repoBlock.appendChild(lastUpdateDate);
+    
+                    const commits = document.createElement('p');
+                    commits.innerHTML = `Commits: <span>${repo.commits.total_commits}</span>`;
+                    repoBlock.appendChild(commits);
+                }
 
                 const repoLinkMore = document.createElement('a');
-                repoLinkMore.href = `/${repo.data.name}`;
+                repoLinkMore.href = `/${!isLocal? repo.data.name : repo.name + "_local" }`;
                 repoLinkMore.className = 'glb-btn-main';
                 repoLinkMore.textContent = 'Ver más';
                 repoBlock.appendChild(repoLinkMore);

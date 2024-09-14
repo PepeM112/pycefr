@@ -16,11 +16,6 @@ app.use(express.json());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routing
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'html', 'home.html'));
-});
-
 // Serve results
 app.get('/results', (req, res) => {
   const resultsDir = path.join(__dirname, '..', 'results');
@@ -43,24 +38,18 @@ app.get('/results', (req, res) => {
       // Get repoInfo
       if (jsonData.repoInfo) {
         repoInfoArray.push({ ...jsonData.repoInfo })
-      } 
+      } else if (jsonData.dirInfo) {
+        repoInfoArray.push({ ...jsonData.dirInfo })
+      }
     })
 
     res.json(repoInfoArray);
   })
 })
 
-app.get('/results/:repoName', (req, res) => {
-  const { repoName } = req.params;
-  const filePath = path.join(__dirname, '..', 'results', `${repoName}.json`);
-
-  fs.access(filePath, fs.constants.F_OK, (err) => {
-    if (!err) {
-      res.sendFile(filePath);
-    } else {
-      res.status(404).send('File not found');
-    }
-  });
+// Routing
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'html', 'home.html'));
 });
 
 app.get('/:filename', (req, res, next) => {
@@ -89,21 +78,40 @@ app.get('/:filename', (req, res, next) => {
           if (err) {
             return res.status(500).send('Error reading JSON results')
           }
+          
+          const parsedData = JSON.parse(jsonData)
 
-          const repoInfo = JSON.parse(jsonData).repoInfo;
+          const isLocal = !!parsedData.dirInfo;
+
+          const repoInfo = parsedData.repoInfo || parsedData.dirInfo;
           const replacedHTML = htmlContent
-            .replace(/PH_REPO_NAME/g, repoInfo.data.name || 'N/A')
-            .replace(/PH_REPO_DATE/g, formatDate(repoInfo.data.createdDate) || 'N/A')
-            .replace(/PH_TOTAL_FILES/g, repoInfo.data.totalFiles || 'N/A')
-            .replace(/PH_TOTAL_COMMITS/g, repoInfo.commits.total_commits || 'N/A')
-            .replace(/PH_TOTAL_CHANGES/g, repoInfo.commits.total_files_modified || 'N/A')
-            .replace(/PH_TOTAL_HOURS/g, repoInfo.commits.total_hours || 'N/A')
-            .replace(/PH_TOTAL_LINES/g, repoInfo.commits.total_loc || 'N/A');
+            .replace(/PH_IS_LOCAL/g, isLocal ? 'true' : 'false')
+            .replace(/PH_REPO_NAME/g, repoInfo.data?.name || 'N/A')
+            .replace(/PH_REPO_DATE/g, formatDate(repoInfo.data?.createdDate) || 'N/A')
+            .replace(/PH_TOTAL_FILES/g, repoInfo.data?.totalFiles || 'N/A')
+            .replace(/PH_TOTAL_COMMITS/g, repoInfo.commits?.total_commits || 'N/A')
+            .replace(/PH_TOTAL_CHANGES/g, repoInfo.commits?.total_files_modified || 'N/A')
+            .replace(/PH_TOTAL_HOURS/g, repoInfo.commits?.total_hours || 'N/A')
+            .replace(/PH_TOTAL_LINES/g, repoInfo.commits?.total_loc || 'N/A');
 
           res.send(replacedHTML);
         })
       })
     })
+  });
+});
+
+
+app.get('/results/:repoName', (req, res) => {
+  const { repoName } = req.params;
+  const filePath = path.join(__dirname, '..', 'results', `${repoName}.json`);
+
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (!err) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('File not found');
+    }
   });
 });
 
