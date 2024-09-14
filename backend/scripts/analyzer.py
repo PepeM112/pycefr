@@ -1,6 +1,7 @@
 import configparser
 from curses.ascii import isdigit
 from genericpath import isdir
+from collections import defaultdict
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -635,10 +636,14 @@ def get_repo_commits():
         
         page_counter += 1
 
-    total_commits = len(all_commits)
-    total_loc = 0
-    files_set = set()
-    commit_dates = []
+    user_data = defaultdict(lambda: {
+        'name': '',
+        'github_user': '',
+        'loc': 0,
+        'commits': 0,
+        'total_hours': 0,
+        'commit_dates': []
+    })
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(fetch_commit_details, commit['url'], headers) for commit in all_commits]
@@ -646,30 +651,30 @@ def get_repo_commits():
         for future in as_completed(futures):
             commit_response = future.result()
 
-            # Number of files modified
-            files = commit_response.get('files', [])
-            for file in files:
-                files_set.add(file['filename'])
-
-            # LOC
-            stats = commit_response.get('stats', {})
-            total_loc += stats.get('additions', 0) + stats.get('deletions', 0)
-
-            # Commit dates
+            # Extraer información del autor
+            author = commit_response['commit']['committer']['name']
+            github_user = commit_response.get('author', {}).get('login', 'Unknown')  # Nombre de usuario GitHub
             commit_date = commit_response['commit']['committer']['date']
             commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
-            commit_dates.append(commit_timestamp)
 
-    total_files_modified = len(files_set)
-    total_hours = calculate_hours_spent(commit_dates)
+            # Actualizar el diccionario por usuario
+            user_data[author]['name'] = author
+            user_data[author]['github_user'] = github_user
+            user_data[author]['commits'] += 1
+            user_data[author]['commit_dates'].append(commit_timestamp)
+
+            # Sumar las LOC (adiciones + eliminaciones) por usuario
+            stats = commit_response.get('stats', {})
+            loc = stats.get('additions', 0) + stats.get('deletions', 0)
+            user_data[author]['loc'] += loc
+
+    for author, data in user_data.items():
+        data['total_hours'] = calculate_hours_spent(data['commit_dates'])
+        del data['commit_dates']    # No longer needed
+
     print("\r[✓] Fetching commits", flush=True)
 
-    return {
-        'total_commits': total_commits,
-        'total_loc': total_loc,
-        'total_files_modified': total_files_modified,
-        'total_hours': total_hours
-    }
+    return list(user_data.values())
 
 
 
