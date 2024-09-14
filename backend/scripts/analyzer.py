@@ -735,7 +735,7 @@ def save_data(data):
     else:
         suffix = "_local" if SETTINGS.get("addLocalSuffix", True) else ""
         REPO_NAME = data + suffix
-        file_data.update({"dirInfo": {'name': data}})
+        file_data.update({"repoInfo": {'data': { 'name' : data}}})  # Just to be aligned with Git analysis
 
     os.makedirs("results", exist_ok=True)
 
