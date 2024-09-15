@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchData() {
         const repoName = window.location.pathname.split('/').pop();
-        const response = await fetch(`/results/${repoName}`);
+        const response = await fetch(`/api/results/${repoName}`);
         const data = await response.json();
         elements = data.elements;
         originalData = [...elements]; // Still pointing to original data

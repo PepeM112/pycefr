@@ -642,7 +642,8 @@ def get_repo_commits():
         'loc': 0,
         'commits': 0,
         'total_hours': 0,
-        'commit_dates': []
+        'commit_dates': [],
+        'files_set': set()
     })
 
     with ThreadPoolExecutor(max_workers=10) as executor:
@@ -651,30 +652,37 @@ def get_repo_commits():
         for future in as_completed(futures):
             commit_response = future.result()
 
-            # Extraer información del autor
             author = commit_response['commit']['committer']['name']
-            github_user = commit_response.get('author', {}).get('login', 'Unknown')  # Nombre de usuario GitHub
+            github_user = commit_response.get('author', {}).get('login', 'Unknown')  # GitHub username
             commit_date = commit_response['commit']['committer']['date']
             commit_timestamp = datetime.fromisoformat(commit_date.replace('Z', '+00:00')).timestamp()
 
-            # Actualizar el diccionario por usuario
             user_data[author]['name'] = author
             user_data[author]['github_user'] = github_user
             user_data[author]['commits'] += 1
             user_data[author]['commit_dates'].append(commit_timestamp)
 
-            # Sumar las LOC (adiciones + eliminaciones) por usuario
+            # LOC
             stats = commit_response.get('stats', {})
             loc = stats.get('additions', 0) + stats.get('deletions', 0)
             user_data[author]['loc'] += loc
 
+            # Files modified
+            files = commit_response.get('files', [])
+            for file in files:
+                user_data[author]['files_set'].add(file['filename'])
+
     for author, data in user_data.items():
         data['total_hours'] = calculate_hours_spent(data['commit_dates'])
-        del data['commit_dates']    # No longer needed
+        data['total_files_modified'] = len(data['files_set'])
+        # No longer needed
+        del data['commit_dates']
+        del data['files_set']    
 
     print("\r[✓] Fetching commits", flush=True)
 
     return list(user_data.values())
+
 
 
 

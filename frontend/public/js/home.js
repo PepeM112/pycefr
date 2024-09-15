@@ -4,9 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const repoList = document.getElementById('repo-list');
     const reposSummaryList = document.getElementById('repos-summary-list');
 
-    fetch('/results')
+    fetch('/api/results')
         .then(response => response.json())
         .then(data => {
+            console.log("data received: ", data)
             data.forEach(repo => {
                 // Crear enlaces de la sidebar
                 /* const repoLink = document.createElement('a');
@@ -14,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 repoLink.textContent = repo.data.name;
                 repoList.appendChild(repoLink); */
 
-                const isLocal = !repo.data;
+                const isLocal = !repo.commits;
 
                 const repoBlock = document.createElement('div');
                 repoBlock.className = 'container repos-summary-list-block';
@@ -60,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const repoLinkMore = document.createElement('a');
-                repoLinkMore.href = `/${!isLocal? repo.data.name : repo.name + "_local" }`;
+                repoLinkMore.href = `/${repo.data.name + (isLocal ? "_local" : "") }`;
                 repoLinkMore.className = 'glb-btn-main';
                 repoLinkMore.textContent = 'Ver más';
                 repoBlock.appendChild(repoLinkMore);
