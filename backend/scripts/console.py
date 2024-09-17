@@ -152,7 +152,8 @@ def main(file_path):
     data = read_data(file_path)
     display_analysis(data['elements'])
     print()
-    display_author_info(data['repoInfo'])
+    if not file_path.endswith("_local.json"):
+        display_author_info(data['repoInfo'])
 
 if __name__ == "__main__":
     filePath = os.path.abspath('results/pycefr.json')

@@ -91,6 +91,7 @@ def request_url(url):
     print("\nDone.")
 
     console.main(output_file)
+    print(f"\nResults file can be found in {os.path.abspath(output_file)}\n")
 
 
 
@@ -547,6 +548,7 @@ def run_directory(dir):
     analyse_project(dir)
     output_file = save_data(os.path.basename(os.path.abspath(dir)))
     console.main(output_file)
+    print(f"\nResults file can be found in {os.path.abspath(output_file)}\n")
 
 
 def get_git_repo_url(dir):
