@@ -268,7 +268,7 @@ def level_files(self, value):
     """
     if value == "open":
         self.level = DICT_LEVEL["File"]["open"]
-        self.clase = "Files --> 'open' call function"
+        self.clase = "Files → 'open' call function"
     elif value in list_file_attr:
         level = DICT_LEVEL["File"]
         for i in range(1, len(level)):
@@ -276,7 +276,7 @@ def level_files(self, value):
             for k in keys:
                 if k == value:
                     self.level = DICT_LEVEL["File"][k]
-                    self.clase = f"Files --> '{value}' call function"
+                    self.clase = f"Files → '{value}' call function"
 
 
 def level_Print(self, value):
@@ -358,7 +358,7 @@ def level_if(self):
         self.clase = "Simple If statements"
         if level_name_main(self):
             self.level = DICT_LEVEL["If-Statements"]["__name__"]
-            self.clase = "If statements using → __name__ == ‘__main__’"
+            self.clase = "If statements using → __name__ == '__main__'"
     elif self.attrib == "ast.if_exp":
         self.level = DICT_LEVEL["If-Statements"]["expression"]
         self.clase = "If statements expression (else)"
@@ -689,7 +689,7 @@ def level_constructor(self):
     for node in self.node.body:
         if node.name == "__init__":
             self.level = DICT_LEVEL["Class"]["__init__"]
-            self.clase += " Using the constructor method --> " + str(node.name)
+            self.clase += " Using the constructor method → " + str(node.name)
 
 
 def level_descriptors(self):
@@ -850,18 +850,18 @@ def level_metaclass(self, pos):
                 for arg in node.args.args:
                     if arg.arg == "meta":
                         self.level = DICT_LEVEL["Metaclass"]["__new__"]
-                        self.clase += " Metaclass (3.X) created with --> __new__"
+                        self.clase += " Metaclass (3.X) created with → __new__"
     elif pos == "header":
         for keyword in self.node.keywords:
             if keyword.arg == "metaclass":
                 self.level = DICT_LEVEL["Metaclass"]["metaclass"]
                 self.clase += (
-                    " Metaclass created in the class header --> 'metaclass = '"
+                    " Metaclass created in the class header → 'metaclass = '"
                     + keyword.value.id
                 )
     elif pos == "attrib":
         self.level = DICT_LEVEL["Metaclass"]["__metaclass__"]
-        self.clase = "Metaclass (2.X) created as attribute with --> __metaclass__"
+        self.clase = "Metaclass (2.X) created as attribute with → __metaclass__"
 
 
 def level_slots(self):
@@ -893,7 +893,7 @@ def level_try(self):
     Args:
         self: Object containing the AST node and its attributes.
     """
-    self.clase = "Exception --> try"
+    self.clase = "Exception → try"
     if any(isinstance(node, ast.Try) for node in self.node.body):
         self.level = DICT_LEVEL["Exception"]["try/try"]
         self.clase += "/try"

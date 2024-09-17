@@ -5,6 +5,8 @@ from collections import defaultdict
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from backend.scripts import console
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -84,9 +86,12 @@ def request_url(url):
     remove_dir(cloned_repo)
 
     repo_info = get_repo_data()
-    save_data(repo_info)
+    output_file = save_data(repo_info)
 
     print("\nDone.")
+
+    console.main(output_file)
+
 
 
 def remove_dir(path):
@@ -540,7 +545,8 @@ def run_directory(dir):
     
     # Proceed with analyzing the project and saving data
     analyse_project(dir)
-    save_data(os.path.basename(os.path.abspath(dir)))
+    output_file = save_data(os.path.basename(os.path.abspath(dir)))
+    console.main(output_file)
 
 
 def get_git_repo_url(dir):
@@ -754,6 +760,8 @@ def save_data(data):
         json.dump(file_data, file, indent=4)
     
     print("\r[✓] Saving data")
+
+    return output_file
 
 
 def get_api_token():
