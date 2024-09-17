@@ -45,7 +45,7 @@ router.get('/:filename', (req, res, next) => {
           const repoInfo = parsedData.repoInfo;
           const isLocal = !repoInfo.commits;
 
-          const total_values = {};
+          let total_values = {};
 
           if (!isLocal) {
             total_values = repoInfo.commits.reduce((acc, commit) => {
