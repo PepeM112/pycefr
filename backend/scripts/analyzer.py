@@ -90,7 +90,6 @@ def request_url(url):
 
     print("\nDone.")
 
-    console.main(output_file)
     print(f"\nResults file can be found in {os.path.abspath(output_file)}\n")
 
 
