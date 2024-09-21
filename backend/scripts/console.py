@@ -155,6 +155,7 @@ def main(file_path):
     if not file_path.endswith("_local.json"):
         display_author_info(data['repoInfo'])
 
+
 if __name__ == "__main__":
     filePath = os.path.abspath('results/pycefr.json')
     main(filePath)

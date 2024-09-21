@@ -531,7 +531,6 @@ def run_directory(dir):
     If the user chooses 'n' or provides invalid input, proceed with analyzing the project.
     """
     git_url = get_git_repo_url(dir)
-    print("Found git: ", git_url)
     if git_url != "":
         while True:
             repo_input = input('A valid Git configuration has been detected. Would you like to analyse the origin repository? (Y/n) ').strip().lower()
