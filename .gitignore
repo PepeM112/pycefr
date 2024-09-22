@@ -1,13 +1,10 @@
 __pycache__/
-backend/config/personal.json
 backend/data/
 backend/tmp/
 results/
-WEB/
 myenv/
+settings.json
 
 # Node generated files
 frontend/node_modules
 frontend/package-lock.json
-
-ast_modules.txt

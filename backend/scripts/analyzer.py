@@ -838,10 +838,10 @@ def get_api_token():
         SystemExit: If the `personal.json` file cannot be found.
     """
     try:
-        with open("backend/config/personal.json", "r") as file:
+        with open("settings.json", "r") as file:
             data = json.load(file)
     except FileNotFoundError:
-        sys.exit("ERROR: Couldn't find personal.json")
+        sys.exit("ERROR: Couldn't find settings.json")
 
     return data.get("API-KEY", "")
 
