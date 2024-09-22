@@ -88,7 +88,8 @@ def request_url(url):
     repo_info = get_repo_data()
     output_file = save_data(repo_info)
 
-    console.main(output_file)
+    if SETTINGS.get("autoDisplayConsole", False):
+        console.main(output_file)
     print(f"\nResults file can be found in file:/{os.path.abspath(output_file)}\n")
 
 
@@ -464,7 +465,8 @@ def load_settings():
     default_settings = {
         "ignoreFolders": [],
         "API-KEY": "",
-        "addLocalSuffix": True
+        "addLocalSuffix": True,
+        "autoDisplayConsole" : True
     }
     
     if not os.path.isfile('settings.json'):
@@ -569,7 +571,8 @@ def run_directory(dir):
     # Proceed with analyzing the project and saving data
     analyse_project(dir)
     output_file = save_data(os.path.basename(os.path.abspath(dir)))
-    console.main(output_file)
+    if SETTINGS.get("autoDisplayConsole", False):
+        console.main(output_file)
     print(f"\nResults file can be found in {os.path.abspath(output_file)}\n")
 
 

@@ -12,7 +12,13 @@ def read_data(file_path):
 
     Returns:
         dict: The parsed JSON data.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
     """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Couldn't find file '{file_path.replace('results/', '')}'.")
+
     with open(file_path, "r") as file:
         return json.load(file)
 
@@ -149,11 +155,14 @@ def main(file_path):
     Args:
         file_path (str): The path to the JSON file.
     """
-    data = read_data(file_path)
-    display_analysis(data['elements'])
-    print()
-    if not file_path.endswith("_local.json"):
-        display_author_info(data['repoInfo'])
+    try:
+        data = read_data(file_path)
+        display_analysis(data['elements'])
+        print()
+        if not file_path.endswith("_local.json"):
+            display_author_info(data['repoInfo'])
+    except FileNotFoundError as e:
+        print(e)
 
 
 if __name__ == "__main__":

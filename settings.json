@@ -6,5 +6,6 @@
         "__pycache__/"
     ],
     "API-KEY": "",
-    "addLocalSuffix": true
+    "addLocalSuffix": true,
+    "autoDisplayConsole": true
 }
