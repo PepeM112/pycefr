@@ -272,13 +272,11 @@ def fetch_user(user):
     
     response = requests.get(user_url, headers=headers)
 
-    if response.status_code == 403:
+    if response.status_code == 403 or response.status_code == 401:
         print()
         display_api_token_error()
     elif response.status_code == 404:
         sys.exit(f"\nERROR: { user } is not a GitHub user")
-    elif response.status_code == 401:
-        sys.exit(f"\nERROR: Forbidden")
     elif response.status_code != 200:
         sys.exit(f"\nERROR: Couldn't fetch user data")
 
@@ -308,7 +306,7 @@ def fetch_user_repos(user):
     }
     response = requests.get(repos_url, headers=headers)
 
-    if response.status_code == 403:
+    if response.status_code == 403 or response.status_code == 401:
         print()
         display_api_token_error()
     elif response.status_code == 404:
@@ -331,9 +329,10 @@ def choose_repo(repos):
         str: The URL of the selected repository.
     """
     while True:
-        repo_input = input("\nSelect which one you want to analyze: ")
-
-        if repo_input.isdigit():
+        repo_input = input("\nSelect which one you want to analyze (Enter [0] to exit): ")
+        if repo_input == '0':
+            sys.exit()
+        elif repo_input.isdigit():
             repo_pos = int(repo_input) - 1
             if 0 <= repo_pos < len(repos):
                 selected_repo = repos[repo_pos]
@@ -343,10 +342,11 @@ def choose_repo(repos):
         else:
             selected_repo = next((repo for repo in repos if repo.get('name') == repo_input), None)
             if selected_repo is None:
-                print("Repository name not found. Please try again.")
+                print("Repository name not found. Please try again (Enter [0] to exit).")
                 continue
         
         # Confirmar la selección
+        
         confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (Y/n) ")
         if confirm_input.lower() == 'y':
             return selected_repo.get('html_url')
@@ -630,7 +630,7 @@ def get_repo():
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}"
     response = requests.get(url, headers=headers)
 
-    if response.status_code == 403:
+    if response.status_code == 403 or response.status_code == 401:
         display_api_token_error()
     elif response.status_code != 200:
         print(f"Warning: Couldn't retrieve repository information [{response.status_code}]")
@@ -673,7 +673,7 @@ def get_repo_commits():
     while True:
         response = requests.get(url, params={'per_page': 100, 'page': page_counter}, headers=headers)
 
-        if response.status_code == 403:
+        if response.status_code == 403 or response.status_code == 401:
             print()
             display_api_token_error()
         elif response.status_code != 200:
@@ -737,7 +737,7 @@ def get_repo_commits():
 
 def fetch_commit_details(commit_url, headers):
     response = requests.get(commit_url, headers=headers)
-    if response.status_code == 403:
+    if response.status_code == 403 or response.status_code == 401:
         display_api_token_error()
     elif response.status_code != 200:
         print("ERROR: Couldn't fetch commit details")
@@ -763,7 +763,7 @@ def get_repo_contributors():
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/contributors"
     response = requests.get(url, headers=headers)
 
-    if response.status_code == 403:
+    if response.status_code == 403 or response.status_code == 401:
         display_api_token_error()
     elif response.status_code != 200:
         print(f"Warning: there was an error retrieving contributors information [{response.status_code}]")
@@ -852,6 +852,6 @@ def display_api_token_error():
     Handle GitHub API token error by displaying a message and exiting the program.
     """
     print("ERROR: Looks like you've reached the limit of API requests.")
-    print("To continue, you will need an API key. You can generate one at:\nhttps://github.com/settings/tokens\n and add it to your settings.json file.")
+    print("To continue, you will need an API key. You can generate one at:\n\thttps://github.com/settings/tokens\nand add it to your settings.json file.")
     print("Also see: https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting")
     sys.exit(1)
