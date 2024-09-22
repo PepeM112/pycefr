@@ -88,9 +88,8 @@ def request_url(url):
     repo_info = get_repo_data()
     output_file = save_data(repo_info)
 
-    print("\nDone.")
-
-    print(f"\nResults file can be found in {os.path.abspath(output_file)}\n")
+    console.main(output_file)
+    print(f"\nResults file can be found in file:/{os.path.abspath(output_file)}\n")
 
 
 
