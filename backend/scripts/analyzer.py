@@ -158,7 +158,7 @@ def is_python_language(protocol, type_git):
     response = requests.get(repo_url, headers=headers)
 
     if response.status_code == 403:
-        print("You've reached the limit of API calls. You can further continue by adding a personal access token or by loging in GitHub")
+        display_api_token_error()
     elif response.status_code == 404:
         sys.exit(f"ERROR: Repository doesn't exist [{response.status_code}]")
     elif response.status_code != 200:
@@ -253,12 +253,15 @@ def fetch_user(user):
     
     response = requests.get(user_url, headers=headers)
 
-    if response.status_code == 404:
-        sys.exit(f"ERROR: { user } is not a GitHub user")
+    if response.status_code == 403:
+        print()
+        display_api_token_error()
+    elif response.status_code == 404:
+        sys.exit(f"\nERROR: { user } is not a GitHub user")
     elif response.status_code == 401:
-        sys.exit(f"ERROR: Forbidden")
+        sys.exit(f"\nERROR: Forbidden")
     elif response.status_code != 200:
-        sys.exit(f"ERROR: Couldn't fetch user data")
+        sys.exit(f"\nERROR: Couldn't fetch user data")
 
     print("\r[✓] Fetching user")
     return response.json()
@@ -286,10 +289,13 @@ def fetch_user_repos(user):
     }
     response = requests.get(repos_url, headers=headers)
 
-    if response.status_code == 404:
-        sys.exit(f"ERROR: Couldn't find repository")
+    if response.status_code == 403:
+        print()
+        display_api_token_error()
+    elif response.status_code == 404:
+        sys.exit(f"\nERROR: Couldn't find repository")
     elif response.status_code != 200:
-        sys.exit(f"ERROR: Couldn't fetch repository data")
+        sys.exit(f"\nERROR: Couldn't fetch repository data")
 
     print("\r[✓] Fetching repositories")
     return response.json()
@@ -597,8 +603,10 @@ def get_repo():
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}"
     response = requests.get(url, headers=headers)
 
-    if response.status_code != 200:
-        print(f"Warning: there was an error retrieving repository information [{response.status_code}]")
+    if response.status_code == 403:
+        display_api_token_error()
+    elif response.status_code != 200:
+        print(f"Warning: Couldn't retrieve repository information [{response.status_code}]")
         return
     
     response_json = response.json()
@@ -630,9 +638,11 @@ def get_repo_commits():
     while True:
         response = requests.get(url, params={'per_page': 100, 'page': page_counter}, headers=headers)
 
-        if response.status_code != 200:
-            print(f"\nWarning: there was an error retrieving commits information [{response.status_code}]")
-            return
+        if response.status_code == 403:
+            print()
+            display_api_token_error()
+        elif response.status_code != 200:
+            sys.exit(f"\nERROR: there was an error retrieving commits information.")
         
         page_commits = response.json()
         all_commits.extend(page_commits)
@@ -690,12 +700,14 @@ def get_repo_commits():
     return list(user_data.values())
 
 
-
-
 def fetch_commit_details(commit_url, headers):
     response = requests.get(commit_url, headers=headers)
-    response.raise_for_status()
+    if response.status_code == 403:
+        display_api_token_error()
+    elif response.status_code != 200:
+        print("ERROR: Couldn't fetch commit details")
     return response.json()
+
 
 def get_repo_contributors():
     headers = {
@@ -704,7 +716,9 @@ def get_repo_contributors():
     url = f"https://api.github.com/repos/{USER_NAME}/{REPO_NAME}/contributors"
     response = requests.get(url, headers=headers)
 
-    if response.status_code != 200:
+    if response.status_code == 403:
+        display_api_token_error()
+    elif response.status_code != 200:
         print(f"Warning: there was an error retrieving contributors information [{response.status_code}]")
         return
 
@@ -723,6 +737,7 @@ def get_repo_contributors():
     print("\r[✓] Fetching contributors")
 
     return contributors
+
 
 def save_data(data):
     """
@@ -783,3 +798,13 @@ def get_api_token():
         sys.exit("ERROR: Couldn't find personal.json")
 
     return data.get("API-KEY", "")
+
+
+def display_api_token_error():
+    """
+    Handle GitHub API token error by displaying a message and exiting the program.
+    """
+    print("ERROR: Looks like you've reached the limit of API requests.")
+    print("To continue, you will need an API key. You can generate one at:\nhttps://github.com/settings/tokens\n and add it to your settings.json file.")
+    print("Also see: https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting")
+    sys.exit(1)  # Termina la ejecución del programa
