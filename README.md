@@ -33,6 +33,16 @@ Retrieves information about a valid GitHub user, asking which of the public proj
 
 Performs full analysis on a directory. If it is detected that the directory is a GitHub project the user is asked if he would like to analyse the origin repository instead of the local files. If yes it analyses the repository as in (1), else it perform analysis on the local files. 
 
+#### 4. List all result files
+```bash
+python3 pycefrl.py [-l | --list]
+```
+
+#### 5. Visualiza results in console
+```bash
+python3 pycefrl.py [-c | --console] <results_file>
+```
+
 ### After analysis
 
 Once the analysis is done, a json file will be generated in a folder named results/. You can visualize here the results.
@@ -60,6 +70,7 @@ There is a settings.json in place in order to setup some configurations:
 |**ignoreFolders**| Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name |
 |**API-KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api. You can generate one at https://github.com/settings/tokens|
 |**addLocalSuffix**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) the suffix "_local" to the results file|
+|**autoDisplayConsole**| Allows to activate or deactive the automatic display of the results in the console after finishing an analysis|
 
 An example of a settings.json could be:
 ```json
