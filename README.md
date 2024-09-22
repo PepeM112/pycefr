@@ -1,7 +1,5 @@
 # **pycefr**
 
-## [OUTDATED]
-
 ## *Identifying Python3 Code Level Using the CERFL Framework as Inspiration*
 
 ### What is this project about?
@@ -60,8 +58,8 @@ There is a settings.json in place in order to setup some configurations:
 |Settings | Description |
 |:--------|:-------------:|
 |**ignoreFolders**| Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name |
-|**API-KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api.|
-|**addLocalSuffix**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) a suffix to the results file|
+|**API-KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api. You can generate one at https://github.com/settings/tokens|
+|**addLocalSuffix**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) the suffix "_local" to the results file|
 
 An example of a settings.json could be:
 ```json
@@ -72,7 +70,7 @@ An example of a settings.json could be:
         ".git/",
         "__pycache__/"
     ],
-    "API-KEY": "",
+    "API-KEY": "customapikey1234",
     "addLocalSuffix": true
 }
 ```
