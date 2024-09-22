@@ -16,7 +16,7 @@ import shlex
 import shutil
 import subprocess
 import requests
-from backend.scripts.ClassIterTree import IterTree
+from backend.scripts.iter_tree import IterTree
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -95,6 +95,15 @@ def request_url(url):
 
 
 def remove_dir(path):
+    """
+    Removes a directory at the specified path and all its contents.
+
+    Args:
+        path (str): The path to the directory to be removed.
+
+    Returns:
+        None: Prints error messages if the directory does not exist or cannot be removed.
+    """
     if not os.path.isdir(path):
         print(f"ERROR: Not a directory")
         return
@@ -110,6 +119,16 @@ def remove_dir(path):
 
 
 def validate_repo_url(url):
+    """
+    Validates the GitHub repository URL and extracts the user name and repository name.
+
+    Args:
+        url (str): The GitHub repository URL to validate.
+
+    Returns:
+        None: Sets global variables for repository URL, user name, repository name, and API key.
+              Exits the program if the URL is invalid or not from GitHub.
+    """
     global REPO_URL, REPO_NAME, USER_NAME, API_KEY
     API_KEY = get_api_token()
     
@@ -595,6 +614,14 @@ def get_git_repo_url(dir):
             
 
 def get_repo():
+    """
+    Fetches the GitHub repository information for the specified user and repository.
+
+    Returns:
+        dict: A dictionary containing repository details such as name, URL, description,
+              creation date, last update date, and owner information, or None if the
+              repository cannot be retrieved due to an error.
+    """
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -626,6 +653,14 @@ def get_repo():
 
 
 def get_repo_commits():
+    """
+    Retrieves the commits from the specified GitHub repository.
+
+    Returns:
+        list: A list of dictionaries containing information about each author, their
+              number of commits, lines of code (LOC) added or removed, total hours spent,
+              and the total number of files modified.
+    """
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -710,6 +745,18 @@ def fetch_commit_details(commit_url, headers):
 
 
 def get_repo_contributors():
+    """
+    Fetches detailed information about a specific commit using its URL.
+
+    Args:
+        commit_url (str): The URL of the commit to fetch details for.
+        headers (dict): The headers to be included in the API request, typically
+                        containing the authorization token.
+
+    Returns:
+        dict: A dictionary containing detailed information about the commit,
+              or an empty dictionary if the commit details cannot be fetched.
+    """
     headers = {
         'Authorization': f'Bearer {API_KEY}'
     }
@@ -807,4 +854,4 @@ def display_api_token_error():
     print("ERROR: Looks like you've reached the limit of API requests.")
     print("To continue, you will need an API key. You can generate one at:\nhttps://github.com/settings/tokens\n and add it to your settings.json file.")
     print("Also see: https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting")
-    sys.exit(1)  # Termina la ejecución del programa
+    sys.exit(1)
