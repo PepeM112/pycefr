@@ -667,16 +667,25 @@ def level_private_class(self):
     Args:
         self: Object containing the AST node and its attributes.
     """
+    private_methods = []
+    private_attributes = []
+
     for funct in self.node.body:
         if funct.name.startswith("__") and not funct.name.endswith("__"):
+            private_methods.append(funct.name)
             self.level = DICT_LEVEL["Class"]["private"]
-            self.clase += f" Private Methods {funct.name} of the class"
 
         for node in ast.walk(funct):
             if isinstance(node, ast.Attribute):
                 if node.attr.startswith("__") and not node.attr.endswith("__"):
+                    private_attributes.append(node.attr)
                     self.level = DICT_LEVEL["Class"]["private"]
-                    self.clase += f" Private Attributes {node.attr} of the class"
+
+    # Build message just once
+    if private_methods:
+        self.clase += f" Private Methods ({', '.join(private_methods)})"
+    if private_attributes:
+        self.clase += f" Private Attributes ({', '.join(private_attributes)})"
 
 
 def level_constructor(self):
@@ -686,10 +695,17 @@ def level_constructor(self):
     Args:
         self: Object containing the AST node and its attributes.
     """
+    init_count = 0
+    
     for node in self.node.body:
-        if node.name == "__init__":
+        if isinstance(node, ast.FunctionDef) and node.name == "__init__":
+            init_count += 1
             self.level = DICT_LEVEL["Class"]["__init__"]
-            self.clase += " Using the constructor method → " + str(node.name)
+    
+    # Group __init__ instances
+    if init_count > 0:
+        self.clase += f" using the constructor method → __init__ (x{init_count})" if init_count > 1 else " using the constructor method → __init__"
+
 
 
 def level_descriptors(self):
@@ -699,13 +715,16 @@ def level_descriptors(self):
     Args:
         self: Object containing the AST node and its attributes.
     """
-    # List of descriptors
     LIST_DESCRIPTORS = ["__get__", "__set__", "__delete__"]
+    descriptors_found = []
 
     for elem in self.node.body:
         if elem.name in LIST_DESCRIPTORS:
             self.level = DICT_LEVEL["Class"]["descriptors"]
-            self.clase += " with Descriptors " + str(elem.name)
+            descriptors_found.append(elem.name)
+
+    if descriptors_found:
+        self.clase += f" with Descriptors ({', '.join(descriptors_found)})"
 
 
 def level_properties(self):
@@ -734,29 +753,36 @@ def level_class(self):
         self: Object containing the AST node and its attributes.
     """
     self.level = DICT_LEVEL["Class"]["simple"]
-    self.clase = "Simple Class "
+    self.clase = "Simple Class"
 
     # Check for inherited class
     for base in self.node.bases:
         try:
             self.level = DICT_LEVEL["Class"]["inherited"]
-            self.clase = "Inherited Class from " + str(base.id)
+            self.clase = f"Inherited Class from {base.id}"
         except AttributeError:
             pass
 
     # Check for properties
     level_properties(self)
 
+    # __init__ counter
+    init_count = 0
+
     # Check for special methods and attributes in the class body
     for node in self.node.body:
         if isinstance(node, ast.FunctionDef):
             try:
-                level_constructor(self)
+                if node.name == "__init__":
+                    init_count += 1
                 level_descriptors(self)
                 level_private_class(self)
                 level_metaclass(self, "function")
             except AttributeError:
                 pass
+
+    if init_count > 0:
+        self.clase += f" using the constructor method → __init__ (x{init_count})" if init_count > 1 else " using the constructor method → __init__"
 
     # Check for class decorators
     level_decorators(self, "Class")
@@ -856,12 +882,11 @@ def level_metaclass(self, pos):
             if keyword.arg == "metaclass":
                 self.level = DICT_LEVEL["Metaclass"]["metaclass"]
                 self.clase += (
-                    " Metaclass created in the class header → 'metaclass = '"
-                    + keyword.value.id
+                    f" Metaclass created in the class header → 'metaclass = {keyword.value.id}'"
                 )
     elif pos == "attrib":
         self.level = DICT_LEVEL["Metaclass"]["__metaclass__"]
-        self.clase = "Metaclass (2.X) created as attribute with → __metaclass__"
+        self.clase += " Metaclass (2.X) created as attribute with → __metaclass__"
 
 
 def level_slots(self):
