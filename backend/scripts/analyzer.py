@@ -176,12 +176,13 @@ def is_python_language(protocol, type_git):
     # Decode JSON response into a Python dict:
     response = requests.get(repo_url, headers=headers)
 
-    if response.status_code == 403:
+    if response.status_code == 403 or response.status_code == 401:
+        print()
         display_api_token_error()
     elif response.status_code == 404:
-        sys.exit(f"ERROR: Repository doesn't exist [{response.status_code}]")
+        sys.exit(f"\nERROR: Repository doesn't exist [{response.status_code}]")
     elif response.status_code != 200:
-        sys.exit(f"ERROR: Couldn't validate Python language [{response.status_code}]")
+        sys.exit(f"\nERROR: Couldn't validate Python language [{response.status_code}]")
     # Calculate total elements and check Python presence
     total_elem = sum(response.json().values())
     python_quantity = response.json().get("Python", 0)
@@ -426,11 +427,11 @@ def analyse_directory(path, total_length=None, current_file=None):
                 analyse_directory(item_path, total_length, current_file)
 
     except FileNotFoundError:
-        print(f"ERROR: Directory {path} not found")
+        print(f"\nERROR: Directory {path} not found")
     except PermissionError:
-        print(f"ERROR: Permission denied to access {path}")
+        print(f"\nERROR: Permission denied to access {path}")
     except Exception:
-        print(f"ERROR: Couldn't read {path}")
+        print(f"\nERROR: Couldn't read {path}")
 
 
 
@@ -742,7 +743,7 @@ def fetch_commit_details(commit_url, headers):
     if response.status_code == 403 or response.status_code == 401:
         display_api_token_error()
     elif response.status_code != 200:
-        print("ERROR: Couldn't fetch commit details")
+        print("\nERROR: Couldn't fetch commit details")
     return response.json()
 
 
@@ -766,6 +767,7 @@ def get_repo_contributors():
     response = requests.get(url, headers=headers)
 
     if response.status_code == 403 or response.status_code == 401:
+        print()
         display_api_token_error()
     elif response.status_code != 200:
         print(f"Warning: there was an error retrieving contributors information [{response.status_code}]")
