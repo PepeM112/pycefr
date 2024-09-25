@@ -25,7 +25,7 @@ def main():
     """
     Main function to handle command-line arguments and invoke appropriate actions.
     """
-    parser = argparse.ArgumentParser(description="A utility for analyzing Python level in local and Github repositories.")
+    parser = argparse.ArgumentParser(description="An utility for analyzing Python level in local and Github repositories.")
     parser.add_argument("-d", "--directory", type=str, help="Run in directory mode")
     parser.add_argument("-r", "--repo", type=str, help="Run with the specified repository URL")
     parser.add_argument("-u", "--user", type=str, help="Run with the specified user identifier")
