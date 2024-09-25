@@ -52,7 +52,7 @@ router.get('/:filename', (req, res, next) => {
               acc.total_commits += commit.commits;
               acc.total_hours += commit.total_hours;
               acc.total_files_modified += commit.total_files_modified;
-              acc.total_loc += commit.total_loc;
+              acc.total_loc += commit.loc;
               return acc;
             }, {
               total_commits: 0,
