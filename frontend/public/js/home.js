@@ -24,12 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const headerText = document.createElement('div');
                 const repoName = document.createElement('h3');
-                repoName.textContent = !isLocal ? repo.data.name : repo.name;
-                const ownerName = document.createElement('span');
-                ownerName.textContent = !isLocal ? repo.data.owner.name : 'Local';
+                repoName.textContent = !isLocal ? repo.data.name : repo.data.name + " (local)";
 
                 headerText.appendChild(repoName);
-                headerText.appendChild(ownerName);
                 repoHeader.appendChild(headerText);
 
                 repoBlock.appendChild(repoHeader);

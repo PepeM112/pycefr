@@ -27,8 +27,18 @@ aside.sidebar {
     background-color: var(--primary-color);
     color: snow;
     min-height: 100vh;
-    padding: 1.25rem 0.5rem;
     min-width: 260px;
+    padding: 1.25rem 0.5rem;
+    position: relative;
+}
+
+aside.sidebar.hidden {
+    min-width: 2.75rem;
+    padding: 0;
+}
+
+aside.sidebar.hidden *:not(.sidebar-toggle) {
+    display: none;
 }
 
 aside.sidebar h2 {
@@ -36,6 +46,30 @@ aside.sidebar h2 {
     line-height: 1.75rem;
     margin: 0;
     padding-left: 0.5rem;
+}
+
+aside.sidebar button.sidebar-toggle {
+    font-size: 24px;
+    background-color: transparent;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    color: var(--secondary-color-light);
+    padding: 0.5rem;
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    z-index: 1000;
+}
+
+aside.sidebar button.sidebar-toggle:hover {
+    background-color: var(--primary-color-light);
+}
+
+aside.sidebar.hidden button.sidebar-toggle {
+    padding: 0.5rem;
+    top: 1rem;
+    right: 0.25rem;
 }
 
 aside.sidebar nav {
