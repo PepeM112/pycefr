@@ -7,14 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch('/api/results')
         .then(response => response.json())
         .then(data => {
-            console.log("data received: ", data)
             data.forEach(repo => {
-                // Crear enlaces de la sidebar
-                /* const repoLink = document.createElement('a');
-                repoLink.href = repo.data.owner.profile_url;
-                repoLink.textContent = repo.data.name;
-                repoList.appendChild(repoLink); */
-
                 const isLocal = !repo.commits;
 
                 const repoBlock = document.createElement('div');
@@ -54,9 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lastUpdateDate = document.createElement('p');
                     lastUpdateDate.innerHTML = `Última actualización: <span>${formatDate(repo.data.lastUpdateDate)}</span>`;
                     repoBlock.appendChild(lastUpdateDate);
-    
+                    
+                    let total_commits = repo.commits
+                        .map(commit => commit.commits)
+                        .reduce((acc, curr) => acc + curr, 0);
+
                     const commits = document.createElement('p');
-                    commits.innerHTML = `Commits: <span>${repo.commits.total_commits}</span>`;
+                    commits.innerHTML = `Commits: <span>${total_commits}</span>`;
                     repoBlock.appendChild(commits);
                 }
 

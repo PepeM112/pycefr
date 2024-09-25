@@ -66,7 +66,6 @@ router.get('/:filename', (req, res, next) => {
             .replace(/PH_IS_LOCAL/g, isLocal ? 'true' : 'false')
             .replace(/PH_REPO_NAME/g, repoInfo.data.name || 'N/A')
             .replace(/PH_REPO_DATE/g, formatDate(repoInfo.data.createdDate) || 'N/A')
-            .replace(/PH_TOTAL_FILES/g, total_values.totalFiles || 'N/A')
             .replace(/PH_TOTAL_COMMITS/g, total_values.total_commits || 'N/A')
             .replace(/PH_TOTAL_CHANGES/g, total_values.total_files_modified || 'N/A')
             .replace(/PH_TOTAL_HOURS/g, total_values.total_hours || 'N/A')
