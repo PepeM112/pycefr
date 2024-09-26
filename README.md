@@ -38,7 +38,7 @@ Performs full analysis on a directory. If it is detected that the directory is a
 python3 pycefrl.py [-l | --list]
 ```
 
-#### 5. Visualiza results in console
+#### 5. Visualize results in console
 ```bash
 python3 pycefrl.py [-c | --console] <results_file>
 ```
@@ -82,6 +82,7 @@ An example of a settings.json could be:
         "__pycache__/"
     ],
     "API-KEY": "customapikey1234",
-    "addLocalSuffix": true
+    "addLocalSuffix": true,
+    "autoDisplayConsole": true
 }
 ```
