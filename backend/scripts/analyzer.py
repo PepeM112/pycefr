@@ -1,24 +1,23 @@
-import configparser
-from curses.ascii import isdigit
-from genericpath import isdir
-from collections import defaultdict
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from backend.scripts import console
-
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import ast
 import json
 import shlex
 import shutil
 import subprocess
 import requests
-from backend.scripts.iter_tree import IterTree
+import configparser
 from datetime import datetime
+from genericpath import isdir
+from curses.ascii import isdigit
 from urllib.parse import urlparse
+from collections import defaultdict
+from backend.scripts import console
+from backend.scripts.iter_tree import IterTree
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 # Lists with attributes
 LITERALS = ["ast.List", "ast.Tuple", "ast.Dict"]
@@ -464,10 +463,14 @@ def load_settings():
     """
     global SETTINGS
     default_settings = {
-        "ignoreFolders": [],
+        "ignoreFolders": [
+            "node_modules/",
+            ".git/",
+            "__pycache__/"
+        ],
         "API-KEY": "",
         "addLocalSuffix": True,
-        "autoDisplayConsole" : True
+        "autoDisplayConsole": True
     }
     
     if not os.path.isfile('settings.json'):
