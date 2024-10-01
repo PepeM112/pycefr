@@ -77,6 +77,9 @@ def request_url(url):
             If the URL is not from 'github.com'.
             If the repository does not meet the language criteria.
     """
+    global API_KEY
+    API_KEY = get_api_token()
+
     validate_repo_url(url)
 
     cloned_repo = clone_repo(REPO_URL)
@@ -128,8 +131,7 @@ def validate_repo_url(url):
         None: Sets global variables for repository URL, user name, repository name, and API key.
               Exits the program if the URL is invalid or not from GitHub.
     """
-    global REPO_URL, REPO_NAME, USER_NAME, API_KEY
-    API_KEY = get_api_token()
+    global REPO_URL, REPO_NAME, USER_NAME
     
     print("[ ] Validating URL", end="")
     parsed_url = urlparse(url)
