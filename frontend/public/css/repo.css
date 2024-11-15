@@ -1,9 +1,18 @@
 .container {
     margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.container.center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .repo-general-info {
-    column-count: 2;
+    /* column-count: 2; */
 }
 
 .repo-general-info p {
@@ -13,6 +22,27 @@
 
 .repo-general-info span {
     font-weight: normal;
+}
+
+.filter-wrapper {
+    position: relative;
+    width: fit-content;
+    margin-bottom: 2rem;
+}
+
+.filter-wrapper #filter-table {
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem 2rem 0.5rem 0.5rem;
+    width: fit-content;
+}
+
+.filter-wrapper i {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-color);
 }
 
 table {

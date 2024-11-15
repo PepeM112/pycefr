@@ -1,23 +1,32 @@
+const graphColors = [
+    'rgba(255, 99, 132, 1)',
+    'rgba(255, 159, 64, 1)',
+    'rgba(255, 206, 86, 1)',
+    'rgba(75, 192, 192, 1)',
+    'rgba(54, 162, 235, 1)',
+    'rgba(153, 102, 255, 1)'
+]
+
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     const container = document.querySelector('.container');
     const isLocal = container.getAttribute('data-is-local') === 'true';
 
-    if (isLocal) {
-        container.style.display = 'none'; // Hide info block if isLocal
-    }
+    if (isLocal) container.style.display = 'none'; // Hide info block if isLocal
 
-    const table = document.getElementById('properties-table');
-    const theaders = table.querySelectorAll('th');
-    const tbody = table.querySelector('tbody');
-    let elements = [];
+    const theaders = document.querySelectorAll('th');
+    const filterInput = document.getElementById('filter-table')
+
     let originalData = [];
+    let elements = [];
     let sorting = {
-        column: null, // index of the column
-        order: 0 // 1 for ASC, -1 for DESC, 0 for no sorting
+        column: null,   // index of the column
+        order: 0        // 1 for ASC, -1 for DESC, 0 for no sorting
     };
 
-    function loadTableData(data) {
+    function renderTableData(data) {
+        const table = document.getElementById('properties-table');
+        const tbody = table.querySelector('tbody');
         tbody.innerHTML = '';
         data.forEach(element => {
             const row = document.createElement('tr');
@@ -34,16 +43,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const repoName = window.location.pathname.split('/').pop();
         const response = await fetch(`/api/results/${repoName}`);
         const data = await response.json();
-        elements = data.elements;
-        originalData = [...elements]; // Still pointing to original data
-        loadTableData(elements);
+
+        originalData = data.elements;
+        elements = JSON.parse(JSON.stringify(originalData));
+        renderTableData(originalData);
+
+        const groupedByLevel = originalData.reduce((acc, element) => {
+            if (acc[element.level]) {
+                acc[element.level] += element.numberOfInstances;
+            } else {
+                acc[element.level] = element.numberOfInstances;
+            }
+            return acc;
+        }, {});
+
+        const levelOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+        const elementsLevels = Object.keys(groupedByLevel).sort((a, b) => {
+            return levelOrder.indexOf(a) - levelOrder.indexOf(b);
+        });
+
+        const elementsInstances = Object.values(groupedByLevel);
+
+        renderDoughnutChart(elementsLevels, elementsInstances);
+        renderHistogram(elementsLevels, elementsInstances);
     }
 
     // Order table
     function sortTable() {
         if (sorting.column === null || sorting.order === 0) {
-            // No sorting or sorting by none
-            loadTableData(originalData);
+            renderTableData(elements);
             return;
         }
 
@@ -61,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return sorting.order * comparison;
         });
 
-        loadTableData(elements);
+        renderTableData(elements);
     }
 
     function updateSortIcons() {
@@ -83,7 +112,78 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Clicks on header
+    // Render graph with Chart.js
+    function renderDoughnutChart(labels, data) {
+        const ctx = document.getElementById('ringChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: graphColors,
+                    borderColor: graphColors,
+                    radius: "90%",
+                    hoverOffset: 20,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (tooltipItem) {
+                                return tooltipItem.label + ': ' + tooltipItem.raw + ' items';  // Formato del tooltip
+                            }
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length == 0) return;
+                    const index = elements[0].index;
+                    console.log("Click en: ", labels[index]);
+                },
+                onHover: (event, elements) => {
+                    if (elements.length > 0) {
+                        const canvas = event.native.target;
+                        canvas.style.cursor = 'pointer'; 
+                    }
+                }
+            }
+        });
+    }
+
+    function renderHistogram(levels, instances) {
+        const ctx = document.getElementById('histogramChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: levels,
+                datasets: [{
+                    label: 'Número de Instancias',
+                    data: instances,
+                    backgroundColor: graphColors,
+                    borderColor: graphColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true  // Aseguramos que el eje Y comienza en 0
+                    }
+                }
+            }
+        });
+    }
+
+
+
+    // Clicks on theaders for order
     theaders.forEach((header, index) => {
         header.addEventListener('click', () => {
             let newOrder = 1; // Default to ascending
@@ -106,6 +206,13 @@ document.addEventListener('DOMContentLoaded', () => {
             sortTable();
             updateSortIcons();
         });
+    });
+
+    // Filter
+    filterInput.addEventListener('input', () => {
+        const filterText = filterInput.value.toLowerCase();
+        elements = originalData.filter(e => e.class.toLowerCase().includes(filterText));
+        renderTableData(elements);
     });
 
     fetchData();
