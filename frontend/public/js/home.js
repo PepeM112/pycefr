@@ -1,6 +1,11 @@
-import { formatDate } from "./utils.js";   
+import { formatDate, toggleDarkMode, checkDarkModeOnLoad } from "./utils.js";   
 
 document.addEventListener('DOMContentLoaded', () => {
+    
+    checkDarkModeOnLoad()
+    const darkModeButton = document.getElementById('dark-mode-toggle');
+    darkModeButton.addEventListener('click', toggleDarkMode);
+
     const repoList = document.getElementById('repo-list');
     const reposSummaryList = document.getElementById('repos-summary-list');
 

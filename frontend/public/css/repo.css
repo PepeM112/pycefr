@@ -37,6 +37,15 @@
     width: fit-content;
 }
 
+.filter-wrapper #filter-table:focus {
+    outline: none;
+}
+
+.dark-mode .filter-wrapper #filter-table {
+    background-color: var(--primary-color-light);
+    color: snow;
+}
+
 .filter-wrapper i {
     position: absolute;
     right: 0.5rem;
@@ -55,11 +64,16 @@ thead {
     color: snow;
 }
 
+.dark-mode thead {
+    background-color: var(--primary-color-light);
+    color: snow;
+}
+
 th {
     text-align: left;
-    padding: 0.75rem 0.5rem;
+    padding: 0.75rem 1rem;
     cursor: pointer;
-    font-weight: normal;
+    font-weight: bold;
     margin-bottom: 0.5rem;
 }
 
@@ -83,7 +97,15 @@ td:nth-child(3) {
 }
 
 td {
-    padding: 0.5rem;
+    padding: 0.25rem 1.25rem;
+}
+
+td span.element-level {
+    display: flex;
+    width: fit-content;
+    color: snow;
+    font-weight: 500;
+    margin: auto;
 }
 
 tbody tr:first-child td {
@@ -92,4 +114,8 @@ tbody tr:first-child td {
 
 tr:not(:last-of-type) td {
     border-bottom: 1px solid var(--primary-color);
+}
+
+.dark-mode tr:not(:last-of-type) td {
+    border-color: rgba(255, 250, 250, 0.5);
 }
