@@ -99,30 +99,32 @@ def display_analysis(elements):
     Display analysis data in a formatted table.
 
     Args:
-        elements (list): A list of dictionaries containing element information.
+        elements (dict): A dictionary where keys are filenames and values are lists of dictionaries containing element information.
     """
+    # Aggregate data across all files
+    aggregated_elements = {}
+    for filename, file_elements in elements.items():
+        for element in file_elements:
+            key = (element["class"], element["level"])
+            if key not in aggregated_elements:
+                aggregated_elements[key] = 0
+            aggregated_elements[key] += element["numberOfInstances"]
+
     # Compute totals per level
     totals = {}
-    for element in elements:
-        level = element["level"]
-        number = element["numberOfInstances"]
+    for (cls, level), count in aggregated_elements.items():
         if level not in totals:
             totals[level] = 0
-        totals[level] += number
+        totals[level] += count
 
-    # Create table with elements
-    table = []
-    for element in elements:
-        table.append(
-            [
-                element["class"],
-                element["level"],
-                element["numberOfInstances"],
-            ]
-        )
-    
+    # Create table with aggregated data
+    table = [
+        [cls, level, count]
+        for (cls, level), count in aggregated_elements.items()
+    ]
+
     headers = ["Element", "Level", "Number"]
-    
+
     # Create the table with tabulate for calculating width
     table_str = tabulate(table, headers, tablefmt="pipe", colalign=("left", "center", "right"))
 

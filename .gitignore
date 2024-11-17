@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 backend/data/
 backend/tmp/
@@ -5,6 +6,6 @@ results/
 myenv/
 settings.json
 
-# Node generated files
-frontend/node_modules
+# Node.js
+frontend/node_modules/
 frontend/package-lock.json

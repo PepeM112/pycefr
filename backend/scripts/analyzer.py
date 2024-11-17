@@ -95,7 +95,6 @@ def request_url(url):
     print(f"\nResults file can be found in file:/{os.path.abspath(output_file)}\n")
 
 
-
 def remove_dir(path):
     """
     Removes a directory at the specified path and all its contents.
@@ -117,7 +116,6 @@ def remove_dir(path):
         shutil.rmtree(path)
     except Exception as e:
         print(f"ERROR: Couldn't remove directory {path}: {e}")
-
 
 
 def validate_repo_url(url):
@@ -218,7 +216,6 @@ def clone_repo(url):
 
     print("\r[✓] Cloning repository")
     return clone_path
-
 
 
 def run_user(user):

@@ -10,19 +10,6 @@ import backend.scripts.levels as levels
 class IterTree:
     """Class to iterate tree."""
 
-    # CSV header
-    myDataCsv = [
-        [
-            "Repository",
-            "File Name",
-            "Class",
-            "Start Line",
-            "End Line",
-            "Displacement",
-            "Level",
-        ]
-    ]
-
     # JSON dictionary
     myDataJson = {}
     myDataJsonNew = {}
@@ -53,21 +40,25 @@ class IterTree:
         if self.clase == "" or self.level == "":
             return
 
-        # Create list if not existing
+        # Ensure 'elements' key exists
         if "elements" not in self.myDataJsonNew:
-            self.myDataJsonNew["elements"] = []
-        
+            self.myDataJsonNew["elements"] = {}
+
+        # Ensure file entry exists in 'elements'
+        if self.name not in self.myDataJsonNew["elements"]:
+            self.myDataJsonNew["elements"][self.name] = []
+
+        # Check if an entry for the current class and level exists
         entry_found = False
-        # Search for entry of that class
-        for entry in self.myDataJsonNew["elements"]:
+        for entry in self.myDataJsonNew["elements"][self.name]:
             if entry["class"] == self.clase:
                 entry["numberOfInstances"] += 1
                 entry_found = True
                 break
 
-        # If not found add new entry
+        # If not found, add a new entry
         if not entry_found:
-            self.myDataJsonNew["elements"].append({
+            self.myDataJsonNew["elements"][self.name].append({
                 "class": str(self.clase),
                 "level": str(self.level),
                 "numberOfInstances": 1
