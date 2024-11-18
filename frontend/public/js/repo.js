@@ -29,21 +29,6 @@ const isLocal = container.getAttribute('data-is-local') === 'true';
 
 if (isLocal) container.style.display = 'none'; // Hide info block if isLocal
 
-function renderTableData(data) {
-    const table = document.getElementById('properties-table');
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    data.forEach(element => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${element.class}</td>
-            <td><span class="element-level" style="background-color: ${graphColors[element.level]}; border-radius:50%; padding: 6px">${element.level}</span></td>
-            <td>${element.numberOfInstances}</td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
 async function fetchData() {
     const repoName = window.location.pathname.split('/').pop();
     const response = await fetch(`/api/results/${repoName}`);
@@ -234,6 +219,38 @@ function renderHistogram(levels, instances, refresh=true) {
     });
 }
 
+function renderTableData(data) {
+    data = groupAllElementsByClass(data)
+    const table = document.getElementById('properties-table');
+    const tbody = table.querySelector('tbody');
+    tbody.innerHTML = '';
+    data.forEach(element => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${element.class}</td>
+            <td><span class="element-level" style="background-color: ${graphColors[element.level]}; border-radius:50%; padding: 6px">${element.level}</span></td>
+            <td>${element.numberOfInstances}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Data manipulation:
+
+function groupAllElementsByClass(data) {
+    const groupedData = Object.values(data).flat().reduce((acc, item) => {
+        const key = item.class;
+        if (!acc[key]) {
+            acc[key] = { ...item };
+        } else {
+            acc[key].numberOfInstances += item.numberOfInstances;
+        }
+        return acc;
+    }, {});
+
+    return Object.values(groupedData);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     
     checkDarkModeOnLoad()
@@ -242,11 +259,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await fetchData();
     originalData = data.elements;
+    const originalDataGroupedByClass = groupAllElementsByClass(originalData);
     elements = JSON.parse(JSON.stringify(originalData));
     
     renderTableData(originalData);
 
-    const originalDataGroupedByLevel = originalData.reduce((acc, element) => {
+    const originalDataGroupedByLevel = groupAllElementsByClass(originalData).reduce((acc, element) => {
         if (acc[element.level]) {
             acc[element.level] += element.numberOfInstances;
         } else {
@@ -287,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     filterInput.addEventListener('input', () => {
         const filterText = filterInput.value.toLowerCase();
-        elements = originalData.filter(e => e.class.toLowerCase().includes(filterText));
+        elements = originalDataGroupedByClass.filter(e => e.class.toLowerCase().includes(filterText));
         renderTableData(elements);
     });
 
