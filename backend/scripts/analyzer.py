@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import ast
 import json
@@ -444,15 +445,16 @@ def analyse_file(path):
         my_code = fp.read()
         try:
             tree = ast.parse(my_code)
+            # Calculate the relative path
+            relative_path = os.path.relpath(path, start=os.getcwd())
             # Iterate through and process every attribute
             for attribute_list in ATTRIBUTES:
                 for attribute in attribute_list:
-                    file = os.path.basename(path)
-                    dir_name = os.path.basename(os.path.dirname(path))
-                    IterTree(tree, attribute, file, dir_name)
+                    IterTree(tree, attribute, re.sub(r"^backend/tmp/[^/]+/", "", relative_path))
         except SyntaxError:
             print("There is a syntax error in the code")
             pass
+
 
 
 def load_settings():

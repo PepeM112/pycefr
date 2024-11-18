@@ -14,12 +14,11 @@ class IterTree:
     myDataJson = {}
     myDataJsonNew = {}
 
-    def __init__(self, tree, attrib, file, dir_name):
+    def __init__(self, tree, attrib, relative_path):
         """Class constructor."""
         self.tree = tree
         self.attrib = attrib
-        self.name = file
-        self.dir_name = dir_name
+        self.name = relative_path
         self.walk_tree()
         self.write_data_json()
 

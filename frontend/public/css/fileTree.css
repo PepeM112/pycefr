@@ -1,0 +1,138 @@
+.file-tree ul {
+  list-style: none !important;
+  padding-left: 1rem;
+  margin: 0;
+  position: relative;
+}
+
+.file-tree > ul > li {
+  padding-left: 0;
+}
+
+.file-tree li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.file-tree li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px; /* Horizontal connector */
+  height: 100%;
+  border-left: 1px solid var(--primary-color-light);
+}
+
+.file-tree li::after {
+  content: "";
+  position: absolute;
+  top: 12px; /* Align horizontal line to text */
+  left: 0;
+  width: 0.5rem; /* Horizontal connector */
+  border-top: 1px solid var(--primary-color-light);
+}
+
+.dark-mode .file-tree li::before,
+.dark-mode .file-tree li::after {
+  border-color: rgba(255, 250, 250, 0.5);
+}
+
+.file-tree li:last-child::before {
+  height: 12px;
+}
+
+.file-tree span {
+  position: relative;
+}
+
+.file-tree span.file::before {
+  content: "";
+  position: absolute;
+  left: -1rem; /* Ajusta la distancia según sea necesario */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.875rem;
+  height: 0.875rem;
+  background-image:  url('../assets/img/python.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.file-tree span.folder:not(.root)::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.875rem;
+  height: 0.875rem;
+  background-image: url('../assets/img/folder-open.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.file-tree span.file[data-ext="py"]::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.875rem;
+  height: 0.875rem;
+  background-image: url('../assets/img/python.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.dark-mode .file-tree span.folder:not(.root)::before {
+  background-image: url('../assets/img/folder-open-snow.svg');
+}
+
+/* Styles for folders and files */
+span {
+  margin-left: 4px;
+  padding: 2px 4px 4px;
+  line-height: 1.5em;
+  border-radius: 6px;
+}
+
+span:hover {
+  background-color: rgba(255, 250, 250, 0.5);
+}
+
+span.selected {
+  background-color: rgba(255, 250, 250, 0.5);
+  font-weight: bold;
+}
+
+.file-tree > ul {
+  padding: 0;
+}
+
+.file-tree > ul > li:before,
+.file-tree > ul > li:after {
+  content: none;
+}
+
+.root::before,
+.root::after {
+  content: none;
+}
+
+.root {
+  margin: 0;
+}
+
+.folder {
+  cursor: pointer;
+}
+
+.file {
+  cursor: pointer;
+}
+
+.highlighted::before,
+.highlighted::after {
+  border-color: red;
+}

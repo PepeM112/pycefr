@@ -1,4 +1,5 @@
 import { toggleDarkMode, checkDarkModeOnLoad } from "./utils.js";
+import { initializeFileTree } from './fileTree.js';
 
 const theaders = document.querySelectorAll('th');
 const filterInput = document.getElementById('filter-table')
@@ -79,7 +80,8 @@ function updateSortIcons() {
 }
 
 // Render graph with Chart.js
-function renderDoughnutChart(labels, data, refresh=true) {
+function renderDoughnutChart(labels, data, refresh = true) {
+    let selectedSegments = {}
     let infoColor = (isDarkMode) ? 'snow' : '#1F2937';
 
     const ctx = document.getElementById('ringChart').getContext('2d');
@@ -132,9 +134,21 @@ function renderDoughnutChart(labels, data, refresh=true) {
                     offset: 10,
                 }
             },
-            onClick: (event, elements) => {
-                if (elements.length == 0) return;
-                const index = elements[0].index;
+            onClick: (e, elements, chart) => {
+                if (elements.length > 0) {
+                    console.log(elements);
+                    console.log("datasets: ", data.datasets);
+                    const index = elements[0].index; // Índice del segmento clickeado 
+                    console.log("index: ", index);
+                    selectedSegments[index] = !selectedSegments[index] ?? true;
+
+                    // Actualizar hoverOffset para reflejar el estado seleccionado
+                    chart.data.datasets[0].hoverOffset = chart.data.datasets[0].data.map((_, i) =>
+                        selectedSegments[i] ? 20 : 10
+                    );
+
+                    chart.update();
+                }
             },
             onHover: (event, elements) => {
                 if (elements.length > 0) {
@@ -147,13 +161,13 @@ function renderDoughnutChart(labels, data, refresh=true) {
     });
 }
 
-function renderHistogram(levels, instances, refresh=true) {
+function renderHistogram(levels, instances, refresh = true) {
     let gridColor = (isDarkMode) ? 'rgba(255, 250, 250, 0.5)' : 'rgba(0, 0, 0, 0.2)';
     let infoColor = (isDarkMode) ? 'snow' : '#1F2937';
 
 
     const ctx = document.getElementById('histogramChart').getContext('2d');
-    
+
     if (barChart) {
         barChart.destroy();
     }
@@ -219,6 +233,11 @@ function renderHistogram(levels, instances, refresh=true) {
     });
 }
 
+function renderFileTree(data) {
+    const fileTreeData = Object.keys(data);
+    initializeFileTree('.file-tree', fileTreeData);
+}
+
 function renderTableData(data) {
     data = groupAllElementsByClass(data)
     const table = document.getElementById('properties-table');
@@ -252,7 +271,7 @@ function groupAllElementsByClass(data) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    
+
     checkDarkModeOnLoad()
     isDarkMode = document.body.classList.contains('dark-mode');
     const darkModeButton = document.getElementById('dark-mode-toggle');
@@ -261,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     originalData = data.elements;
     const originalDataGroupedByClass = groupAllElementsByClass(originalData);
     elements = JSON.parse(JSON.stringify(originalData));
-    
+
     renderTableData(originalData);
 
     const originalDataGroupedByLevel = groupAllElementsByClass(originalData).reduce((acc, element) => {
@@ -278,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderDoughnutChart(elementsLevels, elementsInstances);
     renderHistogram(elementsLevels, elementsInstances);
+    renderFileTree(originalData);
 
     theaders.forEach((header, index) => {
         header.addEventListener('click', () => {

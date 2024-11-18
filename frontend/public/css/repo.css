@@ -24,6 +24,34 @@
     font-weight: normal;
 }
 
+.properties-wrapper {
+    display: flex;
+    width: 100%;
+}
+
+.file-tree-wrapper {
+    background-color: var(--secondary-color-light);
+    border-radius: var(--border-radius);
+    min-width: 270px;
+    height: fit-content;
+    min-height: 600px;
+    max-height: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    padding: 2rem 1rem 1rem;
+    margin-right: 2rem;
+}
+
+.dark-mode .file-tree-wrapper {
+    background-color: var(--primary-color-light);
+}
+
+.repo-properties {
+    flex-grow: 1;
+    padding-left: 2rem;
+    border-left: 2px solid var(--primary-color-light);
+}
+
 .filter-wrapper {
     position: relative;
     width: fit-content;
