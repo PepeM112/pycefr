@@ -10,10 +10,12 @@
     <link rel="stylesheet" href="../css/repo.css">
     <link rel="stylesheet" href="../css/fileTree.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css">
     <script type="module" defer src="../js/repo.js"></script>
     <script type="module" defer src="../js/sidebar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
 </head>
 
 <body>
@@ -57,9 +59,25 @@
                     <div class="file-tree"></div>
                 </div>
                 <div class="repo-properties">
-                    <div class="filter-wrapper">
-                        <input type="text" id="filter-table" placeholder="Buscar...">
-                        <i class="fas fa-search search-icon"></i>
+                    <div class="filters-wrapper">
+                        <div class="filter-class">
+                            <input type="text" id="filter-table" placeholder="Buscar...">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        <div class="filter-level">
+                            <button>A1</button>
+                            <button>A2</button>
+                            <button>B1</button>
+                            <button>B2</button>
+                            <button>C1</button>
+                            <button>C2</button>
+                        </div>
+                        <div class="filter-instances">
+                            <div class="range-slider"></div>
+                            <div class="slider-value">
+                                <span id="slider-value-min">0</span> - <span id="slider-value-max">100</span>
+                            </div>
+                        </div>
                     </div>
                     <table id="properties-table">
                         <thead>

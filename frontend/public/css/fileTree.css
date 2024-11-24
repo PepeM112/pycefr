@@ -79,6 +79,10 @@
   background-image: url('../assets/img/folder.svg');
 }
 
+body:not(.dark-mode) .file-tree li span:not(.root):hover::before {
+  background-color: var(--primary-color);
+}
+
 .file-tree span:hover::before {
   background-color: #9b9ca4;
   border-radius: 6px 0 0 6px;
@@ -88,27 +92,32 @@
   display: none;
 }
 
-.dark-mode .file-tree span.folder:not(.root)::before {
+.dark-mode .file-tree span.folder:not(.root)::before, .file-tree li.expanded span.folder:not(.root):hover::before {
   background-image: url('../assets/img/folder-open-snow.svg');
 }
 
-.dark-mode .file-tree li.collapsed span.folder:not(.root)::before {
+.dark-mode .file-tree li.collapsed span.folder:not(.root)::before, .file-tree li.collapsed span.folder:not(.root):hover::before {
   background-image: url('../assets/img/folder-snow.svg');
 }
 
 /* Styles for folders and files */
-span {
+.file-tree span {
   margin-left: 4px;
   padding: 2px 4px 4px;
   line-height: 1.5em;
   border-radius: 0 6px 6px 0;
 }
 
-span:hover {
+.dark-mode .file-tree span:hover {
   background-color: #9b9ca4;
 }
 
-span.selected {
+.file-tree span:hover {
+  background-color: var(--primary-color);
+  color: snow;
+}
+
+.file-tree span.selected {
   background-color: #9b9ca4;
   font-weight: bold;
 }
@@ -129,7 +138,7 @@ span.selected {
 
 .root {
   margin: 0;
-  border-radius: 6px;
+  border-radius: 6px !important;
 }
 
 .folder {

@@ -2,14 +2,17 @@ import { toggleDarkMode, checkDarkModeOnLoad } from "./utils.js";
 import { initializeFileTree } from './fileTree.js';
 
 const theaders = document.querySelectorAll('th');
-const filterInput = document.getElementById('filter-table')
+const filterInput = document.getElementById('filter-table');
+const filterClass = document.querySelectorAll('.filter-level');
 
 let originalData = [];
-let elements = [];
+let elements = [];  // For filtering purposes
 let sorting = {
     column: null,   // index of the column
     order: 0        // 1 for ASC, -1 for DESC, 0 for no sorting
 };
+
+let currentFilters = []
 
 let isDarkMode = null
 
@@ -240,6 +243,7 @@ function renderFileTree(data) {
 
 function renderTableData(data) {
     data = groupAllElementsByClass(data)
+    console.log(data);
     const table = document.getElementById('properties-table');
     const tbody = table.querySelector('tbody');
     tbody.innerHTML = '';
@@ -252,6 +256,65 @@ function renderTableData(data) {
         `;
         tbody.appendChild(row);
     });
+}
+
+function setupLevelFilters() {
+    const levelFilter = document.querySelector('.filter-level');
+    const buttons = levelFilter.querySelectorAll('button');
+
+    buttons.forEach(button => {
+        const level = button.textContent.trim();
+        button.style.backgroundColor = graphColors[level] ?? '#FFFFFF';
+
+        button.addEventListener('click', () => {
+            button.classList.toggle('disabled');
+
+            if (button.classList.contains('disabled')) {
+                // Remove the level from filters
+                currentFilters = currentFilters.filter(activeLevel => activeLevel !== level);
+            } else {
+                // Add the level to filters
+                currentFilters.push(level);
+            }
+
+            // Trigger table rendering based on filters
+            filterTableByLevel();
+        })
+    });
+}
+
+function setupInstancesFilters() {
+    const slider = document.querySelector('.range-slider');
+    const minValueDisplay = document.getElementById('slider-value-min');
+    const maxValueDisplay = document.getElementById('slider-value-max');
+
+    noUiSlider.create(slider, {
+        start: [0, 100],
+        connect: true,
+        behaviour: 'drag-smooth-steps-tap',
+        range: {
+            min: 0,
+            max: 100
+        },
+        step: 1,
+        tooltips: false,
+    });
+
+    slider.noUiSlider.on('update', (values) => {
+        const minValue = parseInt(values[0], 10);
+        const maxValue = parseInt(values[1], 10);
+
+        // Actualizar valores visibles
+        minValueDisplay.textContent = minValue;
+        maxValueDisplay.textContent = maxValue;
+
+        // Agregar los valores dinámicamente como atributos en los manejadores
+        slider.querySelectorAll('.noUi-handle')[0].setAttribute('data-value', minValue);
+        slider.querySelectorAll('.noUi-handle')[1].setAttribute('data-value', maxValue);
+
+        // Aquí puedes agregar la lógica de filtrado si es necesario
+    });
+
 }
 
 // Data manipulation:
@@ -269,6 +332,8 @@ function groupAllElementsByClass(data) {
 
     return Object.values(groupedData);
 }
+
+fun
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -298,6 +363,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderDoughnutChart(elementsLevels, elementsInstances);
     renderHistogram(elementsLevels, elementsInstances);
     renderFileTree(originalData);
+    setupLevelFilters();
+    setupInstancesFilters();
 
     theaders.forEach((header, index) => {
         header.addEventListener('click', () => {

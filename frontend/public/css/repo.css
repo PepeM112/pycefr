@@ -30,7 +30,8 @@
 }
 
 .file-tree-wrapper {
-    background-color: var(--secondary-color-light);
+    background: white;
+    border: 2px solid var(--primary-color);
     border-radius: var(--border-radius);
     min-width: 270px;
     height: fit-content;
@@ -52,34 +53,127 @@
     border-left: 2px solid var(--primary-color-light);
 }
 
-.filter-wrapper {
+.filters-wrapper {
+    display: flex;
+}
+
+.filter-class {
     position: relative;
     width: fit-content;
     margin-bottom: 2rem;
+    margin-right: 2.5rem;
 }
 
-.filter-wrapper #filter-table {
+.filter-class #filter-table {
     border: 1px solid var(--primary-color);
     border-radius: var(--border-radius);
     padding: 0.5rem 2rem 0.5rem 0.5rem;
     width: fit-content;
 }
 
-.filter-wrapper #filter-table:focus {
+.filter-class #filter-table:focus {
     outline: none;
 }
 
-.dark-mode .filter-wrapper #filter-table {
+.filter-level {
+    display: flex;
+    gap: 0.5rem;
+    margin-right: 4.5rem;
+}
+
+.filter-level button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.875rem;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    border: none;
+    color: snow;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+}
+
+.filter-level button:hover {
+    transform: scale(1.125);
+}
+
+.filter-level button.disabled:not(:hover) {
+    background-color: #9b9ca4 !important;
+    color: var(--primary-color);
+    opacity: 0.35;
+}
+
+.dark-mode .filter-class #filter-table {
     background-color: var(--primary-color-light);
     color: snow;
 }
 
-.filter-wrapper i {
+.filter-class i {
     position: absolute;
     right: 0.5rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--primary-color);
+}
+
+.filter-instances {
+    min-width: 250px;
+    margin-top: 0.75rem;
+}
+
+/* Slider */
+.range-slider.noUi-target {
+    border: none;
+    box-shadow: none;
+    height: 0.5rem;
+}
+
+.range-slider .noUi-connects {
+    background-color: #c8c8c8;
+}
+
+.dark-mode .range-slider .noUi-connects {
+    background-color: snow;
+}
+
+.range-slider .noUi-connect {
+    background-color: var(--primary-color);
+}
+
+.dark-mode .range-slider .noUi-connect {
+    background-color: var(--primary-color-light);
+}
+
+.range-slider .noUi-handle {
+    border-radius: 50%;
+    background-color: snow;
+    box-shadow: none;
+    width: 1rem !important;
+    height: 1rem !important;
+    border: 2px solid var(--primary-color);
+}
+
+.range-slider .noUi-handle {
+    background-color: snow;
+}
+
+.dark-mode .range-slider .noUi-handle {
+    background-color: snow;
+}
+
+.range-slider .noUi-handle {
+    right: -5px !important;
+    top: -4px !important;
+}
+
+.range-slider .noUi-handle:after, .range-slider .noUi-handle:before{
+    content: none;
+}
+
+.slider-value {
+    margin-top: 0.5rem;
 }
 
 table {
@@ -130,8 +224,12 @@ td {
 
 td span.element-level {
     display: flex;
-    width: fit-content;
+    width: 2rem;
+    height: 2rem;
+    justify-content: center;
+    align-items: center;
     color: snow;
+    font-size: 0.875rem;
     font-weight: 500;
     margin: auto;
 }
