@@ -20,5 +20,8 @@
   "type": "module",
   "dependencies": {
     "express": "^4.20.0"
+  },
+  "devDependencies": {
+    "sass": "^1.89.2"
   }
 }
