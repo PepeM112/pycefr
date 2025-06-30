@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-const isDarkMode = ref(false)
+const isDarkMode = ref(false);
 const toggleSidebar = () => {
   // Lógica del sidebar
-}
+};
 </script>
 
 <template>

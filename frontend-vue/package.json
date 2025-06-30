@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "npx prettier --ignore-path .prettierignore --write '**/*.{css,sass,scss,htm,html,vue,ts,js}'",
+    "format:branch": "npx prettier --ignore-path .prettierignore $(git diff --name-only --diff-filter=ACMR $(git merge-base HEAD main) | grep -E '\\.(css|sass|scss|htm|html|vue|ts|js)$' | sed 's|frontend-vue/||') -w -u"
   },
   "dependencies": {
     "axios": "^1.10.0",
@@ -19,6 +21,7 @@
     "@types/node": "^24.0.7",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/tsconfig": "^0.7.0",
+    "prettier": "^3.6.2",
     "typescript": "~5.8.3",
     "vite": "^7.0.0",
     "vue-tsc": "^2.2.10"

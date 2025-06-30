@@ -1,15 +1,3 @@
-<script setup lang="ts">
-import { onMounted } from 'vue';
-import Sidebar from '@/components/Sidebar.vue';
-import { useRepoStore } from '@/stores/repoStore';
-
-const repoStore = useRepoStore();
-
-onMounted(async () => {
-  await repoStore.fetchRepos();
-});
-</script>
-
 <template>
   <sidebar />
   <div class="content">
@@ -21,7 +9,17 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+<script setup lang="ts">
+import { onMounted } from 'vue';
+import Sidebar from '@/components/Sidebar.vue';
+import { useRepoStore } from '@/stores/repoStore';
 
+const repoStore = useRepoStore();
+
+onMounted(async () => {
+  await repoStore.fetchRepos();
+});
+</script>
 <style scoped>
 /* Tus estilos SCSS convertidos */
 </style>
