@@ -5,7 +5,6 @@
       <h1>Resumen</h1>
     </header>
     <div class="repos-summary-list">
-      <!-- Usar v-for para listar repos -->
     </div>
   </div>
 </template>

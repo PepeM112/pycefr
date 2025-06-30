@@ -11,11 +11,14 @@
     "format:branch": "npx prettier --ignore-path .prettierignore $(git diff --name-only --diff-filter=ACMR $(git merge-base HEAD main) | grep -E '\\.(css|sass|scss|htm|html|vue|ts|js)$' | sed 's|frontend-vue/||') -w -u"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
     "axios": "^1.10.0",
     "pinia": "^3.0.3",
     "sass": "^1.89.2",
+    "vite-plugin-vuetify": "^2.1.1",
     "vue": "^3.5.17",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vuetify": "^3.8.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.7",
