@@ -17,13 +17,15 @@
 <body>
     <aside class="sidebar">
         <h2>pycefr</h2>
-        <button class="sidebar-toggle">&#9776;</button>
+        <div class="sidebar-button-wrapper">
+            <button id="dark-mode-toggle" aria-label="Toggle dark mode">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <button class="sidebar-toggle">&#9776;</button>
+        </div>
         <nav class="sidebar-repos" id="repo-list">
             <a href="/">Home</a>
         </nav>
-        <button id="dark-mode-toggle" aria-label="Toggle dark mode">
-            <i class="fa-solid fa-moon"></i>
-        </button>
     </aside>
     <div class="content">
         <header>

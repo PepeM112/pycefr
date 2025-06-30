@@ -1,24 +1,10 @@
 <template>
-  <sidebar />
   <div class="content">
     <header>
-      <h1>Resumen</h1>
+      <h1>pycefr</h1>
     </header>
-    <div class="repos-summary-list">
-    </div>
+    <div class="repos-summary-list"></div>
   </div>
 </template>
-<script setup lang="ts">
-import { onMounted } from 'vue';
-import Sidebar from '@/components/Sidebar.vue';
-import { useRepoStore } from '@/stores/repoStore';
-
-const repoStore = useRepoStore();
-
-onMounted(async () => {
-  await repoStore.fetchRepos();
-});
-</script>
-<style scoped>
-/* Tus estilos SCSS convertidos */
-</style>
+<script setup lang="ts"></script>
+<style scoped></style>
