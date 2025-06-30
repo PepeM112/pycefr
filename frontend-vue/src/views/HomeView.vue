@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import Sidebar from '@/components/Sidebar.vue'
-import { useRepoStore } from '@/stores/repoStore'
+import { onMounted } from 'vue';
+import Sidebar from '@/components/Sidebar.vue';
+import { useRepoStore } from '@/stores/repoStore';
 
-const repoStore = useRepoStore()
+const repoStore = useRepoStore();
 
 onMounted(async () => {
-  await repoStore.fetchRepos()
-})
+  await repoStore.fetchRepos();
+});
 </script>
 
 <template>
-  <Sidebar />
+  <sidebar />
   <div class="content">
     <header>
       <h1>Resumen</h1>
