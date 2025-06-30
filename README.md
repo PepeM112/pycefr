@@ -65,12 +65,12 @@ node server.js
 
 There is a settings.json in place in order to setup some configurations:
 
-|Settings | Description |
-|:--------|:-------------:|
-|**ignoreFolders**| Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name |
-|**API-KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api. You can generate one at https://github.com/settings/tokens|
-|**addLocalSuffix**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) the suffix "_local" to the results file|
-|**autoDisplayConsole**| Allows to activate or deactive the automatic display of the results in the console after finishing an analysis|
+| Settings               |                                                                                                Description                                                                                                 |
+| :--------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| **ignoreFolders**      |                                            Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name                                            |
+| **API-KEY**            |                                      GitHub api key in order to be avoid the limit on calls to GitHub api. You can generate one at https://github.com/settings/tokens                                      |
+| **addLocalSuffix**     | Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) the suffix "_local" to the results file |
+| **autoDisplayConsole** |                                               Allows to activate or deactive the automatic display of the results in the console after finishing an analysis                                               |
 
 An example of a settings.json could be:
 ```json
