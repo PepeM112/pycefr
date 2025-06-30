@@ -46,16 +46,17 @@
       }
 
       span.folder:not(.root)::before {
-        background-image: url('../assets/img/folder.svg');
+        background-image: url("../assets/img/folder.svg");
 
         &:hover::before {
-          background-image: url('../assets/img/folder-snow.svg');
+          background-image: url("../assets/img/folder-snow.svg") !important;
         }
       }
     }
 
     &.expanded span.folder:not(.root):hover::before {
-      background-image: url('../assets/img/folder-open-snow.svg');
+      background-image: url("../assets/img/folder-open-snow.svg");
+      height: 1em;
     }
 
     &.highlighted {
@@ -69,13 +70,13 @@
   span {
     position: relative;
     margin-left: 4px;
-    padding: 2px 4px 4px;
+    padding: 1px 4px 4px;
     line-height: 1.5em;
     border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    display: flex;
 
     &.file {
-      cursor: pointer;
-
       &::before {
         content: "";
         position: absolute;
@@ -84,31 +85,27 @@
         transform: translateY(-50%);
         width: 1em;
         height: 1em;
-        background-image: url('../assets/img/python.svg');
+        background-image: url("../assets/img/python.svg");
         background-size: 0.875rem;
         background-position: center;
         background-repeat: no-repeat;
-        padding: 4px 0 4px 8px;
+        padding: 9px 0 4px 8px;
       }
     }
 
-    &.folder:not(.root) {
-      cursor: pointer;
-
-      &::before {
-        content: "";
-        position: absolute;
-        left: -20px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 1em;
-        height: 1em;
-        background-image: url('../assets/img/folder-open.svg');
-        background-size: 0.875rem;
-        background-position: center;
-        background-repeat: no-repeat;
-        padding: 4px 0 4px 8px;
-      }
+    &.folder:not(.root)::before {
+      content: "";
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1em;
+      height: 1em;
+      background-image: url("../assets/img/folder-open.svg");
+      background-size: 0.875rem;
+      background-position: center;
+      background-repeat: no-repeat;
+      padding: 9px 0 4px 8px;
     }
 
     &:hover {
@@ -161,11 +158,11 @@
       }
 
       &.folder:not(.root)::before {
-        background-image: url('../assets/img/folder-open-snow.svg');
+        background-image: url("../assets/img/folder-open-snow.svg");
       }
 
       &.collapsed span.folder:not(.root)::before {
-        background-image: url('../assets/img/folder-snow.svg');
+        background-image: url("../assets/img/folder-snow.svg");
       }
     }
   }

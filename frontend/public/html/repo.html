@@ -7,8 +7,9 @@
     <title>PH_REPO_NAME</title>
     <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="../css/globals.css">
+    <link rel="stylesheet" href="../css/sidebar.css">
     <link rel="stylesheet" href="../css/repo.css">
-    <link rel="stylesheet" href="../css/fileTree.css">
+    <link rel="stylesheet" href="../css/file-tree.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css">
     <script type="module" defer src="../js/repo.js"></script>
@@ -21,13 +22,15 @@
 <body>
     <aside class="sidebar">
         <h2>pycefr</h2>
-        <button class="sidebar-toggle">&#9776;</button>
+        <div class="sidebar-button-wrapper">
+            <button id="dark-mode-toggle" aria-label="Toggle dark mode">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <button class="sidebar-toggle">&#9776;</button>
+        </div>
         <nav class="sidebar-repos" id="repo-list">
             <a href="/">Home</a>
         </nav>
-        <button id="dark-mode-toggle" aria-label="Toggle dark mode">
-            <i class="fa-solid fa-moon"></i>
-        </button>
     </aside>
     <div class="content">
         <header>

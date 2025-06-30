@@ -7,6 +7,7 @@
     <title>Resumen</title>
     <link rel="icon" href="../assets/img/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="../css/globals.css">
+    <link rel="stylesheet" href="../css/sidebar.css">
     <link rel="stylesheet" href="../css/home.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script type="module" defer src="../js/home.js"></script>
@@ -17,13 +18,15 @@
 <body>
     <aside class="sidebar">
         <h2>pycefr</h2>
-        <button class="sidebar-toggle">&#9776;</button>
+        <div class="sidebar-button-wrapper">
+            <button id="dark-mode-toggle" aria-label="Toggle dark mode">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <button class="sidebar-toggle">&#9776;</button>
+        </div>
         <nav class="sidebar-repos" id="repo-list">
             <a href="/">Home</a>
         </nav>
-        <button id="dark-mode-toggle" aria-label="Toggle dark mode">
-            <i class="fa-solid fa-moon"></i>
-        </button>
     </aside>
     <div class="content">
         <header>

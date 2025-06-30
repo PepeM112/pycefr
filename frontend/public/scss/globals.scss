@@ -20,6 +20,7 @@ body {
   margin: 0;
   display: flex;
   width: 100%;
+  max-width: 100vw;
   line-height: 1.25;
 
   &.dark-mode {

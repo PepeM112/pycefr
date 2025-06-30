@@ -1,23 +1,35 @@
 aside.sidebar {
+  position: relative;
   background-color: var(--primary-color);
   color: snow;
   min-height: 100vh;
-  min-width: 260px;
+  min-width: 240px;
   padding: 0.5rem;
-  position: relative;
+  transition: all 0.25s ease;
 
   &.hidden {
     min-width: 2.75rem;
     padding: 0;
 
-    *:not(.sidebar-toggle) {
+    > *:not(.sidebar-button-wrapper) {
       display: none;
     }
 
+    .sidebar-button-wrapper {
+      position: unset;
+    }
+
     button.sidebar-toggle {
-      top: 0;
-      right: 0.25rem;
       padding: 0.25rem 0.5rem;
+    }
+
+    .sidebar-button-wrapper {
+      flex-direction: column-reverse;
+      justify-content: center;
+
+      #dark-mode-toggle {
+        margin: 0;
+      }
     }
   }
 
@@ -28,21 +40,53 @@ aside.sidebar {
     padding-left: 0.5rem;
   }
 
-  button.sidebar-toggle {
+  .sidebar-button-wrapper {
     position: absolute;
-    top: 0.25rem;
-    right: 1.5rem;
-    background-color: transparent;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    color: var(--secondary-color-light);
-    font-size: 24px;
-    padding: 0.25rem 0.5rem;
-    z-index: 1000;
+    top: 0;
+    right: 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 
-    &:hover {
-      background-color: var(--primary-color-light);
+    button.sidebar-toggle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      margin: 0.25rem;
+      background-color: transparent;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--secondary-color-light);
+      font-size: 24px;
+      width: 32px;
+      height: 32px;
+      z-index: 1000;
+
+      &:hover {
+        background-color: var(--primary-color-light);
+      }
+    }
+
+    button#dark-mode-toggle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: snow;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.75rem;
+      width: 32px;
+      height: 32px;
+      margin-top: 0.25rem;
+
+      &:hover {
+        background-color: var(--primary-color-light);
+      }
     }
   }
 
@@ -64,27 +108,6 @@ aside.sidebar {
       &:hover {
         background-color: var(--primary-color-light);
       }
-    }
-  }
-
-  #dark-mode-toggle {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    bottom: 1rem;
-    right: 1.5rem;
-    background: transparent;
-    border: none;
-    border-radius: 50%;
-    color: snow;
-    cursor: pointer;
-    font-size: 1.25rem;
-    padding: 0.75rem;
-    width: 44px;
-    height: 44px;
-
-    &:hover {
-      background-color: var(--primary-color-light);
     }
   }
 }
