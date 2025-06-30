@@ -1,0 +1,9 @@
+.husky/
+.vscode/
+.yarn/
+coverage/
+dist/
+public/
+public/assets/
+tsconfig.*.json
+index.html
