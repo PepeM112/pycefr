@@ -6,8 +6,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 
+const emit = defineEmits<{
+  (e: 'select-element', value: string): void;
+}>();
+
 const props = defineProps<{
-  data: string[];
+  paths: string[];
 }>();
 
 function buildTree(data: string[]): Record<string, any> {
@@ -78,19 +82,6 @@ function toggleFolder(event: MouseEvent) {
   li.classList.toggle('expanded');
 }
 
-function highlightPath(element: HTMLElement) {
-  document.querySelectorAll('.file-tree .highlighted').forEach(el => el.classList.remove('highlighted'));
-
-  let current: HTMLElement | null = element;
-
-  while (current) {
-    if (current.tagName === 'LI') {
-      current.classList.add('highlighted');
-    }
-    current = current.parentElement;
-  }
-}
-
 function initializeFileTree(containerSelector: string, data: string[]) {
   const container = document.querySelector(containerSelector);
 
@@ -103,21 +94,40 @@ function initializeFileTree(containerSelector: string, data: string[]) {
   container.innerHTML = ''; // Clear the container
   container.appendChild(createTreeHTML(treeData, true));
 
-  // Listener for highlighting paths
+  // Listener for when clicking entry
   container.addEventListener('click', e => {
     if (!e.target) return;
     const element = e.target as HTMLElement;
-    if (element.tagName === 'SPAN' && element.parentElement) {
-      highlightPath(element.parentElement);
+
+    if (element.classList.contains('root')) {
+      const lastSelected = document.querySelector('.file-tree li.selected');
+      if (lastSelected) lastSelected.classList.remove('selected');
+
+      emit('select-element', '');
+    }
+    if (element.tagName === 'SPAN') {
+      if (element.classList.contains('file')) {
+        selectFile(element);
+      }
     }
   });
 }
 
+function selectFile(element: HTMLElement) {
+  const lastSelected = document.querySelector('.file-tree li.selected');
+  if (lastSelected) lastSelected.classList.remove('selected');
+
+  if (!element.parentElement) return;
+  element.parentElement.classList.add('selected');
+
+  emit('select-element', element.textContent || '');
+}
+
 onMounted(() => {
-  initializeFileTree('.file-tree', props.data);
+  initializeFileTree('.file-tree', props.paths);
 });
 </script>
-<style lang="scss" scoped>
+<style lang="scss">
 .file-tree-wrapper {
   background: white;
   border: 2px solid var(--primary-color);
@@ -130,143 +140,158 @@ onMounted(() => {
   overflow-y: auto;
   padding: 1rem;
   margin-right: 2rem;
-}
 
-ul {
-  list-style: none;
-  padding-left: 1rem;
-  margin: 0;
-  position: relative;
+  ul {
+    list-style: none;
+    padding-left: 1rem;
+    margin: 0;
+    position: relative;
 
-  &:first-child {
-    padding: 0;
-    &::before,
-    &::after {
-      content: none;
-    }
-  }
-}
-
-.file-tree > ul > li {
-  padding-left: 0;
-}
-
-li {
-  position: relative;
-  padding-left: 18px;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -6px;
-    height: 100%;
-    border-left: 1px solid var(--primary-color-light);
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 12px;
-    left: -6px;
-    width: 0.5rem;
-    border-top: 1px solid var(--primary-color-light);
-  }
-
-  &:last-child::before {
-    height: 12px;
-  }
-
-  &.collapsed {
-    ul {
-      display: none;
-    }
-
-    span.folder:not(.root)::before {
-      background-image: url('../assets/img/folder.svg');
-
-      &:hover::before {
-        background-image: url('../assets/img/folder-snow.svg') !important;
+    &:first-child {
+      padding: 0;
+      &::before,
+      &::after {
+        content: none;
       }
     }
   }
 
-  &.expanded span.folder:not(.root):hover::before {
-    background-image: url('../assets/img/folder-open-snow.svg');
-    height: 1em;
-  }
-
-  &.highlighted {
-    &::before,
-    &::after {
-      border-color: red;
-    }
-  }
-}
-
-span {
-  position: relative;
-  margin-left: 4px;
-  padding: 1px 4px 4px;
-  line-height: 1.5em;
-  border-radius: 0 6px 6px 0;
-  cursor: pointer;
-  display: flex;
-
-  &.file {
-    &::before {
-      content: '';
-      position: absolute;
-      left: -20px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 1em;
-      height: 1em;
-      background-image: url('../assets/img/python.svg');
-      background-size: 0.875rem;
-      background-position: center;
-      background-repeat: no-repeat;
-      padding: 9px 0 4px 8px;
-    }
-  }
-
-  &.folder:not(.root)::before {
-    content: '';
-    position: absolute;
-    left: -20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1em;
-    height: 1em;
-    background-image: url('../assets/img/folder-open.svg');
-    background-size: 0.875rem;
-    background-position: center;
-    background-repeat: no-repeat;
-    padding: 9px 0 4px 8px;
-  }
-
-  &:hover {
-    background-color: var(--primary-color);
-    color: snow;
-
-    &::before {
-      background-color: #9b9ca4;
-      border-radius: 6px 0 0 6px;
-    }
-  }
-
-  &.selected {
-    background-color: #9b9ca4;
-    font-weight: bold;
-  }
-
-  &.root {
-    margin: 0;
-    border-radius: 6px !important;
+  .file-tree > ul > li {
+    padding-left: 0;
 
     &::before,
     &::after {
       content: none;
+    }
+  }
+
+  li {
+    position: relative;
+    padding-left: 18px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -6px;
+      height: 100%;
+      border-left: 1px solid var(--primary-color-light);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: -6px;
+      width: 0.5rem;
+      border-top: 1px solid var(--primary-color-light);
+    }
+
+    &:last-child::before {
+      height: 12px;
+    }
+
+    &.collapsed {
+      ul {
+        display: none;
+      }
+
+      span.folder::before {
+        background-image: url('@/assets/img/folder.svg');
+      }
+
+      span.folder:hover::before {
+        background-image: url('@/assets/img/folder-snow.svg') !important;
+      }
+    }
+
+    &.expanded span.folder:not(.root):hover::before {
+      background-image: url('@/assets/img/folder-open-snow.svg');
+      height: 1em;
+    }
+
+    &.selected {
+      > span {
+        background-color: var(--primary-color);
+        color: snow;
+      }
+
+      > span::before {
+        background-color: var(--primary-color);
+        border-radius: 6px;
+      }
+    }
+
+    /* &.highlighted {
+      &::before,
+      &::after {
+        border-color: red;
+      }
+    } */
+  }
+
+  span {
+    position: relative;
+    margin-left: 4px;
+    padding: 1px 4px 4px;
+    line-height: 1.5em;
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    display: flex;
+
+    &.file {
+      &::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 50%;
+        box-sizing: content-box;
+        transform: translateY(-50%);
+        width: 1em;
+        height: 1em;
+        background-image: url('@/assets/img/python.svg');
+        background-size: 0.875rem;
+        background-position: center;
+        background-repeat: no-repeat;
+        padding: 9px 0 4px 8px;
+        border-radius: 6px 0 0 6px;
+      }
+    }
+
+    &.folder:not(.root)::before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      box-sizing: content-box;
+      transform: translateY(-50%);
+      width: 1em;
+      height: 1em;
+      background-image: url('@/assets/img/folder-open.svg');
+      background-size: 0.875rem;
+      background-position: center;
+      background-repeat: no-repeat;
+      padding: 9px 0 4px 8px;
+      border-radius: 6px 0 0 6px;
+    }
+
+    &:hover {
+      background-color: var(--primary-color);
+      color: snow !important;
+
+      &::before {
+        background-color: var(--primary-color);
+      }
+    }
+
+    &.root {
+      margin: 0;
+      border-radius: 6px !important;
+
+      &::before,
+      &::after {
+        content: none;
+      }
     }
   }
 }

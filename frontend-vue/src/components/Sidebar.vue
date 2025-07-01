@@ -32,7 +32,7 @@ function toggleSidebar() {
   color: snow;
   min-height: 100vh;
   width: 240px;
-  padding: 0.5rem;
+  padding: 1rem 0.5rem;
   transition: all 0.25s ease;
 }
 
@@ -68,7 +68,7 @@ h2 {
 
 .top-buttons {
   position: absolute;
-  top: 0;
+  top: .5rem;
   right: 0;
   display: flex;
   justify-content: flex-end;

@@ -54,7 +54,7 @@ const config = [
   // Vue.js
   {
     files: ['**/*.vue'],
-    ...vuePlugin.configs['flat/recommended'],
+    ...vuePlugin.configs['flat/strongly-recommended'],
     languageOptions: {
       parser: vueParser,
       parserOptions: {

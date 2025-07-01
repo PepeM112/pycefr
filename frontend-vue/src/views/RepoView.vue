@@ -7,7 +7,7 @@
     <div class="container">
       <h2>Propiedades</h2>
       <div class="d-flex">
-        <file-tree :data="[]" />
+        <file-tree :paths="treePaths" />
         <div class="properties">
           <div class="filters-wrapper pl-8">
             <v-text-field
@@ -47,6 +47,14 @@ import FileTree from '@/components/FileTree.vue';
 const route = useRoute();
 const repoTitle = ref<string>('');
 const selectedLevels = ref<string[]>([]);
+
+const treePaths = ref([
+  'pycerfl.py',
+  'backend/scripts/levels.py',
+  'backend/scripts/analyzer.py',
+  'backend/scripts/console.py',
+  'backend/scripts/iter_tree.py',
+]);
 
 const levels = [
   { label: 'A1', color: 'rgba(255, 99, 132, 1)' },

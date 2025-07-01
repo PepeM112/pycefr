@@ -9,3 +9,5 @@ settings.json
 # Node.js
 frontend/node_modules/
 frontend/package-lock.json
+frontend-vue/node_modules/
+frontend-vue/package-lock.json
