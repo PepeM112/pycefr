@@ -74,6 +74,22 @@ function createTreeHTML(tree: Record<string, any>, isRoot: boolean = false) {
   return ul;
 }
 
+function getFullPathFromElement(el: HTMLElement | null): string {
+  const parts = [];
+
+  while (el && !el.classList.contains('root')) {
+    if (el.tagName === 'LI') {
+      const span = el.querySelector(':scope > span');
+      if (span) {
+        parts.unshift(span.textContent?.trim());
+      }
+    }
+    el = el.parentElement?.closest('li') || null;
+  }
+
+  return parts.slice(1).join('');
+}
+
 function toggleFolder(event: MouseEvent) {
   if (!event.target) return;
   const li = (event.target as HTMLElement).closest('li');
@@ -120,7 +136,7 @@ function selectFile(element: HTMLElement) {
   if (!element.parentElement) return;
   element.parentElement.classList.add('selected');
 
-  emit('select-element', element.textContent || '');
+  emit('select-element', getFullPathFromElement(element) || '');
 }
 
 onMounted(() => {
@@ -139,7 +155,6 @@ onMounted(() => {
   overflow-x: auto;
   overflow-y: auto;
   padding: 1rem;
-  margin-right: 2rem;
 
   ul {
     list-style: none;

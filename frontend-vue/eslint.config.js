@@ -35,7 +35,7 @@ const config = [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: "./tsconfig.eslint.json",
+        project: './tsconfig.eslint.json',
         extraFileExtensions: ['.vue'],
       },
     },
@@ -81,27 +81,31 @@ const config = [
     },
     settings: {
       'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx', '.vue']
+        '@typescript-eslint/parser': ['.ts', '.tsx', '.vue'],
       },
       'import/resolver': {
         typescript: {
           project: './tsconfig.eslint.json',
-          alwaysTryTypes: true
+          alwaysTryTypes: true,
         },
         alias: {
           map: [['@', './src']],
-          extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue']
-        }
-      }
+          extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue'],
+        },
+      },
     },
     rules: {
       'import/no-unresolved': 'error',
-      'import/extensions': ['error', 'ignorePackages', {
-        js: 'never',
-        ts: 'never',
-        vue: 'always'
-      }]
-    }
+      'import/extensions': [
+        'error',
+        'ignorePackages',
+        {
+          js: 'never',
+          ts: 'never',
+          vue: 'always',
+        },
+      ],
+    },
   },
 
   // YAML
