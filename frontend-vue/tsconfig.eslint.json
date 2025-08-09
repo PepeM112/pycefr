@@ -1,8 +1,10 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.app.json",
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.vue"],
   "compilerOptions": {
     "baseUrl": ".",
+    "noEmit": true,
+    "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"]
     }

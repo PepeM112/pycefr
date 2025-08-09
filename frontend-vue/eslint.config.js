@@ -123,10 +123,13 @@ const config = [
   {
     languageOptions: {
       globals: {
-        browser: true,
-        node: true,
-        es6: true,
+        ...vueParser.defineGlobals(),
       },
+      ecmaVersion: 'latest',
+    },
+    env: {
+      browser: true,
+      node: true
     },
     rules: {
       'require-jsdoc': 'off',
