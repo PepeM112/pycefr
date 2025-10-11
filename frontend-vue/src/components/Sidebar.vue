@@ -16,13 +16,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
-const isSidebarHidden = ref(false);
+const emit = defineEmits<{
+  (e: 'update:showMenu', value: boolean): void;
+}>();
+const props = defineProps<{
+  showMenu?: boolean;
+}>();
+
+const isSidebarHidden = ref(props.showMenu ?? false);
 
 function toggleSidebar() {
   isSidebarHidden.value = !isSidebarHidden.value;
+  emit('update:showMenu', !isSidebarHidden.value);
 }
+
+onMounted(() => {
+  toggleSidebar();
+  toggleSidebar();
+  emit('update:showMenu', !isSidebarHidden.value);
+});
 </script>
 
 <style scoped lang="scss">
