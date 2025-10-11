@@ -7,9 +7,11 @@ import importPlugin from 'eslint-plugin-import';
 import yamlPlugin from 'eslint-plugin-yaml';
 import prettier from 'eslint-config-prettier';
 import accessibilityPlugin from 'eslint-plugin-vuejs-accessibility';
+import jsdocPlugin from 'eslint-plugin-jsdoc';
+import jsoncPlugin from 'eslint-plugin-jsonc';
 
 const config = [
-  // Configuración base
+  // Base config
   {
     ignores: [
       '.husky/',
@@ -21,10 +23,13 @@ const config = [
       'public/assets/',
       'tsconfig.*.json',
       'index.html',
+      'node_modules/',
+      '*.min.js',
+      'dist/**/*'
     ],
   },
 
-  // Configuración básica de ESLint
+  // Basic ESLint
   js.configs.recommended,
 
   // TypeScript
@@ -45,7 +50,14 @@ const config = [
     rules: {
       ...ts.configs['eslint-recommended'].rules,
       ...ts.configs['recommended'].rules,
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_'
+      }],
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/prefer-const': 'error',
       'new-cap': 'off',
       'no-invalid-this': 'off',
     },
@@ -69,13 +81,21 @@ const config = [
     },
     rules: {
       ...accessibilityPlugin.configs.recommended.rules,
-      'vue/html-self-closing': ['error', { html: { void: 'always' } }],
+      'vue/html-self-closing': ['error', {
+        html: { void: 'always', normal: 'always', component: 'always' },
+        svg: 'always'
+      }],
       'vue/multi-word-component-names': 'warn',
+      'vue/component-tags-order': ['error', {
+        order: ['template', 'script', 'style']
+      }],
+      'vuejs-accessibility/label-has-for': 'off', // Compatible with Vuetify
     },
   },
 
   // Imports
   {
+    files: ['**/*.ts', '**/*.js', '**/*.vue'],
     plugins: {
       import: importPlugin,
     },
@@ -96,6 +116,12 @@ const config = [
     },
     rules: {
       'import/no-unresolved': 'error',
+      'import/named': 'error',
+      'import/default': 'error',
+      'import/namespace': 'error',
+      'import/no-absolute-path': 'error',
+      'import/no-cycle': 'warn',
+      'import/no-self-import': 'error',
       'import/extensions': [
         'error',
         'ignorePackages',
@@ -105,6 +131,49 @@ const config = [
           vue: 'always',
         },
       ],
+      'import/order': [
+        'error',
+        {
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
+            'object',
+            'type'
+          ],
+          'newlines-between': 'always',
+          alphabetize: { order: 'asc', caseInsensitive: true },
+        },
+      ],
+    },
+  },
+
+  // JSDoc
+  {
+    files: ['**/*.ts', '**/*.js'],
+    plugins: {
+      jsdoc: jsdocPlugin,
+    },
+    rules: {
+      ...jsdocPlugin.configs.recommended.rules,
+      'jsdoc/require-param-description': 'warn',
+      'jsdoc/require-returns-description': 'warn',
+      'jsdoc/require-jsdoc': 'off',
+      'jsdoc/tag-lines': 'off',
+    },
+  },
+
+  // JSON
+  {
+    files: ['**/*.json', '**/*.jsonc'],
+    plugins: {
+      jsonc: jsoncPlugin,
+    },
+    rules: {
+      ...jsoncPlugin.configs['recommended-with-jsonc'].rules,
     },
   },
 
@@ -119,25 +188,46 @@ const config = [
     },
   },
 
-  // Configuración global
+  // Global config
   {
+    files: ['**/*.ts', '**/*.js', '**/*.vue'],
     languageOptions: {
       globals: {
-        ...vueParser.defineGlobals(),
+        // Globals para browser
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        console: 'readonly',
+        // Globals for Node.js
+        process: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        // Timers
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
       },
       ecmaVersion: 'latest',
     },
     env: {
       browser: true,
-      node: true
+      node: true,
+      es2022: true
     },
     rules: {
       'require-jsdoc': 'off',
       'valid-jsdoc': 'off',
+      'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
+      'prefer-const': 'error',
+      'no-var': 'error',
     },
   },
 
-  // Prettier (debe ir último)
+  // Prettier
   prettier,
 ];
 
