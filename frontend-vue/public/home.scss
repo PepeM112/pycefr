@@ -1,0 +1,54 @@
+.repos-summary-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.repos-summary-list-block {
+  h3 {
+    font-weight: 600;
+    line-height: 1.75rem;
+    margin: 0;
+  }
+
+  p.description {
+    display: -webkit-box;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.125rem;
+    height: calc(3 * 1.125rem);
+    text-overflow: ellipsis;
+    font-size: 0.875rem;
+    margin: 0 0 1.25rem;
+  }
+
+  a {
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  p:not(.description) {
+    font-size: 0.875rem;
+    font-weight: bold;
+    margin: 0 0 1rem;
+
+    span {
+      font-weight: normal;
+    }
+  }
+}
+
+.repos-summary-list-block-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  img {
+    border-radius: 50%;
+    height: 48px;
+    width: 48px;
+  }
+}
