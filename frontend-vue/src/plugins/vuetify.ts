@@ -19,6 +19,9 @@ export default createVuetify({
       rounded: 'md',
       variant: 'text',
     },
+    VIcon: {
+      style: 'opacity: 1',
+    },
   },
   theme: {
     defaultTheme: 'light',

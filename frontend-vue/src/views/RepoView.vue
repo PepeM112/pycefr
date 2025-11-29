@@ -8,21 +8,20 @@
       <h2>Propiedades</h2>
       <div class="d-flex">
         <!-- <file-tree :paths="treePaths" @select-element="(value: string) => (selectedElementInFileTree = value)" /> -->
-        <file-tree-v2 :model-value="buildTree(treePaths)" v-model:selected="selectedNodes"/>
+        <file-tree :model-value="buildTree(treePaths)" v-model:selected="selectedNodes" />
         <v-divider class="mx-8" vertical thickness="2px" color="primary" opacity="100" />
         <div class="d-flex flex-column w-100">
-          <div class="filters-wrapper mb-4">
+          <div class="d-flex align-center ga-4 mb-4">
             <v-text-field
               v-model="search"
-              class="search-field mb-4"
+              class="search-field"
               density="compact"
               variant="outlined"
               placeholder="Search..."
               :append-inner-icon="'mdi-magnify'"
               hide-details
-              width="180px"
-              height="32px"
-              border="md"
+              max-width="240"
+              rounded="lg"
             />
             <div class="d-flex ga-2">
               <v-btn
@@ -54,9 +53,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-/* import FileTree from '@/components/FileTree.vue'; */
-import FileTreeV2, { type TreeNode } from '@/components/FileTreeV2.vue';
-import PropertiesTable from '@/components/PropertiesTable.vue';
+import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
+import PropertiesTable from '@/components/repo/PropertiesTable.vue';
 
 const route = useRoute();
 const repoTitle = ref<string>('');
@@ -346,8 +344,8 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   font-size: 0.875rem;
-  width: 2rem;
-  height: 2rem !important;
+  width: 2.25em;
+  height: 2.25em !important;
   min-width: unset;
   color: white;
 
@@ -360,30 +358,6 @@ onMounted(() => {
     &:hover {
       opacity: 0.65;
       color: white;
-    }
-  }
-}
-</style>
-<style lang="scss">
-.filters-wrapper {
-  display: flex;
-  gap: 1rem;
-}
-.search-field {
-  max-width: 240px;
-
-  .v-input__control .v-field {
-    border-radius: var(--border-radius);
-
-    &.v-field--appended {
-      padding-right: 0.25rem;
-    }
-
-    input {
-      height: 32px !important;
-      min-height: 0 !important;
-      font-size: 0.875em;
-      padding: 0 0.5rem;
     }
   }
 }
