@@ -7,7 +7,11 @@
     <div class="container">
       <h2>Propiedades</h2>
       <div class="d-flex">
-        <file-tree :model-value="fileTreeData" v-model:selected="selectedTreeNodeIds" @update:selected="onUpdateSelected" />
+        <file-tree
+          :model-value="fileTreeData"
+          v-model:selected="selectedTreeNodeIds"
+          @update:selected="onUpdateSelected"
+        />
         <v-divider class="mx-8" vertical thickness="2px" color="primary" opacity="100" />
         <v-card class="pa-4 w-100">
           <div class="d-flex align-center ga-4 mb-4">
@@ -176,7 +180,7 @@ onMounted(async () => {
   height: 2.25em !important;
   min-width: unset;
   color: white;
-  
+
   &:focus {
     outline: 2px solid var(--primary-color);
   }

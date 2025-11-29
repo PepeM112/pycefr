@@ -26,13 +26,13 @@ export default createVuetify({
     VIcon: {
       style: 'opacity: 1',
     },
-    
+
     VTextField: {
       density: 'compact',
       variant: 'outlined',
       hideDetails: 'auto',
       rounded: 'lg',
-    }
+    },
   },
   theme: {
     defaultTheme: 'light',
