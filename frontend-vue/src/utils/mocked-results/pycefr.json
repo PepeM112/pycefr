@@ -1,0 +1,605 @@
+{
+    "elements": {
+        "pycerfl.py": [
+            {
+                "class": "Simple List",
+                "level": "A1",
+                "instances": 1
+            },
+            {
+                "class": "Print",
+                "level": "A1",
+                "instances": 4
+            },
+            {
+                "class": "Simple Attribute",
+                "level": "A2",
+                "instances": 24
+            },
+            {
+                "class": "Simple Assignment",
+                "level": "A1",
+                "instances": 4
+            },
+            {
+                "class": "Import",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "From",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "If statements using \u2192 __name__ == '__main__'",
+                "level": "B2",
+                "instances": 1
+            },
+            {
+                "class": "Simple If statements",
+                "level": "A1",
+                "instances": 7
+            },
+            {
+                "class": "Simple For Loop",
+                "level": "A1",
+                "instances": 1
+            },
+            {
+                "class": "Exception \u2192 try/except",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Function",
+                "level": "A1",
+                "instances": 2
+            }
+        ],
+        "backend/scripts/levels.py": [
+            {
+                "class": "Simple List",
+                "level": "A1",
+                "instances": 12
+            },
+            {
+                "class": "Simple Tuple",
+                "level": "A1",
+                "instances": 1
+            },
+            {
+                "class": "'range' call function",
+                "level": "A2",
+                "instances": 3
+            },
+            {
+                "class": "Files \u2192 'open' call function",
+                "level": "A2",
+                "instances": 1
+            },
+            {
+                "class": "Simple Attribute",
+                "level": "A2",
+                "instances": 443
+            },
+            {
+                "class": "Generator Expression",
+                "level": "C1",
+                "instances": 1
+            },
+            {
+                "class": "Simple Assignment",
+                "level": "A1",
+                "instances": 187
+            },
+            {
+                "class": "Assignment with sum (total = total + 1)",
+                "level": "A1",
+                "instances": 2
+            },
+            {
+                "class": "Simplified incremental Assignment with increase amount",
+                "level": "A2",
+                "instances": 34
+            },
+            {
+                "class": "'raise' exception",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "'pass' statement",
+                "level": "B1",
+                "instances": 5
+            },
+            {
+                "class": "Import",
+                "level": "A2",
+                "instances": 3
+            },
+            {
+                "class": "Simple If statements",
+                "level": "A1",
+                "instances": 116
+            },
+            {
+                "class": "Simple For Loop",
+                "level": "A1",
+                "instances": 23
+            },
+            {
+                "class": "1 Nested For Loop",
+                "level": "A2",
+                "instances": 4
+            },
+            {
+                "class": "Exception \u2192 try/except",
+                "level": "B1",
+                "instances": 5
+            },
+            {
+                "class": "With",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Function with Simple argument",
+                "level": "A1",
+                "instances": 48
+            },
+            {
+                "class": "Return",
+                "level": "A1",
+                "instances": 3
+            }
+        ],
+        "backend/scripts/analyzer.py": [
+            {
+                "class": "Simple List",
+                "level": "A1",
+                "instances": 20
+            },
+            {
+                "class": "Simple Tuple",
+                "level": "A1",
+                "instances": 3
+            },
+            {
+                "class": "Simple Dictionary",
+                "level": "A2",
+                "instances": 15
+            },
+            {
+                "class": "1 List Dictionary",
+                "level": "B1",
+                "instances": 2
+            },
+            {
+                "class": "1 Nested Dictionary",
+                "level": "B1",
+                "instances": 3
+            },
+            {
+                "class": "Print",
+                "level": "A1",
+                "instances": 45
+            },
+            {
+                "class": "'enumerate' call function",
+                "level": "C2",
+                "instances": 1
+            },
+            {
+                "class": "Files \u2192 'read' call function",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "Files \u2192 'open' call function",
+                "level": "A2",
+                "instances": 6
+            },
+            {
+                "class": "'range' call function",
+                "level": "A2",
+                "instances": 1
+            },
+            {
+                "class": "Simple Attribute",
+                "level": "A2",
+                "instances": 206
+            },
+            {
+                "class": "Simple List Comprehension",
+                "level": "C1",
+                "instances": 3
+            },
+            {
+                "class": "List Comprehension with 1 If statements",
+                "level": "C1",
+                "instances": 2
+            },
+            {
+                "class": "Generator Expression",
+                "level": "C1",
+                "instances": 4
+            },
+            {
+                "class": "Simple Assignment",
+                "level": "A1",
+                "instances": 109
+            },
+            {
+                "class": "Assignment with sum (total = total + 1)",
+                "level": "A1",
+                "instances": 6
+            },
+            {
+                "class": "Simplified incremental Assignment with increase amount",
+                "level": "A2",
+                "instances": 5
+            },
+            {
+                "class": "'pass' statement",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Import",
+                "level": "A2",
+                "instances": 9
+            },
+            {
+                "class": "From",
+                "level": "A2",
+                "instances": 8
+            },
+            {
+                "class": "Simple If statements",
+                "level": "A1",
+                "instances": 51
+            },
+            {
+                "class": "For Loop with Tuple as name",
+                "level": "A2",
+                "instances": 3
+            },
+            {
+                "class": "Simple For Loop",
+                "level": "A1",
+                "instances": 5
+            },
+            {
+                "class": "1 Nested For Loop",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "While with Else Loop",
+                "level": "B1",
+                "instances": 3
+            },
+            {
+                "class": "'break' statement",
+                "level": "B1",
+                "instances": 2
+            },
+            {
+                "class": "'continue' statement",
+                "level": "B1",
+                "instances": 3
+            },
+            {
+                "class": "Exception \u2192 try/except",
+                "level": "B1",
+                "instances": 5
+            },
+            {
+                "class": "With",
+                "level": "B1",
+                "instances": 7
+            },
+            {
+                "class": "Function with Simple argument",
+                "level": "A1",
+                "instances": 16
+            },
+            {
+                "class": "Recursive Functions",
+                "level": "B2",
+                "instances": 1
+            },
+            {
+                "class": "Function",
+                "level": "A1",
+                "instances": 7
+            },
+            {
+                "class": "Function with Simple argument with Default argument",
+                "level": "A2",
+                "instances": 1
+            },
+            {
+                "class": "Lambda",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Return",
+                "level": "A1",
+                "instances": 26
+            }
+        ],
+        "backend/scripts/console.py": [
+            {
+                "class": "Simple List",
+                "level": "A1",
+                "instances": 5
+            },
+            {
+                "class": "Simple Tuple",
+                "level": "A1",
+                "instances": 7
+            },
+            {
+                "class": "2 Nested Tuple",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "Simple Dictionary",
+                "level": "A2",
+                "instances": 4
+            },
+            {
+                "class": "Print",
+                "level": "A1",
+                "instances": 18
+            },
+            {
+                "class": "Files \u2192 'open' call function",
+                "level": "A2",
+                "instances": 1
+            },
+            {
+                "class": "Simple Attribute",
+                "level": "A2",
+                "instances": 27
+            },
+            {
+                "class": "Simple List Comprehension",
+                "level": "C1",
+                "instances": 1
+            },
+            {
+                "class": "Generator Expression",
+                "level": "C1",
+                "instances": 3
+            },
+            {
+                "class": "Simple Assignment",
+                "level": "A1",
+                "instances": 27
+            },
+            {
+                "class": "Simplified incremental Assignment with increase amount",
+                "level": "A2",
+                "instances": 6
+            },
+            {
+                "class": "'raise' exception",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Import",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "From",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "If statements using \u2192 __name__ == '__main__'",
+                "level": "B2",
+                "instances": 1
+            },
+            {
+                "class": "Simple If statements",
+                "level": "A1",
+                "instances": 6
+            },
+            {
+                "class": "Simple For Loop",
+                "level": "A1",
+                "instances": 3
+            },
+            {
+                "class": "For Loop with Tuple as name",
+                "level": "A2",
+                "instances": 3
+            },
+            {
+                "class": "Exception \u2192 try/except",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "With",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Function with Simple argument",
+                "level": "A1",
+                "instances": 4
+            },
+            {
+                "class": "Lambda",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Return",
+                "level": "A1",
+                "instances": 1
+            }
+        ],
+        "backend/scripts/iter_tree.py": [
+            {
+                "class": "Simple List",
+                "level": "A1",
+                "instances": 1
+            },
+            {
+                "class": "Simple Dictionary",
+                "level": "A2",
+                "instances": 4
+            },
+            {
+                "class": "Files \u2192 'open' call function",
+                "level": "A2",
+                "instances": 1
+            },
+            {
+                "class": "Simple Attribute",
+                "level": "A2",
+                "instances": 33
+            },
+            {
+                "class": "Simple Assignment",
+                "level": "A1",
+                "instances": 12
+            },
+            {
+                "class": "Simplified incremental Assignment with increase amount",
+                "level": "A2",
+                "instances": 1
+            },
+            {
+                "class": "Import",
+                "level": "A2",
+                "instances": 2
+            },
+            {
+                "class": "Import with 'as' extension",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Simple If statements",
+                "level": "A1",
+                "instances": 6
+            },
+            {
+                "class": "Simple For Loop",
+                "level": "A1",
+                "instances": 2
+            },
+            {
+                "class": "'break' statement",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "With",
+                "level": "B1",
+                "instances": 1
+            },
+            {
+                "class": "Function with Simple argument",
+                "level": "A1",
+                "instances": 4
+            },
+            {
+                "class": "Return",
+                "level": "A1",
+                "instances": 1
+            },
+            {
+                "class": "Simple Class using the constructor method \u2192 __init__",
+                "level": "B1",
+                "instances": 1
+            }
+        ]
+    },
+    "repoInfo": {
+        "data": {
+            "name": "pycefr",
+            "url": "https://github.com/PepeM112/pycefr",
+            "description": null,
+            "createdDate": "2024-05-02T10:26:27Z",
+            "lastUpdateDate": "2024-11-18T12:52:51Z",
+            "owner": {
+                "name": "PepeM112",
+                "avatar": "https://avatars.githubusercontent.com/u/129164725?v=4",
+                "profile_url": "https://github.com/PepeM112"
+            }
+        },
+        "commits": [
+            {
+                "name": "jmatas",
+                "github_user": "PepeM112",
+                "loc": 20162,
+                "commits": 81,
+                "total_hours": 23,
+                "total_files_modified": 59
+            },
+            {
+                "name": "PepeM112",
+                "github_user": "PepeM112",
+                "loc": 1077,
+                "commits": 5,
+                "total_hours": 2,
+                "total_files_modified": 14
+            },
+            {
+                "name": "GitHub",
+                "github_user": "anapgh",
+                "loc": 2663,
+                "commits": 19,
+                "total_hours": 4,
+                "total_files_modified": 19
+            },
+            {
+                "name": "anapgh",
+                "github_user": "anapgh",
+                "loc": 21355,
+                "commits": 227,
+                "total_hours": 38,
+                "total_files_modified": 32
+            },
+            {
+                "name": "Gregorio",
+                "github_user": "gregoriorobles",
+                "loc": 1107,
+                "commits": 8,
+                "total_hours": 2,
+                "total_files_modified": 8
+            }
+        ],
+        "contributors": [
+            {
+                "name": "anapgh",
+                "avatar": "https://avatars.githubusercontent.com/u/60195957?v=4",
+                "profile_url": "https://github.com/anapgh",
+                "commits": 246
+            },
+            {
+                "name": "PepeM112",
+                "avatar": "https://avatars.githubusercontent.com/u/129164725?v=4",
+                "profile_url": "https://github.com/PepeM112",
+                "commits": 86
+            },
+            {
+                "name": "gregoriorobles",
+                "avatar": "https://avatars.githubusercontent.com/u/842692?v=4",
+                "profile_url": "https://github.com/gregoriorobles",
+                "commits": 8
+            }
+        ]
+    }
+}
