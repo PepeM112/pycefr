@@ -7,7 +7,8 @@
     <div class="container">
       <h2>Propiedades</h2>
       <div class="d-flex">
-        <file-tree :paths="treePaths" @select-element="(value: string) => (selectedElementInFileTree = value)" />
+        <!-- <file-tree :paths="treePaths" @select-element="(value: string) => (selectedElementInFileTree = value)" /> -->
+        <file-tree-v2 :model-value="buildTree(treePaths)" v-model:selected="selectedNodes"/>
         <v-divider class="mx-8" vertical thickness="2px" color="primary" opacity="100" />
         <div class="d-flex flex-column w-100">
           <div class="filters-wrapper mb-4">
@@ -25,7 +26,7 @@
             />
             <div class="d-flex ga-2">
               <v-btn
-                v-for="level in levels"
+                v-for="level in LEVELS"
                 class="level-bubble"
                 :class="{ selected: selectedLevels.includes(level.label) }"
                 :style="{ backgroundColor: level.color }"
@@ -53,7 +54,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import FileTree from '@/components/FileTree.vue';
+/* import FileTree from '@/components/FileTree.vue'; */
+import FileTreeV2, { type TreeNode } from '@/components/FileTreeV2.vue';
 import PropertiesTable from '@/components/PropertiesTable.vue';
 
 const route = useRoute();
@@ -65,13 +67,15 @@ const selectedElementInFileTree = ref<string>('');
 
 const treePaths = ref([
   'pycerfl.py',
-  'backend/scripts/levels.py',
+  'backend/scripts/LEVELS.py',
   'backend/scripts/analyzer.py',
   'backend/scripts/console.py',
   'backend/scripts/iter_tree.py',
 ]);
 
-const levels = [
+const selectedNodes = ref<number[]>([]);
+
+const LEVELS = [
   { label: 'A1', color: 'rgba(255, 99, 132, 1)' },
   { label: 'A2', color: 'rgba(255, 159, 64, 1)' },
   { label: 'B1', color: 'rgba(255, 206, 86, 1)' },
@@ -81,7 +85,7 @@ const levels = [
 ];
 
 const filteredLevels = computed(() => {
-  return levels.filter(level => selectedLevels.value.includes(level.label));
+  return LEVELS.filter(level => selectedLevels.value.includes(level.label));
 });
 
 function toggleLevel(level: string) {
@@ -92,9 +96,46 @@ function toggleLevel(level: string) {
   }
 }
 
+function buildTree(paths: string[]): any[] {
+  const root: any = {};
+
+  paths.forEach(path => {
+    const parts = path.split('/');
+    let current: Record<string, any> = root;
+
+    parts.forEach(part => {
+      if (!current[part]) {
+        current[part] = {};
+      }
+      current = current[part];
+    });
+  });
+
+  return convertToArray(root);
+}
+
+function convertToArray(node: any): TreeNode[] {
+  let id = 1;
+
+  function convertRecursive(currentNode: any): TreeNode[] {
+    return Object.keys(currentNode).map(key => {
+      const child = currentNode[key];
+
+      return {
+        id: id++,
+        title: key,
+        children: Object.keys(child).length > 0 ? convertRecursive(child) : undefined,
+      };
+    });
+  }
+
+  return convertRecursive(node);
+}
+
 onMounted(() => {
   repoTitle.value = route.params.repoName.toString();
-  selectedLevels.value = levels.map(level => level.label);
+  selectedLevels.value = LEVELS.map(level => level.label);
+  console.log('RepoView mounted for repo:', buildTree(treePaths.value));
   tableData.value = [
     {
       class: 'Simple List',

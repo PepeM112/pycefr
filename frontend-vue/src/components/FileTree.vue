@@ -1,6 +1,6 @@
 <template>
   <div class="file-tree-wrapper">
-    <div class="file-tree" />
+    <div class="file-tree"></div>
   </div>
 </template>
 <script setup lang="ts">
@@ -13,6 +13,15 @@ const emit = defineEmits<{
 const props = defineProps<{
   paths: string[];
 }>();
+
+export interface FileTreeData {
+  [key: string]: FileTreeData;
+}
+
+export interface iFoo {
+  a: string;
+  b: number;
+}
 
 function buildTree(data: string[]): Record<string, any> {
   const root = {};
