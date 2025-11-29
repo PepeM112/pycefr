@@ -1,0 +1,98 @@
+aside.sidebar {
+  position: relative;
+  background-color: var(--primary-color);
+  color: snow;
+  min-height: 100vh;
+  min-width: 240px;
+  padding: 0.5rem;
+  transition: all 0.25s ease;
+}
+aside.sidebar.hidden {
+  min-width: 2.75rem;
+  padding: 0;
+}
+aside.sidebar.hidden > *:not(.sidebar-button-wrapper) {
+  display: none;
+}
+aside.sidebar.hidden .sidebar-button-wrapper {
+  position: unset;
+}
+aside.sidebar.hidden button.sidebar-toggle {
+  padding: 0.25rem 0.5rem;
+}
+aside.sidebar.hidden .sidebar-button-wrapper {
+  flex-direction: column-reverse;
+  justify-content: center;
+}
+aside.sidebar.hidden .sidebar-button-wrapper #dark-mode-toggle {
+  margin: 0;
+}
+aside.sidebar h2 {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  margin: 0;
+  padding-left: 0.5rem;
+}
+aside.sidebar .sidebar-button-wrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+aside.sidebar .sidebar-button-wrapper button.sidebar-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  margin: 0.25rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--secondary-color-light);
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  z-index: 1000;
+}
+aside.sidebar .sidebar-button-wrapper button.sidebar-toggle:hover {
+  background-color: var(--primary-color-light);
+}
+aside.sidebar .sidebar-button-wrapper button#dark-mode-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: snow;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.75rem;
+  width: 32px;
+  height: 32px;
+  margin-top: 0.25rem;
+}
+aside.sidebar .sidebar-button-wrapper button#dark-mode-toggle:hover {
+  background-color: var(--primary-color-light);
+}
+aside.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+aside.sidebar nav a {
+  color: snow;
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  margin-bottom: 0.25rem;
+  padding: 0.5rem;
+  text-decoration: none;
+}
+aside.sidebar nav a:hover {
+  background-color: var(--primary-color-light);
+}/*# sourceMappingURL=sidebar.css.map */

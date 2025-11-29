@@ -333,8 +333,6 @@ function groupAllElementsByClass(data) {
     return Object.values(groupedData);
 }
 
-fun
-
 document.addEventListener('DOMContentLoaded', async () => {
 
     checkDarkModeOnLoad()

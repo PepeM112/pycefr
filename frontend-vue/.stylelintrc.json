@@ -1,0 +1,23 @@
+{
+  "extends": [
+    "stylelint-config-recommended-scss",
+    "stylelint-config-recommended-vue"
+  ],
+  "plugins": ["stylelint-order"],
+  "rules": {
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": ["deep", "global", "v-deep", "::v-deep"]
+      }
+    ],
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": ["include", "mixin", "use", "forward", "if", "else"]
+      }
+    ],
+    "selector-class-pattern": null,
+    "no-descending-specificity": null
+  }
+}
