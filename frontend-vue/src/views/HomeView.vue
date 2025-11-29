@@ -36,7 +36,7 @@
             </p>
           </template>
 
-          <a :href="`/${repo.data.name}${isLocal(repo) ? '_local' : ''}`" class="glb-btn-main">Ver más</a>
+          <a :href="`/repo/${repo.data.name}${isLocal(repo) ? '_local' : ''}`" class="glb-btn-main">Ver más</a>
         </div>
       </div>
     </div>
@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { formatDate } from '@/utils/utils';
-import axios from 'axios';
+/* import axios from 'axios'; */
 
 const reposData = ref();
 
