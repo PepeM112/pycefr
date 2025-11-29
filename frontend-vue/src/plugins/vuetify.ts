@@ -18,6 +18,20 @@ export default createVuetify({
       elevation: 0,
       rounded: 'md',
       variant: 'text',
+      style: 'text-transform: none; letter-spacing: normal;',
+    },
+    VCard: {
+      rounded: 'lg',
+    },
+    VIcon: {
+      style: 'opacity: 1',
+    },
+
+    VTextField: {
+      density: 'compact',
+      variant: 'outlined',
+      hideDetails: 'auto',
+      rounded: 'lg',
     },
   },
   theme: {
