@@ -32,6 +32,7 @@ export interface Header {
   text: string;
   value: string;
   sort?: boolean | ((a: any, b: any) => number);
+  width?: string;
 }
 
 export interface Sorting {
