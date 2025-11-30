@@ -12,11 +12,15 @@
     <nav class="repos-wrapper">
       <a href="/">Home</a>
     </nav>
+    <div class="position-absolute" style="top: 95dvh; right: 0;">
+      <language-selector />
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import LanguageSelector from '@/components/LanguageSelector.vue';
 
 const emit = defineEmits<{
   (e: 'update:showMenu', value: boolean): void;

@@ -35,7 +35,7 @@
             </v-btn>
           </template>
           <span style="font-size: 0.75rem">
-            {{ searchOptions.allowFilterByFiles ? 'Enable filtering by files' : 'Disable filtering by files' }}
+            {{ searchOptions.allowFilterByFiles ? $t('enable_filtering_by_files') : $t('disable_filtering_by_files') }}
           </span>
         </v-tooltip>
         <div v-if="searchOptions.allowFilterByFiles" style="display: flex; gap: 0.5rem">
@@ -48,7 +48,7 @@
             style="min-width: unset; height: 24px"
             @click="selectedNodes = []"
           >
-            Clear
+            {{ $t('clear') }}
           </v-btn>
           <v-btn
             color="primary"
@@ -58,7 +58,7 @@
             style="min-width: unset; height: 24px"
             @click="emit('update:selected', 'all')"
           >
-            Select all
+            {{ $t('select_all') }}
           </v-btn>
         </div>
       </div>

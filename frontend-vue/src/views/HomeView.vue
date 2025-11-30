@@ -1,7 +1,7 @@
 <template>
   <div class="content">
     <header>
-      <h1>Resumen</h1>
+      <h1>{{ $t('summary') }}</h1>
     </header>
     <div class="repo-list">
       <div class="repo-wrapper" v-for="(repo, index) in reposData" :key="'repo' + index">
@@ -23,20 +23,20 @@
 
           <template v-if="!isLocal(repo)">
             <p>
-              Fecha de creación:
+              {{ $t('creation_date') }}:
               <span>{{ formatDate(repo.data.createdDate) }}</span>
             </p>
             <p>
-              Última actualización:
+              {{ $t('last_update') }}:
               <span>{{ formatDate(repo.data.lastUpdateDate) }}</span>
             </p>
             <p>
-              Commits:
+              {{ $t('commits') }}:
               <span>{{ totalCommits(repo.commits) }}</span>
             </p>
           </template>
 
-          <a :href="`/repo/${repo.data.name}${isLocal(repo) ? '_local' : ''}`" class="glb-btn-main">Ver más</a>
+          <a :href="`/repo/${repo.data.name}${isLocal(repo) ? '_local' : ''}`" class="glb-btn-main">{{ $t('see_more') }}</a>
         </div>
       </div>
     </div>
