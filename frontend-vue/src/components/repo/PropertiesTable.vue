@@ -1,5 +1,5 @@
 <template>
-  <v-table class="properties-table" density="comfortable">
+  <v-table density="compact">
     <thead>
       <tr>
         <th
@@ -16,7 +16,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(item, index) in tableData" :key="index">
+      <tr v-for="(item, index) in paginatedTableData" :key="index">
         <td>{{ item.class }}</td>
         <td>
           <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level) }]">
@@ -27,9 +27,10 @@
       </tr>
     </tbody>
   </v-table>
+  <pagination class="mt-4" v-model="pagination" />
 </template>
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import {
   type Header,
   getLevelColor,
@@ -38,6 +39,7 @@ import {
   SortDirection,
   type TableDataItem,
 } from '@/components/repo/utils';
+import Pagination, { type PaginationItem } from '@/components/repo/Pagination.vue';
 
 defineProps<{
   modelValue: TableDataItem[];
@@ -45,8 +47,20 @@ defineProps<{
   search?: string;
 }>();
 
-const sortingColumn = ref<Sorting>({ value: '', direction: SortDirection.UNKNOWN });
-const tableData = defineModel<TableDataItem[]>('modelValue');
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: TableDataItem[]): void;
+}>();
+
+const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOWN });
+const pagination = ref<PaginationItem>({ page: 1, itemsPerPage: 10, total: 0 });
+const localModelValue = defineModel<TableDataItem[]>('modelValue');
+
+const paginatedTableData = computed<TableDataItem[]>(() => {
+  return (localModelValue.value ?? []).slice(
+    (pagination.value.page - 1) * pagination.value.itemsPerPage,
+    pagination.value.page * pagination.value.itemsPerPage
+  );
+});
 
 const headers: Header[] = [
   { text: 'Clase', value: 'class', sort: true },
@@ -55,7 +69,7 @@ const headers: Header[] = [
 ];
 
 function getSortIcon(column: string): string {
-  if (sortingColumn.value.value !== column) return 'mdi-swap-vertical';
+  if (sortingColumn.value.column !== column) return 'mdi-swap-vertical';
   switch (sortingColumn.value.direction) {
     case SortDirection.ASC:
       return 'mdi-arrow-up-thin';
@@ -67,21 +81,23 @@ function getSortIcon(column: string): string {
 }
 
 function sortColumn(column: string) {
-  if (sortingColumn.value.value === column) {
+  console.log('Sorting by column:', column);
+  if (sortingColumn.value.column === column) {
     sortingColumn.value.direction = (sortingColumn.value.direction + 1) % 3;
   } else {
-    sortingColumn.value = { value: column, direction: SortDirection.ASC };
-  }
-}
-</script>
-<style lang="scss" scoped>
-.properties-table {
-  .full-width-table {
-    width: 100%;
-    table-layout: fixed;
+    sortingColumn.value = { column: column, direction: SortDirection.ASC };
   }
 }
 
+watch(
+  () => localModelValue.value,
+  newValue => {
+    if (!newValue) return;
+    pagination.value.total = newValue.length;
+  }
+);
+</script>
+<style lang="scss" scoped>
 thead {
   background-color: var(--primary-color);
   color: white;
@@ -99,11 +115,11 @@ td {
   justify-content: center;
   align-items: center;
   color: white;
-  width: 2rem;
-  height: 2rem;
+  font-size: 0.75rem;
+  width: 2.25em;
+  height: 2.25em;
   min-width: unset;
   border-radius: 50%;
-  font-size: 0.875rem;
   margin: auto;
 }
 </style>
