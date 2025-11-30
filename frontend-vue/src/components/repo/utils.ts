@@ -35,7 +35,7 @@ export interface Header {
 }
 
 export interface Sorting {
-  value: string;
+  column: string;
   direction: SortDirection;
 }
 
