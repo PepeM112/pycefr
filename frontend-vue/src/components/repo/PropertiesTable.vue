@@ -6,7 +6,7 @@
           v-for="header in headers"
           :key="header.value"
           :class="{ sortable: header.sort, 'text-center': header.value !== 'class' }"
-          style="white-space: nowrap"
+          :style="{ whiteSpace: 'nowrap', width: header.width || 'auto' }"
         >
           <span>{{ header.text }}</span>
           <v-btn v-if="header.sort" class="ml-2" density="compact" icon @click="sortColumn(header.value)">
@@ -16,7 +16,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(item, index) in paginatedTableData" :key="index">
+      <tr v-for="(item, index) in displayedTableData" :key="index">
         <td>{{ item.class }}</td>
         <td>
           <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level) }]">
@@ -55,17 +55,35 @@ const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOW
 const pagination = ref<PaginationItem>({ page: 1, itemsPerPage: 10, total: 0 });
 const localModelValue = defineModel<TableDataItem[]>('modelValue');
 
-const paginatedTableData = computed<TableDataItem[]>(() => {
-  return (localModelValue.value ?? []).slice(
-    (pagination.value.page - 1) * pagination.value.itemsPerPage,
-    pagination.value.page * pagination.value.itemsPerPage
+const displayedTableData = computed<TableDataItem[]>(() => {
+  if (!localModelValue.value) return [];
+
+  return (
+    [...localModelValue.value]
+      // Sorting
+      .sort((a, b) => {
+        if (sortingColumn.value.direction === SortDirection.UNKNOWN || !sortingColumn.value.column) return 0;
+
+        const column = sortingColumn.value.column as keyof TableDataItem;
+        let comparison = 0;
+
+        if (a[column] < b[column]) comparison = -1;
+        else if (a[column] > b[column]) comparison = 1;
+
+        return sortingColumn.value.direction === SortDirection.ASC ? comparison : -comparison;
+      })
+      // Pagination
+      .slice(
+        (pagination.value.page - 1) * pagination.value.itemsPerPage,
+        pagination.value.page * pagination.value.itemsPerPage
+      )
   );
 });
 
 const headers: Header[] = [
   { text: 'Clase', value: 'class', sort: true },
-  { text: 'Nivel', value: 'level', sort: true },
-  { text: 'Instancias', value: 'numberOfInstances', sort: true },
+  { text: 'Nivel', value: 'level', sort: true, width: '1px' },
+  { text: 'Instancias', value: 'instances', sort: true, width: '1px' },
 ];
 
 function getSortIcon(column: string): string {

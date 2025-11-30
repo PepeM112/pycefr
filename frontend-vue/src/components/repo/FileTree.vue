@@ -1,6 +1,6 @@
 <template>
   <v-card class="position-relative" :min-width="300" rounded="lg">
-    <div class="pa-2 pt-4 pr-4">
+    <div class="pa-2 pt-4 pr-4" style="border-bottom: 1px solid #dedede">
       <div class="d-flex align-center">
         <v-btn
           class="mr-2"
@@ -18,18 +18,26 @@
         />
       </div>
       <div v-if="searchOptions.visible" class="d-flex justify-space-between align-center pt-2">
-        <v-btn
-          class="px-2"
-          style="min-width: unset"
-          color="primary"
-          density="compact"
-          variant="text"
-          @click="toggleAllowFilterByFiles"
-        >
-          <v-icon>
-            {{ searchOptions.allowFilterByFiles ? 'mdi-filter' : 'mdi-filter-off-outline' }}
-          </v-icon>
-        </v-btn>
+        <v-tooltip>
+          <template #activator="{ props }">
+            <v-btn
+              v-bind="props"
+              class="px-2"
+              style="min-width: unset"
+              color="primary"
+              density="compact"
+              variant="text"
+              @click="toggleAllowFilterByFiles"
+            >
+              <v-icon>
+                {{ searchOptions.allowFilterByFiles ? 'mdi-filter' : 'mdi-filter-off-outline' }}
+              </v-icon>
+            </v-btn>
+          </template>
+          <span style="font-size: 0.75rem">
+            {{ searchOptions.allowFilterByFiles ? 'Enable filtering by files' : 'Disable filtering by files' }}
+          </span>
+        </v-tooltip>
         <div v-if="searchOptions.allowFilterByFiles" style="display: flex; gap: 0.5rem">
           <v-btn
             v-if="selectedNodes?.length"
