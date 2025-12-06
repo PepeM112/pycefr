@@ -5,7 +5,7 @@
     </header>
     <div class="charts"></div>
     <div class="container">
-      <h2>Propiedades</h2>
+      <h2>{{ $t('properties') }}</h2>
       <div class="d-flex">
         <file-tree
           :model-value="fileTreeData"

@@ -12,11 +12,15 @@
     <nav class="repos-wrapper">
       <a href="/">Home</a>
     </nav>
+    <div class="pl-2">
+      <language-selector />
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import LanguageSelector from '@/components/LanguageSelector.vue';
 
 const emit = defineEmits<{
   (e: 'update:showMenu', value: boolean): void;
@@ -110,5 +114,10 @@ nav {
       background-color: var(--primary-color-light);
     }
   }
+}
+</style>
+<style lang="scss">
+.hidden button:not(.sidebar-toggle) {
+  margin: auto;
 }
 </style>

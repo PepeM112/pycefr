@@ -1,0 +1,15 @@
+export default {
+  clear: 'Clear',
+  commits: 'Commits',
+  creation_date: 'Creation date',
+  disable_filtering_by_files: 'Disable filtering by files',
+  enable_filtering_by_files: 'Enable filtering by files',
+  english: 'English',
+  last_update: 'Last update',
+  properties: 'Properties',
+  see_more: 'See more',
+  select_all: 'Select all',
+  select_language: 'Select language',
+  spanish: 'Spanish',
+  summary: 'Summary',
+};
