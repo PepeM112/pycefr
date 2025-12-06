@@ -12,7 +12,7 @@
     <nav class="repos-wrapper">
       <a href="/">Home</a>
     </nav>
-    <div class="position-absolute" style="top: 95dvh; right: 0;">
+    <div class="pl-2">
       <language-selector />
     </div>
   </aside>
@@ -114,5 +114,10 @@ nav {
       background-color: var(--primary-color-light);
     }
   }
+}
+</style>
+<style lang="scss">
+.hidden button:not(.sidebar-toggle) {
+  margin: auto;
 }
 </style>

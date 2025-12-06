@@ -1,31 +1,26 @@
 <template>
-  <v-menu v-model="isMenuOpen" location="top" class="language-selector">
+  <v-menu v-model="isMenuOpen" class="language-selector">
     <template #activator="{ props }">
-      <v-btn
-        v-bind="props"
-        class="d-flex px-0 py-2"
-        density="compact"
-        variant="text"
-      >
+      <button v-bind="props" class="d-flex justify-center align-center">
         <country-flag
           :country="getLanguageFlag(selectedLanguage)"
-          style="transform: scale(0.35) translate(0, -25%)"
+          style="
+            margin: 0em -0.9em -0.6em;
+            transform: scale(0.35) translate(0, -25%);
+            -webkit-transform: scale(0.35) translate(0, -25%);
+          "
         />
-      </v-btn>
+      </button>
       <v-list v-if="isMenuOpen" class="rounded-lg">
         <v-list-item
           v-for="option in languageOptions"
           :key="option.code"
+          class="pl-0"
           style="cursor: pointer"
           @click="changeLanguage(option.code)"
         >
-          <country-flag
-            class="ml-1 mr-1"
-            :country="(option.flag || option.code)"
-            size="small"
-            style="transform: scale(0.4)"
-          />
-          {{ t(option.label) }}
+          <country-flag class="ml-1" :country="option.flag || option.code" size="small" style="transform: scale(0.4)" />
+          <span class="ml-3">{{ t(option.label) }}</span>
         </v-list-item>
       </v-list>
     </template>
@@ -55,6 +50,4 @@ function changeLanguage(code: string) {
   locale.value = code;
 }
 </script>
-<style lang="scss">
-
-</style>
+<style lang="scss"></style>
