@@ -1,13 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime
 from models.common import Level, Origin
-from models.class_model import ClassEnum
+from models.class_model import ClassID
 
 
 class AnalysisClass(BaseModel):
-    id: int
-    analysis_id: int
-    class_id: ClassEnum
+    class_id: ClassID
     level: Level
     instances: int
 
@@ -17,15 +15,16 @@ class Analysis(BaseModel):
     name: str
     origin: Origin
     created_at: datetime
+    classes: list[AnalysisClass]
 
 
 class AnalysisCreate(BaseModel):
     name: str
     origin: Origin
-    classes: list[ClassEnum]
+    classes: list[AnalysisClass]
 
 
 class AnalysisUpdate(BaseModel):
     name: str | None = None
     origin: Origin | None = None
-    classes: list[ClassEnum] | None = None
+    classes: list[AnalysisClass] | None = None
