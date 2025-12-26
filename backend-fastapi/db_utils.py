@@ -1,84 +1,101 @@
 import sqlite3
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
+from datetime import datetime
+
+from models.analysis import AnalysisCreate, AnalysisUpdate
+from models.common import Level, Origin
+from models.class_model import ClassID
+from config.analysis_map import CODE_CLASS_DETAILS
 
 DATABASE_PATH = 'database/pycefr.db'
 
-def get_db_connection():
+
+def get_db_connection() -> sqlite3.Connection:
+    """
+    Establishes a connection to the SQLite database.
+
+    Returns:
+        sqlite3.Connection: A connection object with the row_factory set to Row.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-def execute_query(query: str, args: tuple = (), fetch_one: bool = False):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(query, args)
-    
-    if fetch_one:
-        result = cursor.fetchone()
-    else:
-        result = cursor.fetchall()
-    
-    conn.commit()
-    conn.close()
-    return result
 
-def get_levels() -> List[Dict]:
-    query = "SELECT * FROM level"
-    levels = execute_query(query)
-    return [dict(level) for level in levels]
-
-def get_origins() -> List[Dict]:
-    query = "SELECT * FROM origin"
-    origins = execute_query(query)
-    return [dict(origin) for origin in origins]
-
-def get_classes() -> List[Dict]:
-    query = "SELECT c.id, c.name, l.name as level_name FROM class c JOIN level l ON c.level_id = l.id"
-    classes = execute_query(query)
-    return [dict(cls) for cls in classes]
-
-def get_analyses() -> List[Dict]:
-    query = """
-    SELECT a.id, a.name, o.name as origin_name, a.created_at 
-    FROM analysis a 
-    JOIN origin o ON a.origin_id = o.id
+# --- READ OPERATIONS ---
+def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
     """
-    analyses = execute_query(query)
-    return [dict(analysis) for analysis in analyses]
+    Retrieves a paginated list of analysis summaries.
 
-def get_analysis_classes(analysis_id: int) -> List[Dict]:
-    query = """
-    SELECT ac.id, c.name as class_name, l.name as level_name, ac.instances
-    FROM analysis_class ac
-    JOIN class c ON ac.class_id = c.id
-    JOIN level l ON c.level_id = l.id
-    WHERE ac.analysis_id = ?
+    Args:
+        page (int): The current page number.
+        per_page (int): The number of records to retrieve per page.
+
+    Returns:
+        Tuple[List[dict], int]: A tuple containing the list of analyses and the total count.
     """
-    analysis_classes = execute_query(query, (analysis_id,))
-    return [dict(ac) for ac in analysis_classes]
 
-def create_analysis(name: str, origin_id: int, classes: List[Dict]) -> Optional[int]:
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Insertar análisis
-        cursor.execute(
-            "INSERT INTO analysis (name, origin_id) VALUES (?, ?)",
-            (name, origin_id)
+    # TODO
+
+
+def get_analysis_details(analysis_id: int) -> Optional[dict]:
+    """
+    Fetches a complete analysis including its nested code classes.
+
+    Args:
+        analysis_id (int): The unique identifier of the analysis.
+
+    Returns:
+        Optional[dict]: The analysis data if found, None otherwise.
+    """
+
+    # TODO
+
+
+def insert_full_analysis(name: str, origin: int, classes: List[Dict]) -> Optional[int]:
+    """
+    Inserts a new analysis in a single transaction.
+
+    Args:
+        data (AnalysisCreate): The Pydantic model containing analysis data.
+
+    Returns:
+        Optional[int]: The ID of the newly created analysis, or None if the operation failed.
+    """
+
+    # TODO
+
+
+def update_analysis(analysis_id: int, name: Optional[str], origin: Optional[int], classes: Optional[List[Dict]] = None) -> bool:
+    """
+    Updates an existing analysis record.
+
+    Args:
+        analysis_id (int): The ID of the analysis to update.
+        data (AnalysisUpdate): The Pydantic model containing updated fields.
+
+    Returns:
+        bool: True if the update was successful, False otherwise.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            "UPDATE analyses SET name = ?, origin_id = ? WHERE id = ?",
+            (name, origin, analysis_id)
         )
-        analysis_id = cursor.lastrowid
-        
-        # Insertar clases del análisis
-        for class_data in classes:
-            cursor.execute(
-                "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
-                (analysis_id, class_data['class_id'], class_data['instances']))
-        
         conn.commit()
-        return analysis_id
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return None
-    finally:
-        conn.close()
+        # cursor.rowcount devuelve el número de filas modificadas
+        return cursor.rowcount > 0
+
+
+def delete_analysis(analysis_id: int) -> bool:
+    """
+    Deletes an analysis record and its dependencies.
+
+    Args:
+        analysis_id (int): The ID of the analysis to delete.
+
+    Returns:
+        bool: True if a record was deleted, False otherwise.
+    """
+
+    # TODO

@@ -6,8 +6,15 @@ from models.class_model import ClassID
 
 class AnalysisClass(BaseModel):
     class_id: ClassID
-    level: Level
+    level: Level | None = None
     instances: int
+
+
+class AnalysisList(BaseModel):
+    id: int
+    name: str
+    origin: Origin
+    created_at: datetime
 
 
 class Analysis(BaseModel):
