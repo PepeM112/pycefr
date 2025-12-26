@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime
 from models.common import Level, Origin
-from models.class_model import ClassID
+from models.class_model import ClassId
 
 
 class AnalysisClass(BaseModel):
-    class_id: ClassID
+    class_id: ClassId
     level: Level | None = None
     instances: int
 

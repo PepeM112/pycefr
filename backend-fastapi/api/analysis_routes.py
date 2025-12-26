@@ -13,9 +13,21 @@ router = APIRouter(
 def list_analysis(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(
-        10, ge=1, le=100, description="Number of items per page")
+        10, ge=1, description="Number of items per page")
 ):
+    """
+    Retrieves a paginated list of analysis summaries.
 
+    Args:
+        page (int): The current page number (starts at 1).
+        per_page (int): The number of items to return per page.
+
+    Returns:
+        dict: A dictionary containing pagination metadata and the list of elements.
+
+    Raises:
+        HTTPException(500): If an internal database error occurs.
+    """
     try:
         data, total = db_utils.get_analyses(page=page, per_page=per_page)
 
@@ -33,6 +45,19 @@ def list_analysis(
 
 @router.get("/{analysis_id}", response_model=Analysis)
 def get_analysis_detail(analysis_id: int):
+    """
+    Fetches the full details of a specific analysis, including nested classes.
+
+    Args:
+        analysis_id (int): The unique identifier of the analysis.
+
+    Returns:
+        Analysis: The complete analysis object with hydrated class levels.
+
+    Raises:
+        HTTPException(404): If the analysis does not exist.
+        HTTPException(500): If an internal server error occurs.
+    """
     try:
         analysis = db_utils.get_analysis_details(analysis_id)
         if analysis is None:
@@ -53,6 +78,19 @@ def get_analysis_detail(analysis_id: int):
 
 @router.post("", response_model=Analysis, status_code=status.HTTP_201_CREATED)
 def create_analysis(analysis_create: AnalysisCreate):
+    """
+    Creates a new analysis record along with its nested code classes.
+
+    Args:
+        analysis_create (AnalysisCreate): The payload containing name, origin, and classes.
+
+    Returns:
+        Analysis: The created analysis object with its generated ID.
+
+    Raises:
+        HTTPException(422): If there are duplicate classes in the request.
+        HTTPException(500): If the creation fails due to server error.
+    """
     try:
         analysis_id = db_utils.insert_full_analysis(
             name=analysis_create.name,
@@ -69,6 +107,11 @@ def create_analysis(analysis_create: AnalysisCreate):
 
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Classes must be unique within an analysis. " + str(e)
+        )
     except Exception as e:
         print(f"[ERROR] create_analysis: {e}")
         raise HTTPException(
@@ -79,6 +122,24 @@ def create_analysis(analysis_create: AnalysisCreate):
 
 @router.patch("/{analysis_id}", response_model=Analysis)
 def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate):
+    """
+    Updates an existing analysis. 
+
+    If 'classes' are provided, the existing classes are replaced entirely (Delete & Insert).
+    If 'classes' is an empty list, all classes for this analysis are removed.
+
+    Args:
+        analysis_id (int): The ID of the analysis to update.
+        analysis_update (AnalysisUpdate): The fields to update (name, origin, classes).
+
+    Returns:
+        Analysis: The updated analysis object.
+
+    Raises:
+        HTTPException(404): If the analysis ID does not exist.
+        HTTPException(422): If the new class list contains duplicates.
+        HTTPException(500): If the update fails due to server error.
+    """
     try:
         success = db_utils.update_analysis(
             analysis_id=analysis_id,
@@ -97,6 +158,11 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate):
         return db_utils.get_analysis_details(analysis_id)
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Classes must be unique within an analysis. " + str(e)
+        )
     except Exception as e:
         print(f"[ERROR] update_analysis ID {analysis_id}: {e}")
         raise HTTPException(
@@ -107,6 +173,16 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate):
 
 @router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_analysis(analysis_id: int):
+    """
+    Deletes an analysis and all associated classes.
+
+    Args:
+        analysis_id (int): The ID of the analysis to delete.
+
+    Raises:
+        HTTPException(404): If the analysis does not exist.
+        HTTPException(500): If the deletion fails.
+    """
     try:
         success = db_utils.delete_analysis(analysis_id)
         if not success:

@@ -9,7 +9,7 @@ class ClassItem(BaseModel):
     level: Level
 
 
-class ClassID(Enum):
+class ClassId(Enum):
     UNKNOWN = 0
     # --- List ---
     LIST_SIMPLE = 1
