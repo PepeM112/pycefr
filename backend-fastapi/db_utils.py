@@ -141,9 +141,7 @@ def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
     Inserts a new analysis and its related classes in a single transaction.
 
     Args:
-        name (str): The name of the analysis.
-        origin (int): The integer value of the Origin Enum.
-        classes (List[Dict]): List of dicts with 'class_id' and 'instances'.
+        analysis (AnalysisCreate): The analysis data to insert.
 
     Returns:
         Optional[int]: The ID of the newly created analysis, or None if it failed.
@@ -154,14 +152,17 @@ def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (analysis.name, analysis.origin))
+        name = analysis.name
+        origin = analysis.origin.value
+
+        cursor.execute("INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (name, origin))
         analysis_id = cursor.lastrowid
 
         classes = [c.model_dump() for c in analysis.classes]
 
         classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
         cursor.executemany(
-            "INSERT INTO analysis_classes (analysis_id, class_id, instances) VALUES (?, ?, ?)",
+            "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
             classes_data,
         )
         conn.commit()
@@ -209,10 +210,10 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> bool:
             cursor.execute("UPDATE analyses SET origin_id = ? WHERE id = ?", (origin, analysis_id))
 
         if classes is not None:
-            cursor.execute("DELETE FROM analysis_classes WHERE analysis_id = ?", (analysis_id,))
+            cursor.execute("DELETE FROM analysis_class WHERE analysis_id = ?", (analysis_id,))
             classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
             cursor.executemany(
-                "INSERT INTO analysis_classes (analysis_id, class_id, instances) VALUES (?, ?, ?)",
+                "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
                 classes_data,
             )
 
