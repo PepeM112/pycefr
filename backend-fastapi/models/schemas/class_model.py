@@ -2,7 +2,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from models.common import Level
+from models.schemas.common import Level
 
 
 class ClassItem(BaseModel):
@@ -44,7 +44,7 @@ class ClassId(Enum):
     PRINT_SIMPLE = 22
     # --- Assign ---
     ASSIGN_SIMPLE = 23
-    ASSIGN_WITH_SUM = 24
+    ASSIGN_WITH_OPERATOR = 24
     ASSIGN_INCREMENTS = 25
     # --- If-Statements ---
     IF_SIMPLE = 26

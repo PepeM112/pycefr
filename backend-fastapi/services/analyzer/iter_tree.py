@@ -4,7 +4,7 @@ CLASS PROGRAM TO ITERATE ON THE TREE
 
 import ast
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List, TypedDict
 
 import backend.scripts.levels as levels
 
@@ -13,8 +13,7 @@ class IterTree:
     """Class to iterate tree."""
 
     # JSON dictionary
-    my_data_json: Dict[str, Any] = {}
-    my_data_json_new: Dict[str, Any] = {}
+    my_data_json: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
 
     def __init__(self, tree: ast.AST, attrib: str, relative_path: str) -> None:
         """Class constructor."""
@@ -41,16 +40,17 @@ class IterTree:
             return
 
         # Ensure 'elements' key exists
-        if "elements" not in self.my_data_json_new:
-            self.my_data_json_new["elements"] = {}
+        if "elements" not in self.my_data_json:
+            self.my_data_json["elements"] = {}
 
         # Ensure file entry exists in 'elements'
-        if self.name not in self.my_data_json_new["elements"]:
-            self.my_data_json_new["elements"][self.name] = []
+        if self.name not in self.my_data_json["elements"]:
+            self.my_data_json["elements"][self.name] = []
 
         # Check if an entry for the current class and level exists
         entry_found = False
-        for entry in self.my_data_json_new["elements"][self.name]:
+        elements_list: List[Dict[str, Any]] = self.my_data_json["elements"][self.name]
+        for entry in elements_list:
             if entry["class"] == self.clase:
                 entry["numberOfInstances"] += 1
                 entry_found = True
@@ -58,10 +58,10 @@ class IterTree:
 
         # If not found, add a new entry
         if not entry_found:
-            self.my_data_json_new["elements"][self.name].append(
+            self.my_data_json["elements"][self.name].append(
                 {"class": str(self.clase), "level": str(self.level), "numberOfInstances": 1}
             )
 
     def write_data_json(self) -> None:
         with open("backend/tmp/data.json", "w") as file:
-            json.dump(self.my_data_json_new, file, indent=4)
+            json.dump(self.my_data_json, file, indent=4)

@@ -1,7 +1,7 @@
 from typing import Optional, TypedDict
 
-from models.class_model import ClassId
-from models.common import Level
+from models.schemas.class_model import ClassId
+from models.schemas.common import Level
 
 
 class ClassDetails(TypedDict):
@@ -11,7 +11,7 @@ class ClassDetails(TypedDict):
 
 CODE_CLASS_DETAILS: dict[ClassId, ClassDetails] = {
     # --- LIST ---
-    ClassId.LIST_SIMPLE: {"name": "List: Sintaxis Simple", "level": Level.A1},
+    ClassId.LIST_SIMPLE: {"name": "List: Simple", "level": Level.A1},
     ClassId.LIST_NESTED: {"name": "List: Anidada", "level": Level.A2},
     ClassId.LIST_WITH_DICT: {"name": "List: Con Diccionario", "level": Level.B1},
     # --- LISTCOMP ---
@@ -19,7 +19,7 @@ CODE_CLASS_DETAILS: dict[ClassId, ClassDetails] = {
     ClassId.LISTCOMP_NESTED: {"name": "ListComp: Anidada", "level": Level.B1},
     ClassId.LISTCOMP_WITH_IF: {"name": "ListComp: Con Condicional", "level": Level.B1},
     # --- DICT ---
-    ClassId.DICT_SIMPLE: {"name": "Dict: Sintaxis Simple", "level": Level.A2},
+    ClassId.DICT_SIMPLE: {"name": "Dict: Simple", "level": Level.A2},
     ClassId.DICT_NESTED: {"name": "Dict: Anidado", "level": Level.B1},
     ClassId.DICT_WITH_LIST: {"name": "Dict: Con Lista", "level": Level.B1},
     ClassId.DICT_WITH_DICT_LIST: {"name": "Dict: Estructura Compleja", "level": Level.B2},
@@ -29,7 +29,7 @@ CODE_CLASS_DETAILS: dict[ClassId, ClassDetails] = {
     ClassId.DICTCOMP_WITH_IF_ELSE: {"name": "DictComp: Con If-Else", "level": Level.B1},
     ClassId.DICTCOMP_NESTED: {"name": "DictComp: Anidado", "level": Level.B2},
     # --- TUPLE ---
-    ClassId.TUPLE_SIMPLE: {"name": "Tuple: Sintaxis Simple", "level": Level.A1},
+    ClassId.TUPLE_SIMPLE: {"name": "Tuple: Simple", "level": Level.A1},
     ClassId.TUPLE_NESTED: {"name": "Tuple: Anidada", "level": Level.A2},
     # --- FILE ---
     ClassId.FILE_OPEN: {"name": "File: Apertura (open)", "level": Level.A2},
@@ -41,7 +41,7 @@ CODE_CLASS_DETAILS: dict[ClassId, ClassDetails] = {
     ClassId.PRINT_SIMPLE: {"name": "Print: Salida estándar", "level": Level.A1},
     # --- ASSIGN ---
     ClassId.ASSIGN_SIMPLE: {"name": "Assign: Simple", "level": Level.A1},
-    ClassId.ASSIGN_WITH_SUM: {"name": "Assign: Con Operación", "level": Level.A1},
+    ClassId.ASSIGN_WITH_OPERATOR: {"name": "Assign: Con Operación", "level": Level.A1},
     ClassId.ASSIGN_INCREMENTS: {"name": "Assign: Incremento (+=)", "level": Level.A1},
     # --- IF-STATEMENTS ---
     ClassId.IF_SIMPLE: {"name": "If: Condicional Simple", "level": Level.A1},
@@ -140,3 +140,17 @@ def get_class_level(class_id: ClassId) -> Level:
     if details:
         return details["level"]
     return Level.UNKNOWN
+
+
+def get_class_name(class_id: ClassId) -> str:
+    """
+    Retrieves the name associated with a given ClassId.
+    Args:
+        class_id (ClassId): The unique identifier of the code construct.
+    Returns:
+        str: The name corresponding to the code construct.
+    """
+    details: Optional[ClassDetails] = CODE_CLASS_DETAILS.get(class_id)
+    if details:
+        return details["name"]
+    return ""

@@ -2,8 +2,9 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from models.class_model import ClassId
-from models.common import Level, Origin
+from models.schemas.class_model import ClassId
+from models.schemas.common import Level, Origin
+from models.schemas.repo import RepoInfo
 
 
 class AnalysisClass(BaseModel):
@@ -37,3 +38,8 @@ class AnalysisUpdate(BaseModel):
     name: str | None = None
     origin: Origin | None = None
     classes: list[AnalysisClass] | None = None
+
+
+class FullAnalysisResult(BaseModel):
+    elements: dict[str, list[AnalysisClass]]
+    repo_info: RepoInfo
