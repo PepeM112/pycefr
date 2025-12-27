@@ -1,8 +1,9 @@
-from pydantic import BaseModel
 from enum import Enum, IntEnum
-from typing import Generic, TypeVar, List, Optional
+from typing import Generic, List, TypeVar
 
-T = TypeVar('T')
+from pydantic import BaseModel
+
+T = TypeVar("T")
 
 
 class Level(IntEnum, Enum):

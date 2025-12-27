@@ -2,8 +2,10 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+from config.analysis_map import get_class_level
+from models.analysis import Analysis, AnalysisClass, AnalysisCreate, AnalysisList, AnalysisUpdate
 from models.class_model import ClassId
-from models.common import Level, Origin
+from models.common import Origin
 
 DATABASE_PATH = "database/pycefr.db"
 
@@ -21,7 +23,7 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 # --- READ OPERATIONS ---
-def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
+def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
     """
     Retrieves a paginated list of analysis summaries.
 
@@ -30,8 +32,8 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
         per_page (int): The number of records to retrieve per page.
 
     Returns:
-        Tuple[List[dict], int]: A tuple containing:
-            - A list of dictionaries with analysis headers.
+        Tuple[List[AnalysisList], int]: A tuple containing:
+            - A list of analyses.
             - The total count of analysis records in the database.
     """
     offset = (page - 1) * per_page
@@ -51,15 +53,15 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
 
         total = cursor.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
 
-        analyses: List[Dict[str, Any]] = []
+        analyses: List[AnalysisList] = []
         for row in rows:
             analyses.append(
-                {
-                    "id": row["id"],
-                    "name": row["name"],
-                    "origin": Origin(row["origin_id"]),
-                    "created_at": datetime.fromisoformat(row["created_at"].replace(" ", "T")),
-                }
+                AnalysisList(
+                    id=row["id"],
+                    name=row["name"],
+                    origin=Origin(row["origin_id"]),
+                    created_at=datetime.fromisoformat(row["created_at"].replace(" ", "T")),
+                )
             )
 
         return analyses, total
@@ -70,7 +72,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
         conn.close()
 
 
-def get_analysis_details(analysis_id: int) -> Optional[Dict[str, Any]]:
+def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
     """
     Fetches a complete analysis including its nested code classes.
 
@@ -105,28 +107,26 @@ def get_analysis_details(analysis_id: int) -> Optional[Dict[str, Any]]:
             (analysis_id,),
         ).fetchall()
 
-        classes = []
+        classes: List[AnalysisClass] = []
         for c_row in classes_rows:
-            cid_value = c_row["class_id"]
+            cid_value: int = c_row["class_id"]
             try:
                 class_id_enum = ClassId(cid_value)
             except ValueError:
                 class_id_enum = ClassId.UNKNOWN
             classes.append(
-                {
-                    "class_id": class_id_enum,
-                    "instances": c_row["instances"],
-                    "level": Level.CODE_CLASS_DETAILS.get(class_id_enum, Level.UNKNOWN),
-                }
+                AnalysisClass(
+                    class_id=class_id_enum, instances=c_row["instances"], level=get_class_level(class_id_enum)
+                )
             )
 
-        analysis: Dict[str, Any] = {
-            "id": analysis_row["id"],
-            "name": analysis_row["name"],
-            "origin": Origin(analysis_row["origin_id"]),
-            "created_at": datetime.fromisoformat(analysis_row["created_at"].replace(" ", "T")),
-            "classes": classes,
-        }
+        analysis: Analysis = Analysis(
+            id=analysis_row["id"],
+            name=analysis_row["name"],
+            origin=Origin(analysis_row["origin_id"]),
+            created_at=datetime.fromisoformat(analysis_row["created_at"].replace(" ", "T")),
+            classes=classes,
+        )
 
         return analysis
     except sqlite3.Error as e:
@@ -136,7 +136,7 @@ def get_analysis_details(analysis_id: int) -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def insert_full_analysis(name: str, origin: int, classes: List[Dict]) -> Optional[int]:
+def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
     """
     Inserts a new analysis and its related classes in a single transaction.
 
@@ -154,8 +154,10 @@ def insert_full_analysis(name: str, origin: int, classes: List[Dict]) -> Optiona
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (name, origin))
+        cursor.execute("INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (analysis.name, analysis.origin))
         analysis_id = cursor.lastrowid
+
+        classes = [c.model_dump() for c in analysis.classes]
 
         classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
         cursor.executemany(
@@ -175,20 +177,13 @@ def insert_full_analysis(name: str, origin: int, classes: List[Dict]) -> Optiona
         conn.close()
 
 
-def update_analysis(
-    analysis_id: int,
-    name: Optional[str],
-    origin: Optional[int],
-    classes: Optional[List[Dict]] = None,
-) -> bool:
+def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> bool:
     """
     Updates an analysis record and replaces its associated classes.
 
     Args:
         analysis_id (int): The ID of the analysis to update.
-        name (Optional[str]): New name for the analysis.
-        origin (Optional[int]): New origin ID.
-        classes (Optional[List[Dict]]): New list of classes to replace old ones.
+        analysis_update (AnalysisUpdate): The fields to update (name, origin, classes).
 
     Returns:
         bool: True if the update was successful, False if the analysis was not found.
@@ -199,6 +194,10 @@ def update_analysis(
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+
+        name = analysis_update.name
+        origin = analysis_update.origin.value if analysis_update.origin else None
+        classes = [c.model_dump() for c in analysis_update.classes] if analysis_update.classes else None
 
         analysis_exists = cursor.execute("SELECT 1 FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
         if analysis_exists is None:

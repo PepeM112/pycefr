@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from common import Level
 from enum import Enum
+
+from pydantic import BaseModel
+
+from models.common import Level
 
 
 class ClassItem(BaseModel):
@@ -66,8 +68,8 @@ class ClassId(Enum):
     # --- FunctionDef ---
     FUNCTIONDEF_SIMPLE = 43
     FUNCTIONDEF_ARGUM_DEFAULT = 44
-    FUNCTIONDEF_ARGUM_STAR = 45        # *args
-    FUNCTIONDEF_ARGUM_DBL_STAR = 46    # **kwargs
+    FUNCTIONDEF_ARGUM_STAR = 45  # *args
+    FUNCTIONDEF_ARGUM_DBL_STAR = 46  # **kwargs
     FUNCTIONDEF_ARGUM_KEYWORD_ONLY = 47
     FUNCTIONDEF_RECURSIVE = 48
     # --- Return ---
@@ -114,7 +116,7 @@ class ClassId(Enum):
     # --- Attributes ---
     ATTRIBUTES_SIMPLE = 79
     ATTRIBUTES_CLASS_REF = 80  # __class__
-    ATTRIBUTES_DICT_REF = 81   # __dict__
+    ATTRIBUTES_DICT_REF = 81  # __dict__
     # --- Exception ---
     EXCEPTION_TRY_EXCEPT = 82
     EXCEPTION_TRY_ELSE_EXCEPT = 83

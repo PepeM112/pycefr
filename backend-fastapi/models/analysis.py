@@ -1,7 +1,9 @@
-from pydantic import BaseModel
 from datetime import datetime
-from models.common import Level, Origin
+
+from pydantic import BaseModel
+
 from models.class_model import ClassId
+from models.common import Level, Origin
 
 
 class AnalysisClass(BaseModel):
