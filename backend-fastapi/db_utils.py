@@ -1,13 +1,11 @@
 import sqlite3
-from typing import List, Dict, Optional, Tuple
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
-from models.analysis import AnalysisCreate, AnalysisUpdate
-from models.common import Level, Origin
 from models.class_model import ClassId
-from config.analysis_map import CODE_CLASS_DETAILS
+from models.common import Level, Origin
 
-DATABASE_PATH = 'database/pycefr.db'
+DATABASE_PATH = "database/pycefr.db"
 
 
 def get_db_connection() -> sqlite3.Connection:
@@ -48,19 +46,21 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
             """,
-            (per_page, offset)
+            (per_page, offset),
         ).fetchall()
 
         total = cursor.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
 
-        analyses = []
+        analyses: List[Dict[str, Any]] = []
         for row in rows:
-            analyses.append({
-                "id": row["id"],
-                "name": row["name"],
-                "origin": Origin(row["origin_id"]),
-                "created_at": datetime.fromisoformat(row["created_at"]).replace(" ", "T")
-            })
+            analyses.append(
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "origin": Origin(row["origin_id"]),
+                    "created_at": datetime.fromisoformat(row["created_at"].replace(" ", "T")),
+                }
+            )
 
         return analyses, total
     except sqlite3.Error as e:
@@ -70,7 +70,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[dict], int]:
         conn.close()
 
 
-def get_analysis_details(analysis_id: int) -> Optional[dict]:
+def get_analysis_details(analysis_id: int) -> Optional[Dict[str, Any]]:
     """
     Fetches a complete analysis including its nested code classes.
 
@@ -78,7 +78,7 @@ def get_analysis_details(analysis_id: int) -> Optional[dict]:
         analysis_id (int): The unique identifier of the analysis.
 
     Returns:
-        Optional[dict]: The analysis data if found, None otherwise.
+        Optional[Dict[str, Any]]: The analysis data if found, None otherwise.
     """
     conn = get_db_connection()
     try:
@@ -90,7 +90,7 @@ def get_analysis_details(analysis_id: int) -> Optional[dict]:
             FROM analyses
             WHERE id = ?
             """,
-            (analysis_id,)
+            (analysis_id,),
         ).fetchone()
 
         if analysis_row is None:
@@ -102,7 +102,7 @@ def get_analysis_details(analysis_id: int) -> Optional[dict]:
             FROM analysis_class
             WHERE analysis_id = ?
             """,
-            (analysis_id,)
+            (analysis_id,),
         ).fetchall()
 
         classes = []
@@ -112,18 +112,20 @@ def get_analysis_details(analysis_id: int) -> Optional[dict]:
                 class_id_enum = ClassId(cid_value)
             except ValueError:
                 class_id_enum = ClassId.UNKNOWN
-            classes.append({
-                "class_id": class_id_enum,
-                "instances": c_row["instances"],
-                "level": Level.CODE_CLASS_DETAILS.get(class_id_enum, Level.UNKNOWN)
-            })
+            classes.append(
+                {
+                    "class_id": class_id_enum,
+                    "instances": c_row["instances"],
+                    "level": Level.CODE_CLASS_DETAILS.get(class_id_enum, Level.UNKNOWN),
+                }
+            )
 
-        analysis = {
+        analysis: Dict[str, Any] = {
             "id": analysis_row["id"],
             "name": analysis_row["name"],
             "origin": Origin(analysis_row["origin_id"]),
-            "created_at": datetime.fromisoformat(analysis_row["created_at"]).replace(" ", "T"),
-            "classes": classes
+            "created_at": datetime.fromisoformat(analysis_row["created_at"].replace(" ", "T")),
+            "classes": classes,
         }
 
         return analysis
@@ -152,22 +154,19 @@ def insert_full_analysis(name: str, origin: int, classes: List[Dict]) -> Optiona
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (name, origin))
+        cursor.execute("INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (name, origin))
         analysis_id = cursor.lastrowid
 
-        classes_data = [(analysis_id, c['class_id'], c['instances'])
-                        for c in classes]
+        classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
         cursor.executemany(
             "INSERT INTO analysis_classes (analysis_id, class_id, instances) VALUES (?, ?, ?)",
-            classes_data
+            classes_data,
         )
         conn.commit()
         return analysis_id
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise ValueError(
-            f"Integrity error: Duplicate class detected or foreign key violation. Details: {e}")
+        raise ValueError(f"Integrity error: Duplicate class detected or foreign key violation. Details: {e}") from e
     except sqlite3.Error as e:
         print(f"[DB ERROR] {e}")
         conn.rollback()
@@ -176,7 +175,12 @@ def insert_full_analysis(name: str, origin: int, classes: List[Dict]) -> Optiona
         conn.close()
 
 
-def update_analysis(analysis_id: int, name: Optional[str], origin: Optional[int], classes: Optional[List[Dict]] = None) -> bool:
+def update_analysis(
+    analysis_id: int,
+    name: Optional[str],
+    origin: Optional[int],
+    classes: Optional[List[Dict]] = None,
+) -> bool:
     """
     Updates an analysis record and replaces its associated classes.
 
@@ -196,34 +200,28 @@ def update_analysis(analysis_id: int, name: Optional[str], origin: Optional[int]
     try:
         cursor = conn.cursor()
 
-        analysis_exists = cursor.execute(
-            "SELECT 1 FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
+        analysis_exists = cursor.execute("SELECT 1 FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
         if analysis_exists is None:
             return False
         if name is not None:
-            cursor.execute(
-                "UPDATE analyses SET name = ? WHERE id = ?", (name, analysis_id))
+            cursor.execute("UPDATE analyses SET name = ? WHERE id = ?", (name, analysis_id))
 
         if origin is not None:
-            cursor.execute(
-                "UPDATE analyses SET origin_id = ? WHERE id = ?", (origin, analysis_id))
+            cursor.execute("UPDATE analyses SET origin_id = ? WHERE id = ?", (origin, analysis_id))
 
         if classes is not None:
-            cursor.execute(
-                "DELETE FROM analysis_classes WHERE analysis_id = ?", (analysis_id,))
-            classes_data = [(analysis_id, c['class_id'], c['instances'])
-                            for c in classes]
+            cursor.execute("DELETE FROM analysis_classes WHERE analysis_id = ?", (analysis_id,))
+            classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
             cursor.executemany(
                 "INSERT INTO analysis_classes (analysis_id, class_id, instances) VALUES (?, ?, ?)",
-                classes_data
+                classes_data,
             )
 
         conn.commit()
         return True
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise ValueError(
-            f"Integrity error: Duplicate class detected in update list. {e}")
+        raise ValueError(f"Integrity error: Duplicate class detected in update list. {e}") from e
     except sqlite3.Error as e:
         print(f"[DB ERROR] {e}")
         conn.rollback()
@@ -245,8 +243,7 @@ def delete_analysis(analysis_id: int) -> bool:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            "DELETE FROM analyses WHERE id = ?", (analysis_id,))
+        cursor.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,))
         conn.commit()
         return cursor.rowcount > 0
     except sqlite3.Error as e:
