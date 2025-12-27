@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-import db_utils
+from db import db_utils
 from models.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
 from models.common import PaginatedResponse, Pagination
 
