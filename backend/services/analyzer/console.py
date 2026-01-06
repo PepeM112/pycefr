@@ -106,7 +106,8 @@ def display_analysis(elements: Dict[str, Any]) -> None:
     Display analysis data in a formatted table.
 
     Args:
-        elements (dict): A dictionary where keys are filenames and values are lists of dictionaries containing element information.
+        elements (dict): A dictionary where keys are filenames and values are lists of dictionaries containing element
+        information.
     """
     # Aggregate data across all files
     aggregated_elements: Dict[Any, int] = {}
