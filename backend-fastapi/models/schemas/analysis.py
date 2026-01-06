@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Dict, List
 
 from pydantic import BaseModel
 
@@ -25,21 +26,24 @@ class Analysis(BaseModel):
     name: str
     origin: Origin
     created_at: datetime
-    classes: list[AnalysisClass]
+    classes: List[AnalysisClass]
 
 
 class AnalysisCreate(BaseModel):
     name: str
     origin: Origin
-    classes: list[AnalysisClass]
+    classes: List[AnalysisClass]
 
 
 class AnalysisUpdate(BaseModel):
     name: str | None = None
     origin: Origin | None = None
-    classes: list[AnalysisClass] | None = None
+    classes: List[AnalysisClass] | None = None
 
 
-class FullAnalysisResult(BaseModel):
-    elements: dict[str, list[AnalysisClass]]
+class AnalysisResult(BaseModel):
+    elements: Dict[str, List[AnalysisClass]]
+
+
+class FullAnalysisResult(AnalysisResult):
     repo_info: RepoInfo

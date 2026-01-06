@@ -8,6 +8,7 @@ class GitHubUser(BaseModel):
     github_user: str
     avatar: str
     profile_url: str
+    commits: Optional[int] = None
 
 
 class GitHubContributor(GitHubUser):
