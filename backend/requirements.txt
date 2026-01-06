@@ -1,0 +1,11 @@
+fastapi
+uvicorn[extra]
+pydantic
+
+requests
+types-requests
+certifi
+charset-normalizer
+idna
+urllib3
+tabulate

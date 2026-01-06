@@ -1,11 +1,11 @@
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
-from config.analysis_map import get_class_level
-from models.analysis import Analysis, AnalysisClass, AnalysisCreate, AnalysisList, AnalysisUpdate
-from models.class_model import ClassId
-from models.common import Origin
+from constants.analysis_rules import get_class_level
+from models.schemas.analysis import Analysis, AnalysisClass, AnalysisCreate, AnalysisList, AnalysisUpdate
+from models.schemas.class_model import ClassId
+from models.schemas.common import Origin
 
 DATABASE_PATH = "database/pycefr.db"
 
