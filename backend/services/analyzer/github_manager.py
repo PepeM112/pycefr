@@ -199,7 +199,7 @@ class GitHubManager:
         return res.json()
 
     def _fetch_all_pages(self) -> List[Any]:
-        results = []
+        results: List[Any] = []
         page = 1
         while True:
             res = requests.get(f"{self.api_url}/commits", params={"per_page": 100, "page": page}, headers=self.headers)
