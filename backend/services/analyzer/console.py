@@ -1,12 +1,12 @@
 import json
 import os
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from tabulate import tabulate
 
 
-def read_data(file_path: str) -> dict:
+def read_data(file_path: str) -> Dict[str, Any]:
     """
     Read JSON data from a file.
 
@@ -34,7 +34,9 @@ def display_author_info(data: Dict[str, Any]) -> None:
         data (dict): The JSON data containing commit and contributor information.
     """
     # Initialize a dictionary to combine data by github_user
-    combined_commits_data = defaultdict(lambda: {"commits": 0, "total_hours": 0, "loc": 0, "total_files_modified": 0})
+    combined_commits_data: Dict[str, Any] = defaultdict(
+        lambda: {"commits": 0, "total_hours": 0, "loc": 0, "total_files_modified": 0}
+    )
 
     # Extract commit information
     for commit in data["commits"]:
@@ -46,7 +48,7 @@ def display_author_info(data: Dict[str, Any]) -> None:
 
     # Extract contributor information
     contributors = data["contributors"]
-    table = []
+    table: List[List[Any]] = []
     for contributor in contributors:
         # Get commit data for the corresponding GitHub user
         commit_info = combined_commits_data.get(contributor["profile_url"].split("/")[-1], {})
@@ -89,13 +91,13 @@ def display_author_info(data: Dict[str, Any]) -> None:
 
     # Print totals
     print(
-        f"| Total commits".ljust(table_width - len(str(total_commits)) - 4)
+        "| Total commits".ljust(table_width - len(str(total_commits)) - 4)
         + f"  {total_commits:>{len(str(total_commits))}} |"
     )
     print(
-        f"| Total hours".ljust(table_width - len(str(total_hours)) - 4) + f"  {total_hours:>{len(str(total_hours))}} |"
+        "| Total hours".ljust(table_width - len(str(total_hours)) - 4) + f"  {total_hours:>{len(str(total_hours))}} |"
     )
-    print(f"| Total loc".ljust(table_width - len(str(total_loc)) - 4) + f"  {total_loc:>{len(str(total_loc))}} |")
+    print("| Total loc".ljust(table_width - len(str(total_loc)) - 4) + f"  {total_loc:>{len(str(total_loc))}} |")
     print("|" + "-" * (table_width - 2) + "|")
 
 
@@ -107,8 +109,8 @@ def display_analysis(elements: Dict[str, Any]) -> None:
         elements (dict): A dictionary where keys are filenames and values are lists of dictionaries containing element information.
     """
     # Aggregate data across all files
-    aggregated_elements = {}
-    for filename, file_elements in elements.items():
+    aggregated_elements: Dict[Any, int] = {}
+    for _filename, file_elements in elements.items():
         for element in file_elements:
             key = (element["class"], element["level"])
             if key not in aggregated_elements:
@@ -116,14 +118,14 @@ def display_analysis(elements: Dict[str, Any]) -> None:
             aggregated_elements[key] += element["numberOfInstances"]
 
     # Compute totals per level
-    totals = {}
-    for (cls, level), count in aggregated_elements.items():
+    totals: Dict[Any, int] = {}
+    for (_cls, level), count in aggregated_elements.items():
         if level not in totals:
             totals[level] = 0
         totals[level] += count
 
     # Create table with aggregated data
-    table = [[cls, level, count] for (cls, level), count in aggregated_elements.items()]
+    table: List[List[Any]] = [[cls, level, count] for (cls, level), count in aggregated_elements.items()]
 
     headers = ["Element", "Level", "Number"]
 
@@ -146,7 +148,7 @@ def display_analysis(elements: Dict[str, Any]) -> None:
     print(table_str)
 
     # Print totals
-    max_total = max(totals.values(), default=0)
+    max_total: int = max(totals.values(), default=0)
     print("|" + "-" * (table_width - 2) + "|")
     for level, total in sorted(totals.items()):
         print(f"| Total {level}".ljust(table_width - len(str(max_total)) - 2) + f"{total:>{len(str(max_total))}} |")
