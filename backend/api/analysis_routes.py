@@ -3,8 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, status
 
 from db import db_utils
-from models.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
-from models.common import PaginatedResponse, Pagination
+from models.schemas.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
+from models.schemas.common import PaginatedResponse, Pagination
 
 router = APIRouter(prefix="/api/analyses", tags=["Analysis"])
 

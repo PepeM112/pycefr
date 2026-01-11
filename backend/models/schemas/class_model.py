@@ -1,11 +1,9 @@
 from enum import Enum
 
-from pydantic import BaseModel
-
-from models.schemas.common import Level
+from models.schemas.common import BaseSchema, Level
 
 
-class ClassItem(BaseModel):
+class ClassItem(BaseSchema):
     id: int
     name: str
     level: Level

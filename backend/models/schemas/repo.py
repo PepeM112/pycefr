@@ -1,9 +1,9 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from models.schemas.common import BaseSchema
 
 
-class GitHubUser(BaseModel):
+class GitHubUser(BaseSchema):
     name: str
     github_user: str
     avatar: str
@@ -15,7 +15,7 @@ class GitHubContributor(GitHubUser):
     contributions: int
 
 
-class RepoInfoData(BaseModel):
+class RepoInfoData(BaseSchema):
     name: str
     url: str
     description: Optional[str]
@@ -24,7 +24,7 @@ class RepoInfoData(BaseModel):
     owner: GitHubUser
 
 
-class RepoInfoCommit(BaseModel):
+class RepoInfoCommit(BaseSchema):
     name: str
     github_user: str
     loc: int
@@ -33,7 +33,7 @@ class RepoInfoCommit(BaseModel):
     total_files_modified: int
 
 
-class RepoInfo(BaseModel):
+class RepoInfo(BaseSchema):
     data: RepoInfoData
     commits: Optional[List[RepoInfoCommit]]
     contributors: Optional[List[GitHubContributor]]
