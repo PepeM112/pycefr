@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from backend.models.schemas.analysis import AnalysisResult, FullAnalysisResult
@@ -23,7 +22,7 @@ def request_url(url: str) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(file_path, "w", encoding="utf-8") as file:
-        json.dump(full_analysis.model_dump_json(), file, indent=4, ensure_ascii=False)
+        file.write(full_analysis.model_dump_json(indent=4))
 
 
 def run_directory(directory: str) -> None:
@@ -56,7 +55,7 @@ def run_directory(directory: str) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(file_path, "w", encoding="utf-8") as file:
-        json.dump(full_analysis.model_dump_json(), file, indent=4, ensure_ascii=False)
+        file.write(full_analysis.model_dump_json(indent=4))
 
 
 def run_user(user: str) -> None:
