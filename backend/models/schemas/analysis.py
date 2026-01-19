@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Dict, List
 
-from models.schemas.class_model import ClassId
-from models.schemas.common import BaseSchema, Level, Origin
-from models.schemas.repo import RepoInfo
+from backend.models.schemas.class_model import ClassId
+from backend.models.schemas.common import BaseSchema, Level, Origin
+from backend.models.schemas.repo import RepoInfo
 
 
 class AnalysisClass(BaseSchema):

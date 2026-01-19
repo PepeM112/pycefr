@@ -1,7 +1,7 @@
 from typing import Optional, TypedDict
 
-from models.schemas.class_model import ClassId
-from models.schemas.common import Level
+from backend.models.schemas.class_model import ClassId
+from backend.models.schemas.common import Level
 
 
 class ClassDetails(TypedDict):

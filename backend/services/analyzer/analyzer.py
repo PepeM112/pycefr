@@ -1,8 +1,8 @@
 import json
 
-from models.schemas.analysis import AnalysisResult, FullAnalysisResult
-from services.analyzer.analyzer_class import Analyzer
-from services.analyzer.github_manager import GitHubManager
+from backend.models.schemas.analysis import AnalysisResult, FullAnalysisResult
+from backend.services.analyzer.analyzer_class import Analyzer
+from backend.services.analyzer.github_manager import GitHubManager
 
 
 def request_url(url: str) -> None:

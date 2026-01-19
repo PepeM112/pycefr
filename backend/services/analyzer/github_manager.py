@@ -1,5 +1,4 @@
 import configparser
-import json
 import os
 import shlex
 import subprocess
@@ -12,7 +11,8 @@ from urllib.parse import urlparse
 
 import requests
 
-from models.schemas.repo import GitHubContributor, GitHubUser, RepoInfo, RepoInfoCommit, RepoInfoData
+from backend.config.settings import settings
+from backend.models.schemas.repo import GitHubContributor, GitHubUser, RepoInfo, RepoInfoCommit, RepoInfoData
 
 
 class GitHubManager:
@@ -30,7 +30,8 @@ class GitHubManager:
 
     def validate_repo_url(self) -> None:
         print("[ ] Validating URL", end="")
-        if not self.user or not self.repo_url:
+        if not self.repo_url:
+            print(f">{self.user}<->{self.repo_url}<")  # DEBUG
             sys.exit("\nERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO")
         parsed_url = urlparse(self.repo_url)
         if parsed_url.scheme != "https":
@@ -59,7 +60,7 @@ class GitHubManager:
         languages = response.json()
         total_bytes = sum(languages.values())
         python_bytes = languages.get("Python", 0)
-        return python_bytes >= total_bytes / 2 if total_bytes > 0 else False
+        return python_bytes >= total_bytes / 3 if total_bytes > 0 else False
 
     def clone_repo(self) -> str:
         print("[ ] Cloning repository", end="")
@@ -85,24 +86,13 @@ class GitHubManager:
     @classmethod
     def get_api_token(cls) -> str:
         """
-        Retrieve the API token from the personal configuration file.
-
-        This function reads the `backend/config/personal.json` file and extracts the GitHub API key used for
-        authentication.
+        Retrieve the GitHub API token from the global settings.
 
         Returns:
-            str: The API token if found in the configuration file, otherwise an empty string.
-
-        Raises:
-            SystemExit: If the `personal.json` file cannot be found.
+            str: The API token from the .env file.
         """
-        try:
-            with open("settings.json", "r") as file:
-                data = json.load(file)
-        except FileNotFoundError:
-            sys.exit("ERROR: Couldn't find settings.json")
-
-        return str(data.get("API-KEY", ""))
+        # Ya no abrimos archivos, usamos el objeto que cargó todo al inicio
+        return settings.api_key
 
     def get_repo_info(self) -> RepoInfo:
         repo_data = self._get_repo()
@@ -219,7 +209,7 @@ class GitHubManager:
         print("ERROR: Looks like you've reached the limit of API requests.")
         print(
             "To continue, you will need an API key. You can generate one at:\n\thttps://github.com/settings/tokens\n"
-            "and add it to your settings.json file."
+            "and add it to your .env file."
         )
         print("Also see: https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting")
         sys.exit(1)
@@ -229,7 +219,7 @@ class GitHubManager:
             print("ERROR: API rate limit or invalid token.")
             sys.exit(1)
         if response.status_code == 404:
-            sys.exit(f"ERROR: Repository {self.user}/{self.repo_name} not found.")
+            sys.exit(f"ERROR: {self.user}/{self.repo_name} not found.")
         if response.status_code != 200:
             sys.exit(f"ERROR: Unexpected error occurred. Status code: {response.status_code}")
 
@@ -255,7 +245,7 @@ class GitHubManager:
 
     def fetch_user(self) -> GitHubUser:
         print("[ ] Fetching user", end="")
-        response = requests.get(f"https://api.github.com/{self.user}", headers=self.headers)
+        response = requests.get(f"https://api.github.com/users/{self.user}", headers=self.headers)
         self._check_response(response)
 
         user_data = response.json()
@@ -307,6 +297,9 @@ class GitHubManager:
 
     @staticmethod
     def choose_repo(repos: List[Dict[str, Any]]) -> str:
+        print("Repositories found:")
+        for idx, repo in enumerate(repos, start=1):
+            print(f"\t[{idx}] {repo.get('name')}")
         while True:
             repo_input = input("\nSelect which one you want to analyze (Enter [0] to exit): ")
             if repo_input == "0":

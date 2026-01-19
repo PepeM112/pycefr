@@ -4,7 +4,11 @@ backend/data/
 backend/tmp/
 results/
 myenv/
-settings.json
+*.egg-info/
+*.egg
+.installed.cfg
+.env
+MANIFEST
 
 # Node.js
 frontend/node_modules/

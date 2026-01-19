@@ -1,6 +1,6 @@
 import ast
 
-from models.schemas.class_model import ClassId
+from backend.models.schemas.class_model import ClassId
 
 
 def get_class_from_ast_node(node: ast.AST) -> ClassId:

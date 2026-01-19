@@ -1,6 +1,6 @@
 from enum import Enum
 
-from models.schemas.common import BaseSchema, Level
+from backend.models.schemas.common import BaseSchema, Level
 
 
 class ClassItem(BaseSchema):

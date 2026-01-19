@@ -5,10 +5,11 @@ import sys
 from collections import defaultdict
 from typing import Any, Dict, List
 
-from constants.analysis_rules import get_class_level
-from models.schemas.analysis import AnalysisClass, AnalysisResult
-from models.schemas.class_model import ClassId
-from services.analyzer.levels import get_class_from_ast_node
+from backend.config.settings import settings
+from backend.constants.analysis_rules import get_class_level
+from backend.models.schemas.analysis import AnalysisClass, AnalysisResult
+from backend.models.schemas.class_model import ClassId
+from backend.services.analyzer.levels import get_class_from_ast_node
 
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "ignoreFolders": ["node_modules/", ".git/", "__pycache__/"],
@@ -21,9 +22,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
 class Analyzer:
     def __init__(self, root_path: str) -> None:
         self.root_path = root_path
-        self.settings: Dict[str, Any] = {}
         self.analysis_result: AnalysisResult = AnalysisResult(elements={})
-        self._load_settings()
 
     def analyse_project(self) -> None:
         print("[ ] Analysing code", end=" ")
@@ -97,15 +96,6 @@ class Analyzer:
         elements.sort(key=lambda x: x.class_id.value)
         return elements
 
-    def _load_settings(self) -> None:
-        if not os.path.isfile("settings.json"):
-            with open("settings.json", "w") as file:
-                json.dump(DEFAULT_SETTINGS, file, indent=4)
-        with open("settings.json", "r") as file:
-            self.settings = json.load(file)
-
-        self.settings["ignoreFolders"] = [folder.rstrip("/") for folder in self.settings.get("ignoreFolders", [])]
-
     @staticmethod
     def print_progress(current: int, total: int) -> None:
         """
@@ -122,7 +112,7 @@ class Analyzer:
         print(f"\r[ ] Analysing code [{progress}] {percent}%", end="")
 
     def _should_ignore(self, path: str) -> bool:
-        ignore_folders = self.settings.get("ignoreFolders", [])
+        ignore_folders = settings.ignore_folders
         path_norm = path.replace("\\", "/")
 
         for folder in ignore_folders:

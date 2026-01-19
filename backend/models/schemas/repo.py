@@ -1,14 +1,23 @@
 from typing import List, Optional
 
-from models.schemas.common import BaseSchema
+from pydantic import field_validator
+
+from backend.models.schemas.common import BaseSchema
 
 
 class GitHubUser(BaseSchema):
-    name: str
+    name: Optional[str] = ""
     github_user: str
     avatar: str
     profile_url: str
     commits: Optional[int] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def handle_null_name(cls, v: str | None) -> str:
+        if v is None:
+            return ""
+        return v
 
 
 class GitHubContributor(GitHubUser):
