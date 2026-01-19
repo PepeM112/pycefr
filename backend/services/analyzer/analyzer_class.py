@@ -46,7 +46,7 @@ class Analyzer:
             for item in items:
                 item_path = os.path.join(path, item)
                 # Item is a python file
-                if os.path.isfile(item_path) and item.endswith(".py"):
+                if os.path.isfile(item_path) and item.endswith(".py") and item != "__init__.py" :
                     percent = int((current_file / file_count) * 100)
                     bar_length = 40
                     block = int(round(bar_length * current_file / file_count))
