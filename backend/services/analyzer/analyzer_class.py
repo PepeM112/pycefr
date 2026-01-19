@@ -1,8 +1,9 @@
 import ast
-import json
 import os
+import shutil
 import sys
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, Dict, List
 
 from backend.config.settings import settings
@@ -36,7 +37,8 @@ class Analyzer:
         file_count = self._count_python_files(root_path)
 
         self._analyse_directory(root_path, file_count)
-        print("\r[✓] Analysing code" + " " * 50)
+        print("\r[✓] Analysing code\033[K")
+        self._delete_tmp_files()
 
     def _analyse_directory(self, path: str, file_count: int = 0, current_file: int = 0) -> None:
         try:
@@ -45,7 +47,11 @@ class Analyzer:
                 item_path = os.path.join(path, item)
                 # Item is a python file
                 if os.path.isfile(item_path) and item.endswith(".py"):
-                    self.print_progress(current_file + 1, file_count)
+                    percent = int((current_file / file_count) * 100)
+                    bar_length = 40
+                    block = int(round(bar_length * current_file / file_count))
+                    progress = "█" * block + "-" * (bar_length - block)
+                    print(f"\r[ ] Analysing code [{progress}] {percent}%\033[K", end="")
                     self._analyse_file(item_path)
                     current_file += 1
                 # Item is a directory
@@ -96,21 +102,6 @@ class Analyzer:
         elements.sort(key=lambda x: x.class_id.value)
         return elements
 
-    @staticmethod
-    def print_progress(current: int, total: int) -> None:
-        """
-        Print a simple progress bar in the console.
-
-        Args:
-            current: The current progress.
-            total: The total amount of work.
-        """
-        percent = int((current / total) * 100)
-        bar_length = 40
-        block = int(round(bar_length * current / total))
-        progress = "█" * block + "-" * (bar_length - block)
-        print(f"\r[ ] Analysing code [{progress}] {percent}%", end="")
-
     def _should_ignore(self, path: str) -> bool:
         ignore_folders = settings.ignore_folders
         path_norm = path.replace("\\", "/")
@@ -136,3 +127,11 @@ class Analyzer:
 
     def get_results(self) -> AnalysisResult:
         return self.analysis_result
+
+    def _delete_tmp_files(self) -> None:
+        tmp_path = Path("backend/tmp")
+        if tmp_path.exists():
+            try:
+                shutil.rmtree(tmp_path)
+            except Exception as e:
+                print(f"\nERROR: Could not delete temporary directory {tmp_path}: {e}")

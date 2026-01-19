@@ -2,13 +2,14 @@ import configparser
 import math
 import os
 import re
-import shlex
+import shutil
 import subprocess
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Any, Dict, List, cast, final
+from pathlib import Path
+from typing import Any, Dict, List, cast
 from urllib.parse import urlparse
 
 import requests
@@ -74,24 +75,20 @@ class GitHubManager:
 
     def clone_repo(self) -> str:
         print("[ ] Cloning repository", end="")
-        clone_dir = os.path.join(
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "tmp"
-        )  # ...backend/tmp
-        clone_path = os.path.join(clone_dir, self.repo_name)
+        clone_dir = Path("backend/tmp")
+        clone_path = clone_dir / self.repo_name
 
-        # Delete folder if already exists
-        if os.path.exists(clone_dir):
-            subprocess.call(["rm", "-rf", clone_dir])
+        if clone_dir.exists():
+            shutil.rmtree(clone_dir)
 
-        os.makedirs(clone_dir)
+        clone_dir.mkdir(parents=True, exist_ok=True)
 
-        command_line = shlex.split(f"git clone {self.repo_url} {clone_path}")
-
-        # Redirigir la salida estándar y la salida de errores a subprocess.PIPE
+        command_line = ["git", "clone", self.repo_url, str(clone_path)]
+        # Redirect standard output and error output to subprocess.PIPE
         subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
         print("\r[✓] Cloning repository")
-        return clone_path
+        return str(clone_path)
 
     @classmethod
     def get_api_token(cls) -> str:

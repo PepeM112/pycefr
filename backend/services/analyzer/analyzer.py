@@ -18,7 +18,8 @@ def request_url(url: str) -> None:
 
     full_analysis = FullAnalysisResult(elements=analysis_result.elements, repo_info=repo_info)
 
-    file_path = Path("backend/tmp/data.json")
+    repo_name = repo_info.data.name
+    file_path = Path(f"results/{repo_name}.json")
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(file_path, "w", encoding="utf-8") as file:
@@ -51,7 +52,8 @@ def run_directory(directory: str) -> None:
 
     full_analysis = AnalysisResult(elements=analysis_results.elements)
 
-    file_path = Path("backend/tmp/data.json")
+    repo_name = Path(directory).resolve().name
+    file_path = Path(f"results/{repo_name}.json")
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(file_path, "w", encoding="utf-8") as file:
