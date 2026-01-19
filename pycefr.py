@@ -1,7 +1,6 @@
 import argparse
 import os
 
-from backend.config.settings import settings
 from backend.services.analyzer import console
 from backend.services.analyzer.analyzer import (
     request_url,

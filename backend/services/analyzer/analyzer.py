@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from backend.models.schemas.analysis import AnalysisResult, FullAnalysisResult
 from backend.services.analyzer.analyzer_class import Analyzer
@@ -18,7 +19,10 @@ def request_url(url: str) -> None:
 
     full_analysis = FullAnalysisResult(elements=analysis_result.elements, repo_info=repo_info)
 
-    with open("backend/tmp/data.json", "w", encoding="utf-8") as file:
+    file_path = Path("backend/tmp/data.json")
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(file_path, "w", encoding="utf-8") as file:
         json.dump(full_analysis.model_dump(), file, indent=4, ensure_ascii=False)
 
 
@@ -48,7 +52,10 @@ def run_directory(directory: str) -> None:
 
     full_analysis = AnalysisResult(elements=analysis_results.elements)
 
-    with open("backend/tmp/data.json", "w", encoding="utf-8") as file:
+    file_path = Path("backend/tmp/data.json")
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(file_path, "w", encoding="utf-8") as file:
         json.dump(full_analysis.model_dump(), file, indent=4, ensure_ascii=False)
 
 

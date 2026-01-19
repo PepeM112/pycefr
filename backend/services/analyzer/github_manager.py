@@ -1,18 +1,28 @@
 import configparser
+import math
 import os
+import re
 import shlex
 import subprocess
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, cast, final
 from urllib.parse import urlparse
 
 import requests
 
 from backend.config.settings import settings
-from backend.models.schemas.repo import GitHubContributor, GitHubUser, RepoInfo, RepoInfoCommit, RepoInfoData
+from backend.models.schemas.repo import (
+    GitHubContributor,
+    GitHubUser,
+    RepoInfo,
+    RepoInfoCommit,
+    RepoInfoData,
+)
+
+PER_PAGE = 100
 
 
 class GitHubManager:
@@ -128,41 +138,60 @@ class GitHubManager:
         )
 
     def _get_repo_commits(self) -> List[RepoInfoCommit]:
-        print("[ ] Fetching commits", end="", flush=True)
-        all_commits = self._fetch_all_pages()
+        total_commits = self._get_total_commits_count()
+        if total_commits == 0:
+            print("[✓] Fetching commits")  # TODO: check what to do here, sys.exit?
+            return []
+
+        all_commits = self._fetch_all_pages(total_commits)
+
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {"name": "", "github_user": "", "loc": 0, "commits": 0, "commit_dates": [], "files_set": set()}
         )
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        bar_length = 40
+
+        with ThreadPoolExecutor(max_workers=50) as executor:
             futures = [executor.submit(self._fetch_commit_details, c["url"]) for c in all_commits]
 
+            completed = 0
             for future in as_completed(futures):
-                details = future.result()
-                author_name = details["commit"]["committer"]["name"]
+                try:
+                    details = future.result()
+                    author_name = details["commit"]["committer"]["name"]
 
-                stats = user_stats[author_name]
-                stats["name"] = author_name
-                stats["github_user"] = details.get("author", {}).get("login", "Unknown")
-                stats["commits"] += 1
+                    stats = user_stats[author_name]
+                    stats["name"] = author_name
+                    stats["github_user"] = details.get("author", {}).get("login", "Unknown")
+                    stats["commits"] += 1
 
-                # Timestamp for total hours calculation
-                date_str = details["commit"]["committer"]["date"]
-                stats["commit_dates"].append(datetime.fromisoformat(date_str.replace("Z", "+00:00")).timestamp())
+                    # Timestamp for total hours calculation
+                    date_str = details["commit"]["committer"]["date"]
+                    stats["commit_dates"].append(datetime.fromisoformat(date_str).timestamp())
 
-                # LOC and Files
-                stats["loc"] += details.get("stats", {}).get("total", 0)
-                for f in details.get("files", []):
-                    stats["files_set"].add(f["filename"])
+                    # LOC and Files
+                    stats["loc"] += details.get("stats", {}).get("total", 0)
+                    for f in details.get("files", []):
+                        stats["files_set"].add(f["filename"])
 
-        for _author, data in user_stats.items():
+                    completed += 1
+                    percent = int((completed / total_commits) * 100)
+                    block = int(round(bar_length * completed / total_commits))
+                    progress_bar = "█" * block + "-" * (bar_length - block)
+                    print(f"\r[ ] Fetching commits [{progress_bar}] {percent}%\033[K", end="", flush=True)
+                except Exception as e:
+                    print(f"\nERROR: Could not process commit: {e}")
+
+        final_results: List[RepoInfoCommit] = []
+        for data in user_stats.values():
             data["total_hours"] = self._calculate_total_hours(data["commit_dates"])
             data["total_files_modified"] = len(data["files_set"])
             del data["commit_dates"]
             del data["files_set"]
+            final_results.append(RepoInfoCommit(**data))
 
-        print("\r[✓] Fetching commits", flush=True)
-        return [RepoInfoCommit(**data) for data in user_stats.values()]
+        print("\r[✓] Fetching commits\033[K", flush=True)
+        return final_results
 
     def _get_repo_contributors(self) -> List[GitHubContributor]:
         print("[ ] Fetching contributors", end="", flush=True)
@@ -184,22 +213,43 @@ class GitHubManager:
         print("\r[✓] Fetching contributors")
         return contributors
 
+    def _get_total_commits_count(self) -> int:
+        url = f"{self.api_url}/commits?per_page=1&page=1"
+        response = requests.get(url, headers=self.headers)
+
+        link_header = response.headers.get("Link")
+        if not link_header:
+            # No Link header means only one page
+            return len(response.json())
+
+        # Search page number before rel="last"
+        match = re.search(r'page=(\d+)>; rel="last"', link_header)
+        return int(match.group(1)) if match else 1
+
     def _fetch_commit_details(self, url: str) -> Dict[str, Any]:
         res = requests.get(url, headers=self.headers)
         return res.json()
 
-    def _fetch_all_pages(self) -> List[Any]:
-        results: List[Any] = []
+    def _fetch_all_pages(self, total: int) -> List[Any]:
+        num_pages = math.ceil(total / PER_PAGE)
+        results: List[Any] = [None] * num_pages
         page = 1
-        while True:
-            res = requests.get(f"{self.api_url}/commits", params={"per_page": 100, "page": page}, headers=self.headers)
+
+        def _fetch_page(page_num: int) -> List[Any]:
+            res = requests.get(
+                f"{self.api_url}/commits", params={"per_page": PER_PAGE, "page": page_num}, headers=self.headers
+            )
             self._check_response(res)
-            data = res.json()
-            results.extend(data)
-            if len(data) < 100:
-                break
-            page += 1
-        return results
+            return res.json()
+
+        print("[ ] Fetching commits", end="", flush=True)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_page = {executor.submit(_fetch_page, p): p for p in range(1, num_pages + 1)}
+
+            all_data: List[Any] = []
+            for future in as_completed(future_to_page):
+                all_data.extend(future.result())
+        return all_data
 
     @staticmethod
     def display_api_token_error() -> None:
