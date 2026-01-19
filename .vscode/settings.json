@@ -15,5 +15,5 @@
       "source.organizeImports.ruff": "explicit"
     }
   },
-  "mypy-type-checker.cwd": "${workspaceFolder}/backend-fastapi/"
+  "mypy-type-checker.cwd": "${workspaceFolder}/backend/"
 }
