@@ -145,6 +145,7 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Option
         HTTPException(503): If the database is unavailable.
         HTTPException(500): If the update fails.
     """
+    # TODO: This should change it so that it reruns the analysis for the id provided. AnalysisUpdate object is useless
     try:
         success = db_utils.update_analysis(analysis_id, analysis_update)
         if not success:

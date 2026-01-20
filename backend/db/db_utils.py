@@ -55,7 +55,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
 
         rows = cursor.execute(
             """
-            SELECT id, name, origin_id, created_at
+            SELECT id, name, origin_id, created_at, total_hours
             FROM analyses
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
@@ -73,6 +73,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
                     name=row["name"],
                     origin=Origin(row["origin_id"]),
                     created_at=datetime.fromisoformat(row["created_at"].replace(" ", "T")),
+                    total_hours=row["total_hours"]
                 )
             )
 
@@ -134,6 +135,7 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
             name=analysis_row["name"],
             origin=Origin(analysis_row["origin_id"]),
             created_at=datetime.fromisoformat(analysis_row["created_at"].replace(" ", "T")),
+            total_hours=analysis_row["total_hours"],
             classes=classes,
         )
     except sqlite3.Error as e:
@@ -164,8 +166,8 @@ def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
         cursor = conn.cursor()
 
         cursor.execute(
-            "INSERT INTO analyses (name, origin_id) VALUES (?, ?)",
-            (analysis.name, analysis.origin.value)
+            "INSERT INTO analyses (name, origin_id, total_hours) VALUES (?, ?, ?)",
+            (analysis.name, analysis.origin.value, analysis.total_hours)
         )
         analysis_id = cursor.lastrowid
 
