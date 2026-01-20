@@ -10,6 +10,7 @@ myenv/
 # --- Analysis and temp data ---
 backend/tmp/
 backend/data/
+database/
 results/
 *.egg-info/
 *.egg
