@@ -1,21 +1,30 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import field_validator
+
+from backend.models.schemas.common import BaseSchema
 
 
-class GitHubUser(BaseModel):
-    name: str
+class GitHubUser(BaseSchema):
+    name: Optional[str] = ""
     github_user: str
     avatar: str
     profile_url: str
     commits: Optional[int] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def handle_null_name(cls, v: str | None) -> str:
+        if v is None:
+            return ""
+        return v
 
 
 class GitHubContributor(GitHubUser):
     contributions: int
 
 
-class RepoInfoData(BaseModel):
+class RepoInfoData(BaseSchema):
     name: str
     url: str
     description: Optional[str]
@@ -24,7 +33,7 @@ class RepoInfoData(BaseModel):
     owner: GitHubUser
 
 
-class RepoInfoCommit(BaseModel):
+class RepoInfoCommit(BaseSchema):
     name: str
     github_user: str
     loc: int
@@ -33,7 +42,7 @@ class RepoInfoCommit(BaseModel):
     total_files_modified: int
 
 
-class RepoInfo(BaseModel):
+class RepoInfo(BaseSchema):
     data: RepoInfoData
     commits: Optional[List[RepoInfoCommit]]
     contributors: Optional[List[GitHubContributor]]

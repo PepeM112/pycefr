@@ -17,7 +17,8 @@
     "test:ui": "vitest --ui",
     "clean": "rimraf dist node_modules/.vite",
     "build:analyze": "vite build --mode analyze",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "gen-client": "npx @hey-api/openapi-ts -i http://127.0.0.1:8000/openapi.json -o src/client -c @hey-api/client-axios"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
+    "@hey-api/openapi-ts": "^0.90.3",
     "@types/js-cookie": "^3.0.6",
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.0.7",
@@ -68,6 +70,7 @@
     "jiti": "^2.4.2",
     "lint-staged": "^16.2.4",
     "npm-run-all": "^4.1.5",
+    "openapi-typescript": "^7.10.1",
     "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
     "rollup-plugin-visualizer": "^6.0.4",

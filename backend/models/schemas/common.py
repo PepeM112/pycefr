@@ -1,9 +1,14 @@
 from enum import Enum, IntEnum
 from typing import Generic, List, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 
 T = TypeVar("T")
+
+
+class BaseSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
 
 
 class Level(IntEnum, Enum):
@@ -23,12 +28,12 @@ class Origin(IntEnum, Enum):
     LOCAL = 3
 
 
-class Pagination(BaseModel):
+class Pagination(BaseSchema):
     page: int
     per_page: int
     total: int
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse(BaseSchema, Generic[T]):
     pagination: Pagination
     elements: List[T]

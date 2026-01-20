@@ -63,26 +63,26 @@ node server.js
 
 ### Options
 
-There is a settings.json in place in order to setup some configurations:
+There is a .env in place in order to setup some configurations:
 
 |Settings | Description |
 |:--------|:-------------:|
-|**ignoreFolders**| Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name |
-|**API-KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api. You can generate one at https://github.com/settings/tokens|
-|**addLocalSuffix**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) the suffix "_local" to the results file|
-|**autoDisplayConsole**| Allows to activate or deactive the automatic display of the results in the console after finishing an analysis|
+|**IGNORE_FOLDERS**| Folders whose names appear here will be excluded from the analysis. No absolute nor relative paths, just folder name |
+|**API_KEY**|GitHub api key in order to be avoid the limit on calls to GitHub api. You can generate one at https://github.com/settings/tokens|
+|**ADD_LOCAL_SUFFIC**|Allows to perform a local analysis without overwritting the results of a repository with the same name as the directory being analysed, by adding (if set to True) the suffix "_local" to the results file|
+|**AUTO_DISPLAY_CONSOLE**| Allows to activate or deactive the automatic display of the results in the console after finishing an analysis|
 
-An example of a settings.json could be:
+An example of a .env could be:
 ```json
 {
-    "ignoreFolders": [
+    "IGNORE_FOLDERS": [
         "node_modules/",
         "myenv/",
         ".git/",
         "__pycache__/"
     ],
-    "API-KEY": "customapikey1234",
-    "addLocalSuffix": true,
-    "autoDisplayConsole": true
+    "API_KEY": "ghp_testapikey",
+    "ADD_LOCAL_SUFFIC": true,
+    "AUTO_DISPLAY_CONSOLE": true
 }
 ```

@@ -1,0 +1,19 @@
+{
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.autoImportCompletions": true,
+  "mypy-type-checker.args": ["--explicit-package-bases", "--check-untyped-defs"],
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportUnusedVariable": "warning",
+    "reportUnusedImport": "warning",
+    "reportUnknownVariableType": "warning"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "mypy-type-checker.cwd": "${workspaceFolder}/backend/"
+}

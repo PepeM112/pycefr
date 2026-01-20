@@ -23,7 +23,7 @@ install-backend:
 	@echo "-> Creating and activating virtual environment..."
 	python -m venv $(PYTHON_VENV)
 	@echo "-> Installing Python dependencies..."
-	$(PYTHON_VENV)/bin/pip install -r requirements.txt
+	$(PYTHON_VENV)/bin/pip install .
 
 db-init:
 	@echo "-> Inicializando base de datos SQLite..."
@@ -35,7 +35,7 @@ db-init:
 
 up-backend:
 	@echo "-> Running FastAPI server in http://localhost:8000 ..."
-	$(PYTHON_VENV)/bin/$(UVICORN_CMD)
+	@$(PYTHON_VENV)/bin/$(UVICORN_CMD) --app-dir backend
 
 # ==============================
 # Frontend
@@ -43,15 +43,15 @@ up-backend:
 
 install-frontend:
 	@echo "-> Installing frontend dependencies..."
-	npm install --prefix frontend
+	npm install --prefix frontend-vue
 
 up-frontend:
 	@echo "-> Running Vite development server in http://localhost:5173 ..."
-	npm run dev --prefix frontend &
+	@npm run dev --prefix frontend-vue
 
 gen-ts:
 	@echo "-> Generating TypeScript client from OpenAPI schema..."
-	npx openapi-typescript-codegen --input $(OPENAPI_URL) --output $(FRONTEND_OUTPUT) --client axios
+	@cd frontend-vue && npm run gen-client
 	@echo "Done"
 
 # ==============================
@@ -64,7 +64,7 @@ clean:
 	rm -f $(DB_SQLITE_PATH)
 	@echo "Cleanup complete."
 
-db-init:
+db-init-2:
 	@echo "-> Initializing SQLite database at $(DB_SQLITE_PATH)..."
 	python scripts/init_db.py
 	@echo "Database initialized."

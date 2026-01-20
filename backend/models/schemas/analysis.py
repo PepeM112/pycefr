@@ -1,27 +1,25 @@
 from datetime import datetime
 from typing import Dict, List
 
-from pydantic import BaseModel
-
-from models.schemas.class_model import ClassId
-from models.schemas.common import Level, Origin
-from models.schemas.repo import RepoInfo
+from backend.models.schemas.class_model import ClassId
+from backend.models.schemas.common import BaseSchema, Level, Origin
+from backend.models.schemas.repo import RepoInfo
 
 
-class AnalysisClass(BaseModel):
+class AnalysisClass(BaseSchema):
     class_id: ClassId
     level: Level | None = None
     instances: int
 
 
-class AnalysisList(BaseModel):
+class AnalysisList(BaseSchema):
     id: int
     name: str
     origin: Origin
     created_at: datetime
 
 
-class Analysis(BaseModel):
+class Analysis(BaseSchema):
     id: int
     name: str
     origin: Origin
@@ -29,19 +27,19 @@ class Analysis(BaseModel):
     classes: List[AnalysisClass]
 
 
-class AnalysisCreate(BaseModel):
+class AnalysisCreate(BaseSchema):
     name: str
     origin: Origin
     classes: List[AnalysisClass]
 
 
-class AnalysisUpdate(BaseModel):
+class AnalysisUpdate(BaseSchema):
     name: str | None = None
     origin: Origin | None = None
     classes: List[AnalysisClass] | None = None
 
 
-class AnalysisResult(BaseModel):
+class AnalysisResult(BaseSchema):
     elements: Dict[str, List[AnalysisClass]]
 
 

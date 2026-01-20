@@ -1,13 +1,25 @@
 # Python
 __pycache__/
-backend/data/
-backend/tmp/
-results/
+*.py[cod]
+.venv/
 myenv/
-settings.json
+.env
+.mypy_cache/
+.pytest_cache/
 
-# Node.js
-frontend/node_modules/
-frontend/package-lock.json
-frontend-vue/node_modules/
-frontend-vue/package-lock.json
+# --- Analysis and temp data ---
+backend/tmp/
+backend/data/
+results/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+
+# --- Node.js ---
+**/node_modules/
+**/dist/
+**/src/client/
+
+# --- Other ---
+.DS_Store
