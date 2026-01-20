@@ -48,3 +48,9 @@ namespace_packages = true
 mypy_path = "."
 ignore_missing_imports = true
 disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

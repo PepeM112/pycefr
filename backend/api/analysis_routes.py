@@ -8,7 +8,6 @@ from backend.db import db_utils
 from backend.models.schemas.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
 from backend.models.schemas.common import PaginatedResponse, Pagination
 
-# Configuración básica de logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analyses", tags=["Analysis"])
