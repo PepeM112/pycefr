@@ -21,9 +21,9 @@ run-all: backend-in-bg frontend-in-bg gen-ts
 
 install-backend:
 	@echo "-> Creating and activating virtual environment..."
-	python -m venv backend/$(PYTHON_VENV)
+	python -m venv $(PYTHON_VENV)
 	@echo "-> Installing Python dependencies..."
-	backend/$(PYTHON_VENV)/bin/pip install -r backend/requirements.txt
+	$(PYTHON_VENV)/bin/pip install .
 
 db-init:
 	@echo "-> Inicializando base de datos SQLite..."
@@ -35,7 +35,7 @@ db-init:
 
 up-backend:
 	@echo "-> Running FastAPI server in http://localhost:8000 ..."
-	@backend/$(PYTHON_VENV)/bin/$(UVICORN_CMD) --app-dir backend
+	@$(PYTHON_VENV)/bin/$(UVICORN_CMD) --app-dir backend
 
 # ==============================
 # Frontend
