@@ -31,8 +31,7 @@ class GitHubManager:
         self.user = user
         self.repo_url = repo_url
         self.repo_name = ""
-        self.api_key = self.get_api_token()
-        self.headers = {"Authorization": f"Bearer {self.api_key}"}
+        self.headers = {"Authorization": f"Bearer {settings.api_key}"}
 
     @property
     def api_url(self) -> str:
@@ -70,7 +69,7 @@ class GitHubManager:
         languages = response.json()
         total_bytes = sum(languages.values())
         python_bytes = languages.get("Python", 0)
-        return python_bytes >= total_bytes / 3 if total_bytes > 0 else False
+        return python_bytes >= total_bytes / 2 if total_bytes > 0 else False
 
     def clone_repo(self) -> str:
         print("[ ] Cloning repository", end="")
@@ -88,17 +87,6 @@ class GitHubManager:
 
         print("\r[✓] Cloning repository")
         return str(clone_path)
-
-    @classmethod
-    def get_api_token(cls) -> str:
-        """
-        Retrieve the GitHub API token from the global settings.
-
-        Returns:
-            str: The API token from the .env file.
-        """
-        # Ya no abrimos archivos, usamos el objeto que cargó todo al inicio
-        return settings.api_key
 
     def get_repo_info(self) -> RepoInfo:
         repo_data = self._get_repo()
@@ -224,27 +212,26 @@ class GitHubManager:
 
     def _fetch_commit_details(self, url: str) -> Dict[str, Any]:
         res = requests.get(url, headers=self.headers)
-        return res.json()
+        return cast(Dict[str, Any], res.json())
 
-    def _fetch_all_pages(self, total: int) -> List[Any]:
+    def _fetch_all_pages(self, total: int) -> List[Dict[str, Any]]:
         num_pages = math.ceil(total / PER_PAGE)
-        results: List[Any] = [None] * num_pages
-        page = 1
 
-        def _fetch_page(page_num: int) -> List[Any]:
+        def _fetch_page(page_num: int) -> List[Dict[str, Any]]:
             res = requests.get(
                 f"{self.api_url}/commits", params={"per_page": PER_PAGE, "page": page_num}, headers=self.headers
             )
             self._check_response(res)
-            return res.json()
+            return cast(List[Dict[str, Any]], res.json())
 
         print("[ ] Fetching commits", end="", flush=True)
         with ThreadPoolExecutor(max_workers=10) as executor:
             future_to_page = {executor.submit(_fetch_page, p): p for p in range(1, num_pages + 1)}
 
-            all_data: List[Any] = []
+            all_data: List[Dict[str, Any]] = []
             for future in as_completed(future_to_page):
                 all_data.extend(future.result())
+        all_data.sort(key=lambda x: x["commit"]["author"]["date"])
         return all_data
 
     @staticmethod
@@ -272,20 +259,31 @@ class GitHubManager:
     def _calculate_total_hours(
         self,
         commit_dates: List[float],
-        max_commit_diff_seconds: int = 120 * 60,
-        first_commit_addition_seconds: int = 120 * 60,
+        session_threshold_seconds: int = 7200,  # 2 horas
+        default_commit_time_seconds: int = 1200,  # 20 minutos de "contexto"
     ) -> float:
-        if len(commit_dates) < 2:
-            return first_commit_addition_seconds / 3600
+        """
+        Calcula las horas basándose en sesiones de trabajo.
+        Cada salto mayor a threshold inicia una nueva sesión con un tiempo base.
+        """
+        if not commit_dates:
+            return 0.0
 
         commit_dates.sort()
-        time_diffs = [commit_dates[i] - commit_dates[i - 1] for i in range(1, len(commit_dates))]
 
-        # Filter out differences longer than max_commit_diff_seconds
-        continuous_time_diffs = [diff for diff in time_diffs if diff <= max_commit_diff_seconds]
+        total_seconds = 0.0
 
-        # Sum up the continuous time differences and add the first commit addition
-        total_seconds = sum(continuous_time_diffs) + first_commit_addition_seconds
+        for i in range(len(commit_dates)):
+            if i == 0:
+                total_seconds += default_commit_time_seconds
+                continue
+
+            diff = commit_dates[i] - commit_dates[i - 1]
+
+            if diff <= session_threshold_seconds:
+                total_seconds += diff
+            else:
+                total_seconds += default_commit_time_seconds
 
         return round(total_seconds / 3600, 2)
 
