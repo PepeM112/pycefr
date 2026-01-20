@@ -26,12 +26,22 @@ install-backend:
 	$(PYTHON_VENV)/bin/pip install .
 
 db-init:
-	@echo "-> Inicializando base de datos SQLite..."
+	@mkdir -p database
+	@echo "-> Initializing SQLite database..."
 	@if [ -f "$(DB_SQLITE_PATH)" ]; then rm $(DB_SQLITE_PATH); fi
-	@echo ".read schema.sql | sqlite3 $(DB_SQLITE_PATH)"
-	sqlite3 $(DB_SQLITE_PATH) ".read schema.sql"
-	@echo ".read initialize_db.sql | sqlite3 $(DB_SQLITE_PATH)"
-	sqlite3 $(DB_SQLITE_PATH) ".read initialize_db.sql"
+	@echo ".read backend/db/schema.sql | sqlite3 $(DB_SQLITE_PATH)"
+	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
+	@echo ".read backend/db/initialize_db.sql | sqlite3 $(DB_SQLITE_PATH)"
+	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
+
+db-seed:
+	@echo "-> Seeding database with test data..."
+	@if [ ! -f "$(DB_SQLITE_PATH)" ]; then \
+		echo "Error: Database file not found. Run 'make db-init' instead"; \
+		exit 1; \
+	fi
+	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
+	@echo "-> Seed completed successfully."
 
 up-backend:
 	@echo "-> Running FastAPI server in http://localhost:8000 ..."

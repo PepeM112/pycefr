@@ -17,25 +17,24 @@ class AnalysisList(BaseSchema):
     name: str
     origin: Origin
     created_at: datetime
+    total_hours: float
 
 
-class Analysis(BaseSchema):
-    id: int
-    name: str
-    origin: Origin
-    created_at: datetime
+class Analysis(AnalysisList):
     classes: List[AnalysisClass]
 
 
 class AnalysisCreate(BaseSchema):
     name: str
     origin: Origin
+    total_hours: float
     classes: List[AnalysisClass]
 
 
 class AnalysisUpdate(BaseSchema):
     name: str | None = None
     origin: Origin | None = None
+    total_hours: float | None = None
     classes: List[AnalysisClass] | None = None
 
 

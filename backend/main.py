@@ -1,7 +1,21 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import logging
+import sys
 
-from api import analysis_routes
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.logging import DefaultFormatter
+
+from backend.api import analysis_routes
+
+# --- LOGGING CONFIGURATION ---
+formatter = DefaultFormatter(fmt="%(levelprefix)-10s %(message)s", use_colors=True)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+
+root_logger = logging.getLogger()
+root_logger.handlers = []
+root_logger.addHandler(console_handler)
+root_logger.setLevel(logging.INFO)
 
 app = FastAPI(title="PyCEFR API", description="API para el análisis y clasificación de código.", version="1.0.0")
 
@@ -13,7 +27,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(analysis_routes.router)
+api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(analysis_routes.router)
+
+app.include_router(api_v1_router)
 
 
 @app.get("/")

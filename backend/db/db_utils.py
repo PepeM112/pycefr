@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 from datetime import datetime
 from typing import List, Optional, Tuple
@@ -6,6 +7,8 @@ from backend.constants.analysis_rules import get_class_level
 from backend.models.schemas.analysis import Analysis, AnalysisClass, AnalysisCreate, AnalysisList, AnalysisUpdate
 from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import Origin
+
+logger = logging.getLogger(__name__)
 
 DATABASE_PATH = "database/pycefr.db"
 
@@ -16,13 +19,21 @@ def get_db_connection() -> sqlite3.Connection:
 
     Returns:
         sqlite3.Connection: A connection object with the row_factory set to Row.
+
+    Raises:
+        sqlite3.OperationalError: If the database connection fails.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.OperationalError as e:
+        logger.critical(f"Failed to connect to database at {DATABASE_PATH}: {e}")
+        raise
 
 
 # --- READ OPERATIONS ---
+
 def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
     """
     Retrieves a paginated list of analysis summaries.
@@ -32,9 +43,10 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
         per_page (int): The number of records to retrieve per page.
 
     Returns:
-        Tuple[List[AnalysisList], int]: A tuple containing:
-            - A list of analyses.
-            - The total count of analysis records in the database.
+        Tuple[List[AnalysisList], int]: A list of analyses and the total count.
+
+    Raises:
+        sqlite3.Error: If a database error occurs.
     """
     offset = (page - 1) * per_page
     conn = get_db_connection()
@@ -43,7 +55,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
 
         rows = cursor.execute(
             """
-            SELECT id, name, origin_id, created_at
+            SELECT id, name, origin_id, created_at, total_hours
             FROM analyses
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
@@ -61,13 +73,14 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
                     name=row["name"],
                     origin=Origin(row["origin_id"]),
                     created_at=datetime.fromisoformat(row["created_at"].replace(" ", "T")),
+                    total_hours=row["total_hours"]
                 )
             )
 
         return analyses, total
     except sqlite3.Error as e:
-        print(f"[DB ERROR] {e}")
-        return [], 0
+        logger.error(f"Error fetching analyses list: {e}")
+        raise
     finally:
         conn.close()
 
@@ -80,30 +93,24 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
         analysis_id (int): The unique identifier of the analysis.
 
     Returns:
-        Optional[Dict[str, Any]]: The analysis data if found, None otherwise.
+        Optional[Analysis]: The analysis data if found, None otherwise.
+
+    Raises:
+        sqlite3.Error: If a database error occurs.
     """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
 
         analysis_row = cursor.execute(
-            """
-            SELECT *
-            FROM analyses
-            WHERE id = ?
-            """,
-            (analysis_id,),
+            "SELECT * FROM analyses WHERE id = ?", (analysis_id,)
         ).fetchone()
 
         if analysis_row is None:
             return None
 
         classes_rows = cursor.execute(
-            """
-            SELECT class_id, instances
-            FROM analysis_class
-            WHERE analysis_id = ?
-            """,
+            "SELECT class_id, instances FROM analysis_class WHERE analysis_id = ?",
             (analysis_id,),
         ).fetchall()
 
@@ -114,27 +121,31 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
                 class_id_enum = ClassId(cid_value)
             except ValueError:
                 class_id_enum = ClassId.UNKNOWN
+
             classes.append(
                 AnalysisClass(
-                    class_id=class_id_enum, instances=c_row["instances"], level=get_class_level(class_id_enum)
+                    class_id=class_id_enum,
+                    instances=c_row["instances"],
+                    level=get_class_level(class_id_enum)
                 )
             )
 
-        analysis: Analysis = Analysis(
+        return Analysis(
             id=analysis_row["id"],
             name=analysis_row["name"],
             origin=Origin(analysis_row["origin_id"]),
             created_at=datetime.fromisoformat(analysis_row["created_at"].replace(" ", "T")),
+            total_hours=analysis_row["total_hours"],
             classes=classes,
         )
-
-        return analysis
     except sqlite3.Error as e:
-        print(f"[DB ERROR] {e}")
-        return None
+        logger.error(f"Error fetching analysis details for ID {analysis_id}: {e}")
+        raise
     finally:
         conn.close()
 
+
+# --- WRITE OPERATIONS ---
 
 def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
     """
@@ -144,36 +155,42 @@ def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
         analysis (AnalysisCreate): The analysis data to insert.
 
     Returns:
-        Optional[int]: The ID of the newly created analysis, or None if it failed.
+        Optional[int]: The ID of the newly created analysis.
 
     Raises:
-        ValueError: If a duplicate class_id is provided for the same analysis.
+        ValueError: If a duplicate class_id or integrity violation occurs.
+        sqlite3.Error: If a general database error occurs.
     """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        name = analysis.name
-        origin = analysis.origin.value
 
-        cursor.execute("INSERT INTO analyses (name, origin_id) VALUES (?, ?)", (name, origin))
+        cursor.execute(
+            "INSERT INTO analyses (name, origin_id, total_hours) VALUES (?, ?, ?)",
+            (analysis.name, analysis.origin.value, analysis.total_hours)
+        )
         analysis_id = cursor.lastrowid
 
-        classes = [c.model_dump() for c in analysis.classes]
+        classes_data = [
+            (analysis_id, c.class_id.value, c.instances)
+            for c in analysis.classes
+        ]
 
-        classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
         cursor.executemany(
             "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
             classes_data,
         )
+
         conn.commit()
         return analysis_id
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise ValueError(f"Integrity error: Duplicate class detected or foreign key violation. Details: {e}") from e
+        logger.warning(f"Integrity violation on insert: {e}")
+        raise ValueError(f"Integrity error: {e}") from e
     except sqlite3.Error as e:
-        print(f"[DB ERROR] {e}")
         conn.rollback()
-        return None
+        logger.error(f"Database error during full analysis insertion: {e}")
+        raise
     finally:
         conn.close()
 
@@ -184,34 +201,38 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> bool:
 
     Args:
         analysis_id (int): The ID of the analysis to update.
-        analysis_update (AnalysisUpdate): The fields to update (name, origin, classes).
+        analysis_update (AnalysisUpdate): The fields to update.
 
     Returns:
         bool: True if the update was successful, False if the analysis was not found.
 
     Raises:
-        ValueError: If the new class list contains duplicate class IDs.
+        ValueError: If duplicate classes are provided.
+        sqlite3.Error: If a database error occurs.
     """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
 
-        name = analysis_update.name
-        origin = analysis_update.origin.value if analysis_update.origin else None
-        classes = [c.model_dump() for c in analysis_update.classes] if analysis_update.classes else None
-
-        analysis_exists = cursor.execute("SELECT 1 FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
-        if analysis_exists is None:
+        # Check existence
+        if not cursor.execute("SELECT 1 FROM analyses WHERE id = ?", (analysis_id,)).fetchone():
             return False
-        if name is not None:
-            cursor.execute("UPDATE analyses SET name = ? WHERE id = ?", (name, analysis_id))
 
-        if origin is not None:
-            cursor.execute("UPDATE analyses SET origin_id = ? WHERE id = ?", (origin, analysis_id))
+        if analysis_update.name is not None:
+            cursor.execute("UPDATE analyses SET name = ? WHERE id = ?", (analysis_update.name, analysis_id))
 
-        if classes is not None:
+        if analysis_update.origin is not None:
+            cursor.execute(
+                "UPDATE analyses SET origin_id = ? WHERE id = ?",
+                (analysis_update.origin.value, analysis_id)
+            )
+
+        if analysis_update.classes is not None:
             cursor.execute("DELETE FROM analysis_class WHERE analysis_id = ?", (analysis_id,))
-            classes_data = [(analysis_id, c["class_id"], c["instances"]) for c in classes]
+            classes_data = [
+                (analysis_id, c.class_id.value, c.instances)
+                for c in analysis_update.classes
+            ]
             cursor.executemany(
                 "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
                 classes_data,
@@ -221,11 +242,12 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> bool:
         return True
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise ValueError(f"Integrity error: Duplicate class detected in update list. {e}") from e
+        logger.warning(f"Integrity violation on update for ID {analysis_id}: {e}")
+        raise ValueError(f"Update integrity error: {e}") from e
     except sqlite3.Error as e:
-        print(f"[DB ERROR] {e}")
         conn.rollback()
-        return False
+        logger.error(f"Database error updating analysis {analysis_id}: {e}")
+        raise
     finally:
         conn.close()
 
@@ -239,6 +261,9 @@ def delete_analysis(analysis_id: int) -> bool:
 
     Returns:
         bool: True if a record was deleted, False otherwise.
+
+    Raises:
+        sqlite3.Error: If a database error occurs.
     """
     conn = get_db_connection()
     try:
@@ -247,7 +272,8 @@ def delete_analysis(analysis_id: int) -> bool:
         conn.commit()
         return cursor.rowcount > 0
     except sqlite3.Error as e:
-        print(f"[DB ERROR] {e}")
-        return False
+        conn.rollback()
+        logger.error(f"Database error deleting analysis {analysis_id}: {e}")
+        raise
     finally:
         conn.close()
