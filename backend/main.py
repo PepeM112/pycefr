@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import analysis_routes
+from backend.api import analysis_routes
 
 app = FastAPI(title="PyCEFR API", description="API para el análisis y clasificación de código.", version="1.0.0")
 
@@ -13,7 +13,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(analysis_routes.router)
+api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(analysis_routes.router)
+
+app.include_router(api_v1_router)
 
 
 @app.get("/")

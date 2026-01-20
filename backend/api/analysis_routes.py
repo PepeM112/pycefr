@@ -1,3 +1,5 @@
+
+import sqlite3
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -6,7 +8,7 @@ from backend.db import db_utils
 from backend.models.schemas.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
 from backend.models.schemas.common import PaginatedResponse, Pagination
 
-router = APIRouter(prefix="/api/analyses", tags=["Analysis"])
+router = APIRouter(prefix="/analyses", tags=["Analysis"])
 
 
 @router.get("", response_model=PaginatedResponse[AnalysisList])
@@ -25,7 +27,8 @@ def list_analysis(
         PaginatedResponse[AnalysisList]: A dictionary containing pagination metadata and the list of elements.
 
     Raises:
-        HTTPException(500): If an internal database error occurs.
+        HTTPException(503): If the database is unavailable.
+        HTTPException(500): If an internal server error occurs.
     """
     try:
         data, total = db_utils.get_analyses(page=page, per_page=per_page)
@@ -34,6 +37,12 @@ def list_analysis(
             pagination=Pagination(page=page, per_page=per_page, total=total),
             elements=data,
         )
+    except (sqlite3.OperationalError, ConnectionError) as e:
+        print(f"[CRITICAL] Database connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is currently unavailable.",
+        ) from e
     except Exception as e:
         print(f"[ERROR] list_analysis: {e}")
         raise HTTPException(
@@ -44,7 +53,7 @@ def list_analysis(
 @router.get("/{analysis_id}", response_model=Analysis)
 def get_analysis_detail(analysis_id: int) -> Analysis:
     """
-    Fetches the full details of a specific analysis, including nested classes.
+    Fetches the full details of a specific analysis.
 
     Args:
         analysis_id (int): The unique identifier of the analysis.
@@ -54,6 +63,7 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
 
     Raises:
         HTTPException(404): If the analysis does not exist.
+        HTTPException(503): If the database is unavailable.
         HTTPException(500): If an internal server error occurs.
     """
     try:
@@ -65,6 +75,12 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
         return analysis
     except HTTPException:
         raise
+    except (sqlite3.OperationalError, ConnectionError) as e:
+        print(f"[CRITICAL] Database connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is currently unavailable.",
+        ) from e
     except Exception as e:
         print(f"[ERROR] get_analysis_detail: {e}")
         raise HTTPException(
@@ -75,17 +91,12 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
 @router.post("", response_model=Analysis, status_code=status.HTTP_201_CREATED)
 def create_analysis(analysis_create: AnalysisCreate) -> Optional[Analysis]:
     """
-    Creates a new analysis record along with its nested code classes.
-
-    Args:
-        analysis_create (AnalysisCreate): The payload containing name, origin, and classes.
-
-    Returns:
-        Optional[Analysis]: The created analysis object with its generated ID.
+    Creates a new analysis record.
 
     Raises:
-        HTTPException(422): If there are duplicate classes in the request.
-        HTTPException(500): If the creation fails due to server error.
+        HTTPException(422): If there are duplicate classes.
+        HTTPException(503): If the database is unavailable.
+        HTTPException(500): If the creation fails.
     """
     try:
         analysis_id = db_utils.insert_full_analysis(analysis_create)
@@ -93,13 +104,18 @@ def create_analysis(analysis_create: AnalysisCreate) -> Optional[Analysis]:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create analysis")
 
         return db_utils.get_analysis_details(analysis_id)
-
     except HTTPException:
         raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Classes must be unique within an analysis. " + str(e),
+            detail=f"Classes must be unique within an analysis. {e}",
+        ) from None
+    except (sqlite3.OperationalError, ConnectionError) as e:
+        print(f"[CRITICAL] Database connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
         print(f"[ERROR] create_analysis: {e}")
@@ -125,24 +141,28 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Option
 
     Raises:
         HTTPException(404): If the analysis ID does not exist.
-        HTTPException(422): If the new class list contains duplicates.
-        HTTPException(500): If the update fails due to server error.
+        HTTPException(503): If the database is unavailable.
+        HTTPException(500): If the update fails.
     """
     try:
         success = db_utils.update_analysis(analysis_id, analysis_update)
-
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
             )
-
         return db_utils.get_analysis_details(analysis_id)
     except HTTPException:
         raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Classes must be unique within an analysis. " + str(e),
+            detail=f"Classes must be unique within an analysis. {e}",
+        ) from None
+    except (sqlite3.OperationalError, ConnectionError) as e:
+        print(f"[CRITICAL] Database connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
         print(f"[ERROR] update_analysis ID {analysis_id}: {e}")
@@ -161,17 +181,22 @@ def delete_analysis(analysis_id: int) -> None:
 
     Raises:
         HTTPException(404): If the analysis does not exist.
+        HTTPException(503): If the database is unavailable.
         HTTPException(500): If the deletion fails.
     """
     try:
         success = db_utils.delete_analysis(analysis_id)
         if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis {analysis_id} not found or already deleted"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis {analysis_id} not found")
         return None
     except HTTPException:
         raise
+    except (sqlite3.OperationalError, ConnectionError) as e:
+        print(f"[CRITICAL] Database connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is currently unavailable.",
+        ) from e
     except Exception as e:
         print(f"[ERROR] delete_analysis ID {analysis_id}: {e}")
         raise HTTPException(
