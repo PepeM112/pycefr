@@ -1,4 +1,4 @@
-
+import logging
 import sqlite3
 from typing import Optional
 
@@ -7,6 +7,9 @@ from fastapi import APIRouter, HTTPException, Query, status
 from backend.db import db_utils
 from backend.models.schemas.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
 from backend.models.schemas.common import PaginatedResponse, Pagination
+
+# Configuración básica de logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analyses", tags=["Analysis"])
 
@@ -38,13 +41,13 @@ def list_analysis(
             elements=data,
         )
     except (sqlite3.OperationalError, ConnectionError) as e:
-        print(f"[CRITICAL] Database connection error: {e}")
+        logger.critical(f"Database connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
-        print(f"[ERROR] list_analysis: {e}")
+        logger.error(f"Unexpected error in list_analysis: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error retrieving the analysis list"
         ) from e
@@ -76,13 +79,13 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
     except HTTPException:
         raise
     except (sqlite3.OperationalError, ConnectionError) as e:
-        print(f"[CRITICAL] Database connection error: {e}")
+        logger.critical(f"Database connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
-        print(f"[ERROR] get_analysis_detail: {e}")
+        logger.error(f"Unexpected error in get_analysis_detail: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error retrieving the analysis details"
         ) from e
@@ -112,13 +115,13 @@ def create_analysis(analysis_create: AnalysisCreate) -> Optional[Analysis]:
             detail=f"Classes must be unique within an analysis. {e}",
         ) from None
     except (sqlite3.OperationalError, ConnectionError) as e:
-        print(f"[CRITICAL] Database connection error: {e}")
+        logger.critical(f"Database connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
-        print(f"[ERROR] create_analysis: {e}")
+        logger.error(f"Unexpected error in create_analysis: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating the analysis"
         ) from e
@@ -129,15 +132,14 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Option
     """
     Updates an existing analysis.
 
-    If 'classes' are provided, the existing classes are replaced entirely (Delete & Insert).
-    If 'classes' is an empty list, all classes for this analysis are removed.
+    If 'classes' are provided, the existing classes are replaced entirely.
 
     Args:
         analysis_id (int): The ID of the analysis to update.
-        analysis_update (AnalysisUpdate): The fields to update (name, origin, classes).
+        analysis_update (AnalysisUpdate): The fields to update.
 
     Returns:
-        Optional[Analysis]: The updated analysis object, or None if not found.
+        Optional[Analysis]: The updated analysis object.
 
     Raises:
         HTTPException(404): If the analysis ID does not exist.
@@ -159,13 +161,13 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Option
             detail=f"Classes must be unique within an analysis. {e}",
         ) from None
     except (sqlite3.OperationalError, ConnectionError) as e:
-        print(f"[CRITICAL] Database connection error: {e}")
+        logger.critical(f"Database connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
-        print(f"[ERROR] update_analysis ID {analysis_id}: {e}")
+        logger.error(f"Unexpected error in update_analysis ID {analysis_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error updating the analysis"
         ) from e
@@ -192,13 +194,13 @@ def delete_analysis(analysis_id: int) -> None:
     except HTTPException:
         raise
     except (sqlite3.OperationalError, ConnectionError) as e:
-        print(f"[CRITICAL] Database connection error: {e}")
+        logger.critical(f"Database connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is currently unavailable.",
         ) from e
     except Exception as e:
-        print(f"[ERROR] delete_analysis ID {analysis_id}: {e}")
+        logger.error(f"Unexpected error in delete_analysis ID {analysis_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error deleting the analysis"
         ) from e
