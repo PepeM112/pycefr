@@ -42,7 +42,6 @@ class GitHubManager:
     def validate_repo_url(self) -> None:
         print("[ ] Validating URL", end="")
         if not self.repo_url:
-            print(f">{self.user}<->{self.repo_url}<")  # DEBUG
             sys.exit("\nERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO")
         parsed_url = urlparse(self.repo_url)
         if parsed_url.scheme != "https":
