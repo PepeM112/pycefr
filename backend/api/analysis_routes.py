@@ -1,11 +1,16 @@
 import logging
 import sqlite3
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 
 from backend.db import db_utils
-from backend.models.schemas.analysis import Analysis, AnalysisCreate, AnalysisList, AnalysisUpdate
+from backend.models.schemas.analysis import (
+    AnalysisCreate,
+    AnalysisList,
+    AnalysisResult,
+    AnalysisUpdate,
+    FullAnalysisResult,
+)
 from backend.models.schemas.common import PaginatedResponse, Pagination
 
 logger = logging.getLogger(__name__)
@@ -52,8 +57,8 @@ def list_analysis(
         ) from e
 
 
-@router.get("/{analysis_id}", response_model=Analysis)
-def get_analysis_detail(analysis_id: int) -> Analysis:
+@router.get("/{analysis_id}", response_model=AnalysisResult | FullAnalysisResult)
+def get_analysis_detail(analysis_id: int) -> AnalysisResult | FullAnalysisResult | None:
     """
     Fetches the full details of a specific analysis.
 
@@ -61,7 +66,7 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
         analysis_id (int): The unique identifier of the analysis.
 
     Returns:
-        Analysis: The complete analysis object with hydrated class levels.
+        AnalysisResult | FullAnalysisResult: The complete analysis object with hydrated class levels.
 
     Raises:
         HTTPException(404): If the analysis does not exist.
@@ -69,8 +74,8 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
         HTTPException(500): If an internal server error occurs.
     """
     try:
-        analysis: Optional[Analysis] = db_utils.get_analysis_details(analysis_id)
-        if analysis is None:
+        analysis = db_utils.get_analysis_details(analysis_id)
+        if not analysis:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
             )
@@ -90,8 +95,8 @@ def get_analysis_detail(analysis_id: int) -> Analysis:
         ) from e
 
 
-@router.post("", response_model=Analysis, status_code=status.HTTP_201_CREATED)
-def create_analysis(analysis_create: AnalysisCreate) -> Optional[Analysis]:
+@router.post("", response_model=AnalysisResult | FullAnalysisResult, status_code=status.HTTP_201_CREATED)
+def create_analysis(analysis_create: AnalysisCreate) -> AnalysisResult | FullAnalysisResult | None:
     """
     Creates a new analysis record.
 
@@ -105,7 +110,12 @@ def create_analysis(analysis_create: AnalysisCreate) -> Optional[Analysis]:
         if analysis_id is None:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create analysis")
 
-        return db_utils.get_analysis_details(analysis_id)
+        analysis_result = db_utils.get_analysis_details(analysis_id)
+        if analysis_result is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve created analysis"
+            )
+        return analysis_result
     except HTTPException:
         raise
     except ValueError as e:
@@ -126,8 +136,8 @@ def create_analysis(analysis_create: AnalysisCreate) -> Optional[Analysis]:
         ) from e
 
 
-@router.patch("/{analysis_id}", response_model=Analysis)
-def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Optional[Analysis]:
+@router.patch("/{analysis_id}", response_model=AnalysisResult | FullAnalysisResult)
+def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> AnalysisResult | FullAnalysisResult | None:
     """
     Updates an existing analysis.
 
@@ -138,7 +148,7 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Option
         analysis_update (AnalysisUpdate): The fields to update.
 
     Returns:
-        Optional[Analysis]: The updated analysis object.
+        AnalysisResult | FullAnalysisResult | None: The updated analysis object.
 
     Raises:
         HTTPException(404): If the analysis ID does not exist.
@@ -152,7 +162,12 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> Option
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
             )
-        return db_utils.get_analysis_details(analysis_id)
+        analysis_result = db_utils.get_analysis_details(analysis_id)
+        if analysis_result is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve updated analysis"
+            )
+        return analysis_result
     except HTTPException:
         raise
     except ValueError as e:

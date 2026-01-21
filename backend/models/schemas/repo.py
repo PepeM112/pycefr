@@ -1,48 +1,39 @@
-from typing import List, Optional
-
-from pydantic import field_validator
+from datetime import datetime
+from typing import List
 
 from backend.models.schemas.common import BaseSchema
 
 
 class GitHubUser(BaseSchema):
-    name: Optional[str] = ""
+    name: str
     github_user: str
     avatar: str
     profile_url: str
-    commits: Optional[int] = None
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def handle_null_name(cls, v: str | None) -> str:
-        if v is None:
-            return ""
-        return v
+    commits: int = 0
 
 
 class GitHubContributor(GitHubUser):
     contributions: int
 
 
-class RepoInfoData(BaseSchema):
-    name: str
-    url: str
-    description: Optional[str]
-    created_at: str
-    last_updated_at: str
-    owner: GitHubUser
-
-
-class RepoInfoCommit(BaseSchema):
-    name: str
+class RepoCommit(BaseSchema):
+    username: str
     github_user: str
     loc: int
     commits: int
-    total_hours: float
+    estimated_hours: float
     total_files_modified: int
 
 
-class RepoInfo(BaseSchema):
-    data: RepoInfoData
-    commits: Optional[List[RepoInfoCommit]]
-    contributors: Optional[List[GitHubContributor]]
+class RepoSummary(BaseSchema):
+    name: str
+    url: str
+    description: str | None = None
+    created_at: datetime
+    last_updated_at: datetime
+    owner: GitHubUser
+
+
+class Repo(RepoSummary):
+    commits: List[RepoCommit] = []
+    contributors: List[GitHubContributor] = []

@@ -4,9 +4,21 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from backend.constants.analysis_rules import get_class_level
-from backend.models.schemas.analysis import Analysis, AnalysisClass, AnalysisCreate, AnalysisList, AnalysisUpdate
+from backend.models.schemas.analysis import (
+    Analysis,
+    AnalysisClass,
+    AnalysisCreate,
+    AnalysisSummary,
+)
 from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import Origin
+from backend.models.schemas.repo import (
+    GitHubContributor,
+    GitHubUser,
+    Repo,
+    RepoCommit,
+    RepoSummary,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +46,8 @@ def get_db_connection() -> sqlite3.Connection:
 
 # --- READ OPERATIONS ---
 
-def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
+
+def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
     """
     Retrieves a paginated list of analysis summaries.
 
@@ -43,7 +56,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
         per_page (int): The number of records to retrieve per page.
 
     Returns:
-        Tuple[List[AnalysisList], int]: A list of analyses and the total count.
+        Tuple[List[AnalysisSummary], int]: A list of analyses and the total count.
 
     Raises:
         sqlite3.Error: If a database error occurs.
@@ -65,15 +78,18 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
 
         total = cursor.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
 
-        analyses: List[AnalysisList] = []
+        analyses: List[AnalysisSummary] = []
         for row in rows:
             analyses.append(
-                AnalysisList(
+                AnalysisSummary(
                     id=row["id"],
                     name=row["name"],
+                    status=row["status"],
                     origin=Origin(row["origin_id"]),
+                    repo_name=row["repo_name"],
+                    repo_url=row["repo_url"],
                     created_at=datetime.fromisoformat(row["created_at"].replace(" ", "T")),
-                    total_hours=row["total_hours"]
+                    estimated_hours=row["total_hours"],
                 )
             )
 
@@ -85,7 +101,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisList], int]:
         conn.close()
 
 
-def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
+def get_analysis_details(analysis_id: int) -> Analysis | None:
     """
     Fetches a complete analysis including its nested code classes.
 
@@ -102,42 +118,61 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
     try:
         cursor = conn.cursor()
 
-        analysis_row = cursor.execute(
-            "SELECT * FROM analyses WHERE id = ?", (analysis_id,)
-        ).fetchone()
+        # Analysis
+        analysis_row = cursor.execute("SELECT * FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
 
         if analysis_row is None:
             return None
 
+        # Analysis Classes
         classes_rows = cursor.execute(
             "SELECT class_id, instances FROM analysis_class WHERE analysis_id = ?",
             (analysis_id,),
         ).fetchall()
 
-        classes: List[AnalysisClass] = []
-        for c_row in classes_rows:
-            cid_value: int = c_row["class_id"]
-            try:
-                class_id_enum = ClassId(cid_value)
-            except ValueError:
-                class_id_enum = ClassId.UNKNOWN
+        classes = [_map_row_to_class(row) for row in classes_rows]
 
-            classes.append(
-                AnalysisClass(
-                    class_id=class_id_enum,
-                    instances=c_row["instances"],
-                    level=get_class_level(class_id_enum)
-                )
+        # Analysis Repo Info
+        repo_data_row = cursor.execute(
+            "SELECT * FROM repo_general_info WHERE analysis_id = ?", (analysis_id,)
+        ).fetchone()
+        repo_data = _map_row_to_repo_info_data(repo_data_row) if repo_data_row else None
+
+        if not repo_data:
+            return Analysis(
+                status=analysis_row["status"],
+                file_classes=[],
+                repo=None,
             )
+        repo_commits_row = cursor.execute(
+            "SELECT * FROM repo_commit_stats WHERE analysis_id = ?", (analysis_id,)
+        ).fetchall()
+        repo_commits = [_map_row_to_repo_commit(row) for row in repo_commits_row]
 
-        return Analysis(
-            id=analysis_row["id"],
-            name=analysis_row["name"],
-            origin=Origin(analysis_row["origin_id"]),
-            created_at=datetime.fromisoformat(analysis_row["created_at"].replace(" ", "T")),
-            total_hours=analysis_row["total_hours"],
-            classes=classes,
+        repo_contributors_row = cursor.execute(
+            "SELECT * FROM repo_contributors WHERE analysis_id = ?", (analysis_id,)
+        ).fetchall()
+        repo_contributors = [_map_row_to_repo_contributor(row) for row in repo_contributors_row]
+
+        repo_info = (
+            Repo(
+                name = 
+                data=repo_info_data,
+                commits=repo_commits,
+                contributors=repo_contributors,
+            )
+            if repo_info_data
+            else None
         )
+
+        analysis_result = AnalysisResult(elements={"classes": classes})
+        if repo_info:
+            return FullAnalysisResult(
+                elements={"classes": classes},
+                repo_info=repo_info,
+            )
+        return analysis_result
+
     except sqlite3.Error as e:
         logger.error(f"Error fetching analysis details for ID {analysis_id}: {e}")
         raise
@@ -146,6 +181,7 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
 
 
 # --- WRITE OPERATIONS ---
+
 
 def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
     """
@@ -167,14 +203,11 @@ def insert_full_analysis(analysis: AnalysisCreate) -> Optional[int]:
 
         cursor.execute(
             "INSERT INTO analyses (name, origin_id, total_hours) VALUES (?, ?, ?)",
-            (analysis.name, analysis.origin.value, analysis.total_hours)
+            (analysis.name, analysis.origin.value, analysis.total_hours),
         )
         analysis_id = cursor.lastrowid
 
-        classes_data = [
-            (analysis_id, c.class_id.value, c.instances)
-            for c in analysis.classes
-        ]
+        classes_data = [(analysis_id, c.class_id.value, c.instances) for c in analysis.classes]
 
         cursor.executemany(
             "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
@@ -223,16 +256,12 @@ def update_analysis(analysis_id: int, analysis_update: AnalysisUpdate) -> bool:
 
         if analysis_update.origin is not None:
             cursor.execute(
-                "UPDATE analyses SET origin_id = ? WHERE id = ?",
-                (analysis_update.origin.value, analysis_id)
+                "UPDATE analyses SET origin_id = ? WHERE id = ?", (analysis_update.origin.value, analysis_id)
             )
 
         if analysis_update.classes is not None:
             cursor.execute("DELETE FROM analysis_class WHERE analysis_id = ?", (analysis_id,))
-            classes_data = [
-                (analysis_id, c.class_id.value, c.instances)
-                for c in analysis_update.classes
-            ]
+            classes_data = [(analysis_id, c.class_id.value, c.instances) for c in analysis_update.classes]
             cursor.executemany(
                 "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
                 classes_data,
@@ -277,3 +306,54 @@ def delete_analysis(analysis_id: int) -> bool:
         raise
     finally:
         conn.close()
+
+
+def _map_row_to_class(row: sqlite3.Row) -> AnalysisClass:
+    try:
+        class_id_enum = ClassId(row["class_id"])
+    except ValueError:
+        class_id_enum = ClassId.UNKNOWN
+
+    return AnalysisClass(class_id=class_id_enum, instances=row["instances"], level=get_class_level(class_id_enum))
+
+
+def _map_row_to_repo_info_data(row: sqlite3.Row) -> RepoSummary:
+    try:
+        return RepoSummary(
+            name=row["name"],
+            url=row["url"],
+            description=row["description"],
+            created_at=row["created_at"],
+            last_updated_at=row["last_updated_at"],
+            owner=GitHubUser(
+                name=row["owner_name"],
+                github_user=row["owner_github_user"],
+                avatar=row["owner_avatar"],
+                profile_url=row["owner_profile_url"],
+                commits=row["owner_commits"],
+            ),
+        )
+    except ValueError as e:
+        logger.error(f"Error mapping row to RepoInfo: {e}")
+        raise
+
+
+def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommit:
+    return RepoCommit(
+        username=row["username"],
+        github_user=row["github_user"],
+        loc=row["loc"],
+        commits=row["commits"],
+        estimated_hours=row["estimated_hours"],
+        total_files_modified=row["total_files_modified"],
+    )
+
+
+def _map_row_to_repo_contributor(row: sqlite3.Row) -> GitHubContributor:
+    return GitHubContributor(
+        name=row["name"],
+        github_user=row["github_user"],
+        avatar=row["avatar"],
+        profile_url=row["profile_url"],
+        contributions=row["contributions"],
+    )
