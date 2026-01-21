@@ -11,7 +11,7 @@ DB_SQLITE_PATH := database/pycefr.db
 
 default: help
 
-setup: install-backend install-frontend db-init
+setup: install-backend install-frontend init-db
 
 run-all: backend-in-bg frontend-in-bg gen-ts
 
@@ -25,42 +25,44 @@ install-backend:
 	@echo "-> Installing Python dependencies..."
 	$(PYTHON_VENV)/bin/pip install .
 
-db-init:
-	@mkdir -p database
-	@echo "-> Initializing SQLite database..."
-	@if [ -f "$(DB_SQLITE_PATH)" ]; then rm $(DB_SQLITE_PATH); fi
-	@echo ".read backend/db/schema.sql | sqlite3 $(DB_SQLITE_PATH)"
-	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
-	@echo ".read backend/db/initialize_db.sql | sqlite3 $(DB_SQLITE_PATH)"
-	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
+up-backend:
+	@echo "Running FastAPI server in http://localhost:8000 ..."
+	@$(PYTHON_VENV)/bin/$(UVICORN_CMD) --app-dir backend
 
-db-seed:
-	@echo "-> Seeding database with test data..."
+# ==============================
+# Database
+# ==============================
+
+init-db:
+	@mkdir -p database
+	@echo "Initializing SQLite database..."
+	@if [ -f "$(DB_SQLITE_PATH)" ]; then rm $(DB_SQLITE_PATH); fi
+	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
+	@echo "Done"
+
+seed:
+	@echo "Seeding database with test data..."
 	@if [ ! -f "$(DB_SQLITE_PATH)" ]; then \
-		echo "Error: Database file not found. Run 'make db-init' instead"; \
+		echo "Error: Database file not found"; \
 		exit 1; \
 	fi
 	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
 	@echo "-> Seed completed successfully."
-
-up-backend:
-	@echo "-> Running FastAPI server in http://localhost:8000 ..."
-	@$(PYTHON_VENV)/bin/$(UVICORN_CMD) --app-dir backend
 
 # ==============================
 # Frontend
 # ==============================
 
 install-frontend:
-	@echo "-> Installing frontend dependencies..."
+	@echo "Installing frontend dependencies..."
 	npm install --prefix frontend-vue
 
 up-frontend:
-	@echo "-> Running Vite development server in http://localhost:5173 ..."
+	@echo "Running Vite development server in http://localhost:5173 ..."
 	@npm run dev --prefix frontend-vue
 
 gen-ts:
-	@echo "-> Generating TypeScript client from OpenAPI schema..."
+	@echo "Generating TypeScript client from OpenAPI schema..."
 	@cd frontend-vue && npm run gen-client
 	@echo "Done"
 
@@ -68,16 +70,12 @@ gen-ts:
 # Maintenance
 # ==============================
 clean:
-	@echo "-> Cleaning up generated files..."
+	@echo "Cleaning up generated files..."
 	rm -rf $(PYTHON_VENV)
 	rm -rf $(FRONTEND_OUTPUT)/*
 	rm -f $(DB_SQLITE_PATH)
 	@echo "Cleanup complete."
 
-db-init-2:
-	@echo "-> Initializing SQLite database at $(DB_SQLITE_PATH)..."
-	python scripts/init_db.py
-	@echo "Database initialized."
-
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	
