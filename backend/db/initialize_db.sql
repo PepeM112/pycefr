@@ -1,3 +1,10 @@
+PRAGMA foreign_keys = OFF;
+DELETE FROM analysis_file_classes;
+DELETE FROM analysis_files;
+DELETE FROM repo_commits;
+DELETE FROM repo_contributors;
+DELETE FROM analyses;
+PRAGMA foreign_keys = ON;
 INSERT INTO analyses (
         id,
         name,
