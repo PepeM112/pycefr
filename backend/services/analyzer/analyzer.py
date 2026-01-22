@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from backend.models.schemas.analysis import AnalysisResult, FullAnalysisResult
 from backend.services.analyzer.analyzer_class import Analyzer
 from backend.services.analyzer.github_manager import GitHubManager
 
@@ -15,15 +14,14 @@ def request_url(url: str) -> None:
 
     repo_info = gh.get_repo_info()
     analysis_result = an.get_results()
+    analysis_result.repo = repo_info
 
-    full_analysis = FullAnalysisResult(elements=analysis_result.elements, repo_info=repo_info)
-
-    repo_name = repo_info.data.name
+    repo_name = repo_info.name
     file_path = Path(f"results/{repo_name}.json")
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(file_path, "w", encoding="utf-8") as file:
-        file.write(full_analysis.model_dump_json(indent=4))
+        file.write(analysis_result.model_dump_json(indent=4))
 
 
 def run_directory(directory: str) -> None:
@@ -50,14 +48,12 @@ def run_directory(directory: str) -> None:
     an.analyse_project()
     analysis_results = an.get_results()
 
-    full_analysis = AnalysisResult(elements=analysis_results.elements)
-
     repo_name = Path(directory).resolve().name
     file_path = Path(f"results/{repo_name}.json")
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(file_path, "w", encoding="utf-8") as file:
-        file.write(full_analysis.model_dump_json(indent=4))
+        file.write(analysis_results.model_dump_json(indent=4))
 
 
 def run_user(user: str) -> None:

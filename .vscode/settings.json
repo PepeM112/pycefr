@@ -15,5 +15,13 @@
       "source.organizeImports.ruff": "explicit"
     }
   },
-  "mypy-type-checker.cwd": "${workspaceFolder}/backend/"
+  "mypy-type-checker.cwd": "${workspaceFolder}/backend/",
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "database": "./database/pycefr.db",
+      "name": "Pycefr"
+    }
+  ]
 }

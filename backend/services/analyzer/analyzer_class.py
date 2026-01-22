@@ -1,86 +1,99 @@
 import ast
+import logging
 import os
 import shutil
-import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 from backend.config.settings import settings
 from backend.constants.analysis_rules import get_class_level
-from backend.models.schemas.analysis import AnalysisClass, AnalysisResult
+from backend.models.schemas.analysis import Analysis, AnalysisClass, AnalysisFile
 from backend.models.schemas.class_model import ClassId
 from backend.services.analyzer.levels import get_class_from_ast_node
 
-DEFAULT_SETTINGS: Dict[str, Any] = {
-    "ignoreFolders": ["node_modules/", ".git/", "__pycache__/"],
-    "API-KEY": "",
-    "addLocalSuffix": True,
-    "autoDisplayConsole": True,
-}
+logger = logging.getLogger(__name__)
 
 
 class Analyzer:
-    def __init__(self, root_path: str) -> None:
+    def __init__(self, root_path: str, is_cli: bool = True) -> None:
         self.root_path = root_path
-        self.analysis_result: AnalysisResult = AnalysisResult(elements={})
+        self.is_cli = is_cli
+        self.analysis_result = Analysis()
+        self._file_count = 0
+        self._processed_files = 0
 
     def analyse_project(self) -> None:
-        print("[ ] Analysing code", end=" ")
+        if self.is_cli:
+            print("[ ] Analysing code", end=" ", flush=True)
+
         root_path = os.path.abspath(self.root_path)
 
         if not os.path.exists(root_path):
-            sys.exit(f"ERROR: Path {root_path} does not exist")
+            raise FileNotFoundError(f"Path {root_path} does not exist")
         if not os.path.isdir(root_path):
-            sys.exit(f"ERROR: Path {root_path} is not a directory")
+            raise ValueError(f"Path {root_path} is not a directory")
 
-        file_count = self._count_python_files(root_path)
+        self._file_count = self._count_python_files(root_path)
+        self._processed_files = 0
 
-        self._analyse_directory(root_path, file_count)
-        print("\r[✓] Analysing code\033[K")
+        self._analyse_directory(root_path)
+
+        if self.is_cli:
+            print("\r[✓] Analysing code\033[K")
+
+        logger.info(f"Analysis completed for {root_path}")
         self._delete_tmp_files()
 
-    def _analyse_directory(self, path: str, file_count: int = 0, current_file: int = 0) -> None:
+    def _analyse_directory(self, path: str) -> None:
         try:
             items = os.listdir(path)
             for item in items:
                 item_path = os.path.join(path, item)
-                # Item is a python file
-                if os.path.isfile(item_path) and item.endswith(".py") and item != "__init__.py" :
-                    percent = int((current_file / file_count) * 100)
-                    bar_length = 40
-                    block = int(round(bar_length * current_file / file_count))
-                    progress = "█" * block + "-" * (bar_length - block)
-                    print(f"\r[ ] Analysing code [{progress}] {percent}%\033[K", end="")
+
+                if os.path.isfile(item_path) and item.endswith(".py") and item != "__init__.py":
+                    self._update_progress()
                     self._analyse_file(item_path)
-                    current_file += 1
-                # Item is a directory
+                    self._processed_files += 1
+
                 elif os.path.isdir(item_path):
                     if self._should_ignore(item_path):
                         continue
+                    self._analyse_directory(item_path)
 
-                    # Recursively analyse the directory if not ignored
-                    self._analyse_directory(item_path, file_count, current_file)
-
-        except FileNotFoundError:
-            print(f"\nERROR: Directory {path} not found")
         except PermissionError:
-            print(f"\nERROR: Permission denied to access {path}")
-        except Exception:
-            print(f"\nERROR: Couldn't read {path}")
+            logger.error(f"Permission denied: {path}")
+        except Exception as e:
+            logger.error(f"Error reading directory {path}: {e}")
+
+    def _update_progress(self) -> None:
+        if self._file_count == 0:
+            return
+
+        percent = int((self._processed_files / self._file_count) * 100)
+
+        if self.is_cli:
+            bar_length = 40
+            block = int(round(bar_length * self._processed_files / self._file_count))
+            progress = "█" * block + "-" * (bar_length - block)
+            print(f"\r[ ] Analysing code [{progress}] {percent}%\033[K", end="", flush=True)
+        else:
+            if self._processed_files % max(1, (self._file_count // 4)) == 0:
+                logger.info(f"Analysis progress: {percent}%")
 
     def _analyse_file(self, file_path: str) -> None:
-        with open(file_path) as fp:
-            my_code = fp.read()
-            relative_path = os.path.relpath(file_path, start=self.root_path)
-            try:
-                tree = ast.parse(my_code)
+        try:
+            with open(file_path, encoding="utf-8") as fp:
+                my_code = fp.read()
+                relative_path = os.path.relpath(file_path, start=self.root_path)
 
-                self.analysis_result.elements[relative_path] = self._analyse_ast(tree)
-            except SyntaxError as e:
-                print(f"\nERROR: Syntax error in file {file_path}: {e}")
-                self.analysis_result.elements[relative_path] = []
-                return
+                tree = ast.parse(my_code)
+                file_classes = self._analyse_ast(tree)
+                self.analysis_result.file_classes.append(AnalysisFile(filename=relative_path, classes=file_classes))
+        except SyntaxError as e:
+            logger.warning(f"Syntax error in {file_path}: {e}")
+        except Exception as e:
+            logger.error(f"Could not analyse file {file_path}: {e}")
 
     def _analyse_ast(self, tree: ast.AST) -> List[AnalysisClass]:
         counter: defaultdict[ClassId, int] = defaultdict(int)
@@ -108,24 +121,18 @@ class Analyzer:
 
         for folder in ignore_folders:
             folder = folder.rstrip("/\\")
-            # Búsqueda más específica
-            folder_with_sep = f"/{folder}/"
-            if folder_with_sep in path_norm or path_norm.endswith(f"/{folder}"):
+            if f"/{folder}/" in f"/{path_norm}/":
                 return True
-
         return False
 
     def _count_python_files(self, directory: str) -> int:
         count = 0
-
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if not self._should_ignore(os.path.join(root, d))]
-
             count += sum(1 for f in files if f.endswith((".py", ".PY")))
-
         return count
 
-    def get_results(self) -> AnalysisResult:
+    def get_results(self) -> Analysis:
         return self.analysis_result
 
     def _delete_tmp_files(self) -> None:
@@ -134,4 +141,4 @@ class Analyzer:
             try:
                 shutil.rmtree(tmp_path)
             except Exception as e:
-                print(f"\nERROR: Could not delete temporary directory {tmp_path}: {e}")
+                logger.error(f"Could not delete temporary directory {tmp_path}: {e}")
