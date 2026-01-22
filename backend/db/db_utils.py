@@ -2,7 +2,6 @@ import logging
 import os
 import sqlite3
 from datetime import datetime
-from tkinter import N
 from typing import List, Optional, Tuple
 
 from backend.constants.analysis_rules import get_class_level
@@ -263,51 +262,6 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
         conn.rollback()
         cursor.execute("UPDATE analyses SET status = 'failed' WHERE id = ?", (analysis_id,))
         conn.commit()
-        raise
-    finally:
-        conn.close()
-
-
-def insert_full_analysis(repo_url: str) -> Optional[int]:
-    """
-    Inserts a new analysis and its related classes in a single transaction.
-
-    Args:
-        analysis (AnalysisCreate): The analysis data to insert.
-
-    Returns:
-        Optional[int]: The ID of the newly created analysis.
-
-    Raises:
-        ValueError: If a duplicate class_id or integrity violation occurs.
-        sqlite3.Error: If a general database error occurs.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "INSERT INTO analyses (name, origin_id, total_hours) VALUES (?, ?, ?)",
-            (analysis.name, analysis.origin.value, analysis.total_hours),
-        )
-        analysis_id = cursor.lastrowid
-
-        classes_data = [(analysis_id, c.class_id.value, c.instances) for c in analysis.classes]
-
-        cursor.executemany(
-            "INSERT INTO analysis_class (analysis_id, class_id, instances) VALUES (?, ?, ?)",
-            classes_data,
-        )
-
-        conn.commit()
-        return analysis_id
-    except sqlite3.IntegrityError as e:
-        conn.rollback()
-        logger.warning(f"Integrity violation on insert: {e}")
-        raise ValueError(f"Integrity error: {e}") from e
-    except sqlite3.Error as e:
-        conn.rollback()
-        logger.error(f"Database error during full analysis insertion: {e}")
         raise
     finally:
         conn.close()
