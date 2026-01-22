@@ -35,14 +35,14 @@ def display_author_info(data: Dict[str, Any]) -> None:
     """
     # Initialize a dictionary to combine data by github_user
     combined_commits_data: Dict[str, Any] = defaultdict(
-        lambda: {"commits": 0, "total_hours": 0, "loc": 0, "total_files_modified": 0}
+        lambda: {"commits": 0, "estimated_hours": 0, "loc": 0, "total_files_modified": 0}
     )
 
     # Extract commit information
     for commit in data["commits"]:
         github_user = commit["github_user"]
         combined_commits_data[github_user]["commits"] += commit["commits"]
-        combined_commits_data[github_user]["total_hours"] += commit["total_hours"]
+        combined_commits_data[github_user]["estimated_hours"] += commit["estimated_hours"]
         combined_commits_data[github_user]["loc"] += commit["loc"]
         combined_commits_data[github_user]["total_files_modified"] += commit["total_files_modified"]
 
@@ -57,7 +57,7 @@ def display_author_info(data: Dict[str, Any]) -> None:
             [
                 contributor["name"],
                 contributor.get("commits", "N/A"),
-                commit_info.get("total_hours", "N/A"),
+                commit_info.get("estimated_hours", "N/A"),
                 commit_info.get("loc", "N/A"),
                 commit_info.get("total_files_modified", "N/A"),
             ]
@@ -77,7 +77,7 @@ def display_author_info(data: Dict[str, Any]) -> None:
 
     # Calculate totals
     total_commits = sum(row[1] if isinstance(row[1], int) else 0 for row in table)
-    total_hours = sum(row[2] if isinstance(row[2], int) else 0 for row in table)
+    estimated_hours = sum(row[2] if isinstance(row[2], int) else 0 for row in table)
     total_loc = sum(row[3] if isinstance(row[3], int) else 0 for row in table)
 
     # Print the centered header
@@ -95,7 +95,8 @@ def display_author_info(data: Dict[str, Any]) -> None:
         + f"  {total_commits:>{len(str(total_commits))}} |"
     )
     print(
-        "| Total hours".ljust(table_width - len(str(total_hours)) - 4) + f"  {total_hours:>{len(str(total_hours))}} |"
+        "| Total hours".ljust(table_width - len(str(estimated_hours)) - 4)
+        + f"  {estimated_hours:>{len(str(estimated_hours))}} |"
     )
     print("| Total loc".ljust(table_width - len(str(total_loc)) - 4) + f"  {total_loc:>{len(str(total_loc))}} |")
     print("|" + "-" * (table_width - 2) + "|")

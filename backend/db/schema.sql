@@ -49,7 +49,7 @@ CREATE TABLE repo_commits (
     github_user TEXT,
     loc INTEGER DEFAULT 0,
     commits INTEGER DEFAULT 0,
-    total_hours REAL DEFAULT 0.0,
+    estimated_hours REAL DEFAULT 0.0,
     total_files_modified INTEGER DEFAULT 0,
     FOREIGN KEY (analysis_id) REFERENCES analyses (id) ON DELETE CASCADE
 );

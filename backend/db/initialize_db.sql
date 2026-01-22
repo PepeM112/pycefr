@@ -66,7 +66,7 @@ INSERT INTO repo_commits (
         github_user,
         loc,
         commits,
-        total_hours,
+        estimated_hours,
         total_files_modified
     )
 VALUES (1, 'anapgh', 'anapgh', 21355, 227, 37.77, 32),

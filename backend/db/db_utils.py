@@ -240,7 +240,7 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
         cursor.executemany(
             """
             INSERT INTO repo_commits
-            (analysis_id, username, github_user, loc, commits, total_hours, total_files_modified)
+            (analysis_id, username, github_user, loc, commits, estimated_hours, total_files_modified)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             [
@@ -287,7 +287,7 @@ def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommit:
         github_user=row["github_user"],
         loc=row["loc"],
         commits=row["commits"],
-        estimated_hours=row["total_hours"],
+        estimated_hours=row["estimated_hours"],
         total_files_modified=row["total_files_modified"],
     )
 
