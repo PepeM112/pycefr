@@ -5,7 +5,7 @@ from backend.models.schemas.common import BaseSchema
 
 
 class GitHubUser(BaseSchema):
-    name: str
+    name: str | None = None
     github_user: str
     avatar: str
     profile_url: str

@@ -25,6 +25,8 @@ from backend.models.schemas.repo import (
 )
 
 logger = logging.getLogger(__name__)
+python_threshold_percentage = settings.python_threshold_percentage
+
 PER_PAGE = 100
 
 
@@ -33,7 +35,8 @@ class GitHubManager:
         self.user = user
         self.repo_url = repo_url
         self.repo_name = ""
-        self.headers = {"Authorization": f"Bearer {settings.api_key}"}
+        self.session = requests.Session()
+        self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
 
     @property
     def api_url(self) -> str:
@@ -60,18 +63,18 @@ class GitHubManager:
             )
 
         if not self.validate_python_language():
-            sys.exit("\nERROR: The repository does not contain at least 50% of Python.")
+            sys.exit(f"\nERROR: The repository does not contain at least {python_threshold_percentage}% of Python.")
 
         print("\r[✓] Validating URL")
 
     def validate_python_language(self) -> bool:
-        response = requests.get(f"{self.api_url}/languages", headers=self.headers)
+        response = self.session.get(f"{self.api_url}/languages")
         self._check_response(response)
 
         languages = response.json()
         total_bytes = sum(languages.values())
         python_bytes = languages.get("Python", 0)
-        return python_bytes >= total_bytes / 2 if total_bytes > 0 else False
+        return python_bytes >= total_bytes * python_threshold_percentage / 100 if total_bytes > 0 else False
 
     def clone_repo(self) -> str:
         print("[ ] Cloning repository", end="")
@@ -108,7 +111,7 @@ class GitHubManager:
 
     def _get_repo(self) -> RepoSummary:
         print("[ ] Fetching data", end=" ")
-        response = requests.get(self.api_url, headers=self.headers)
+        response = self.session.get(self.api_url)
 
         self._check_response(response)
 
@@ -153,7 +156,7 @@ class GitHubManager:
 
         bar_length = 40
 
-        with ThreadPoolExecutor(max_workers=50) as executor:
+        with ThreadPoolExecutor(max_workers=100) as executor:
             futures = [executor.submit(self._fetch_commit_details, c["url"]) for c in all_commits]
 
             completed = 0
@@ -186,7 +189,7 @@ class GitHubManager:
 
         final_results: List[RepoCommit] = []
         for data in user_stats.values():
-            data["total_hours"] = self._calculate_total_hours(data["commit_timestamps"])
+            data["estimated_hours"] = self._calculate_estimated_hours(data["commit_timestamps"])
             data["total_files_modified"] = len(data["files_set"])
             del data["commit_timestamps"]
             del data["files_set"]
@@ -197,7 +200,7 @@ class GitHubManager:
 
     def _get_repo_contributors(self) -> List[GitHubContributor]:
         print("[ ] Fetching contributors", end="", flush=True)
-        response = requests.get(f"{self.api_url}/contributors", headers=self.headers)
+        response = self.session.get(f"{self.api_url}/contributors")
         self._check_response(response)
 
         contributors_data = response.json()
@@ -217,7 +220,7 @@ class GitHubManager:
 
     def _get_total_commits_count(self) -> int:
         url = f"{self.api_url}/commits?per_page=1&page=1"
-        response = requests.get(url, headers=self.headers)
+        response = self.session.get(url)
 
         link_header = response.headers.get("Link")
         if not link_header:
@@ -229,16 +232,14 @@ class GitHubManager:
         return int(match.group(1)) if match else 1
 
     def _fetch_commit_details(self, url: str) -> Dict[str, Any]:
-        res = requests.get(url, headers=self.headers)
+        res = self.session.get(url)
         return cast(Dict[str, Any], res.json())
 
     def _fetch_all_pages(self, total: int) -> List[Dict[str, Any]]:
         num_pages = math.ceil(total / PER_PAGE)
 
         def _fetch_page(page_num: int) -> List[Dict[str, Any]]:
-            res = requests.get(
-                f"{self.api_url}/commits", params={"per_page": PER_PAGE, "page": page_num}, headers=self.headers
-            )
+            res = self.session.get(f"{self.api_url}/commits", params={"per_page": PER_PAGE, "page": page_num})
             self._check_response(res)
             return cast(List[Dict[str, Any]], res.json())
 
@@ -274,7 +275,7 @@ class GitHubManager:
         if response.status_code != 200:
             sys.exit(f"ERROR: Unexpected error occurred. Status code: {response.status_code}")
 
-    def _calculate_total_hours(
+    def _calculate_estimated_hours(
         self,
         commit_timestamps: List[float],
         session_threshold_seconds: int = 7200,  # 2 hours
@@ -307,23 +308,21 @@ class GitHubManager:
 
     def fetch_user(self) -> GitHubUser:
         print("[ ] Fetching user", end="")
-        response = requests.get(f"https://api.github.com/users/{self.user}", headers=self.headers)
+        response = self.session.get(f"https://api.github.com/users/{self.user}")
         self._check_response(response)
-
-        user_data = response.json()
-        user = GitHubUser(
-            name=user_data.get("name", "Unknown"),
-            github_user=user_data.get("login", "Unknown"),
-            avatar=user_data.get("avatar_url", ""),
-            profile_url=user_data.get("html_url", ""),
-        )
-
         print("\r[✓] Fetching user")
-        return user
+
+        user = response.json()
+        return GitHubUser(
+            name=user.get("name"),
+            github_user=user.get("login"),
+            avatar=user.get("avatar_url"),
+            profile_url=user.get("html_url"),
+        )
 
     def fetch_user_repos(self) -> List[Dict[str, Any]]:
         print("[ ] Fetching repositories", end="")
-        response = requests.get(f"https://api.github.com/users/{self.user}/repos", headers=self.headers)
+        response = self.session.get(f"https://api.github.com/users/{self.user}/repos")
         self._check_response(response)
 
         print("\r[✓] Fetching repositories")

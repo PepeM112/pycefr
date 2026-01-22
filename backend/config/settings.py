@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     add_local_suffix: bool = True
     auto_display_console: bool = True
     ignore_folders: Union[str, List[str]] = ["node_modules/", ".git/", "__pycache__/"]
+    python_threshold_percentage: int = 50
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
