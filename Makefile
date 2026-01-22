@@ -23,6 +23,11 @@ run-all: ## Run backend and frontend in parallel with TS generation
 # Backend
 # ==============================
 
+test: ## Run tests using pycefr_test.db
+	@echo "Running tests..."
+	@export DATABASE_PATH=database/pycefr_test.db && $(PYTHON_VENV)/bin/pytest tests/ -v
+
+
 install-backend: ## Create virtual environment and install dependencies
 	@echo "-> Creating and activating virtual environment..."
 	python -m venv $(PYTHON_VENV)

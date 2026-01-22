@@ -1,4 +1,5 @@
 import configparser
+import logging
 import math
 import os
 import re
@@ -18,11 +19,12 @@ from backend.config.settings import settings
 from backend.models.schemas.repo import (
     GitHubContributor,
     GitHubUser,
-    RepoInfo,
-    RepoInfoCommit,
-    RepoInfoData,
+    Repo,
+    RepoCommit,
+    RepoSummary,
 )
 
+logger = logging.getLogger(__name__)
 PER_PAGE = 100
 
 
@@ -88,15 +90,24 @@ class GitHubManager:
         print("\r[✓] Cloning repository")
         return str(clone_path)
 
-    def get_repo_info(self) -> RepoInfo:
+    def get_repo_info(self) -> Repo:
         repo_data = self._get_repo()
         repo_commits = self._get_repo_commits()
         repo_contributors = self._get_repo_contributors()
 
-        return RepoInfo(data=repo_data, commits=repo_commits, contributors=repo_contributors)
+        return Repo(
+            name=repo_data.name,
+            url=repo_data.url,
+            description=repo_data.description,
+            created_at=repo_data.created_at,
+            last_updated_at=repo_data.last_updated_at,
+            owner=repo_data.owner,
+            commits=repo_commits,
+            contributors=repo_contributors,
+        )
 
-    def _get_repo(self) -> RepoInfoData:
-        print("[ ] Fetching data", end="")
+    def _get_repo(self) -> RepoSummary:
+        print("[ ] Fetching data", end=" ")
         response = requests.get(self.api_url, headers=self.headers)
 
         self._check_response(response)
@@ -112,7 +123,7 @@ class GitHubManager:
             profile_url=owner_data.get("html_url", ""),
         )
 
-        return RepoInfoData(
+        return RepoSummary(
             name=data["name"],
             url=data["html_url"],
             description=data.get("description"),
@@ -121,7 +132,7 @@ class GitHubManager:
             owner=owner,
         )
 
-    def _get_repo_commits(self) -> List[RepoInfoCommit]:
+    def _get_repo_commits(self) -> List[RepoCommit]:
         total_commits = self._get_total_commits_count()
         if total_commits == 0:
             print("[✓] Fetching commits")  # TODO: check what to do here, sys.exit?
@@ -130,7 +141,14 @@ class GitHubManager:
         all_commits = self._fetch_all_pages(total_commits)
 
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
-            lambda: {"name": "", "github_user": "", "loc": 0, "commits": 0, "commit_dates": [], "files_set": set()}
+            lambda: {
+                "username": "",
+                "github_user": "",
+                "loc": 0,
+                "commits": 0,
+                "commit_timestamps": [],
+                "files_set": set(),
+            }
         )
 
         bar_length = 40
@@ -145,13 +163,13 @@ class GitHubManager:
                     author_name = details["commit"]["committer"]["name"]
 
                     stats = user_stats[author_name]
-                    stats["name"] = author_name
+                    stats["username"] = author_name
                     stats["github_user"] = details.get("author", {}).get("login", "Unknown")
                     stats["commits"] += 1
 
                     # Timestamp for total hours calculation
                     date_str = details["commit"]["committer"]["date"]
-                    stats["commit_dates"].append(datetime.fromisoformat(date_str).timestamp())
+                    stats["commit_timestamps"].append(datetime.fromisoformat(date_str).timestamp())
 
                     # LOC and Files
                     stats["loc"] += details.get("stats", {}).get("total", 0)
@@ -166,13 +184,13 @@ class GitHubManager:
                 except Exception as e:
                     print(f"\nERROR: Could not process commit: {e}")
 
-        final_results: List[RepoInfoCommit] = []
+        final_results: List[RepoCommit] = []
         for data in user_stats.values():
-            data["total_hours"] = self._calculate_total_hours(data["commit_dates"])
+            data["total_hours"] = self._calculate_total_hours(data["commit_timestamps"])
             data["total_files_modified"] = len(data["files_set"])
-            del data["commit_dates"]
+            del data["commit_timestamps"]
             del data["files_set"]
-            final_results.append(RepoInfoCommit(**data))
+            final_results.append(RepoCommit(**data))
 
         print("\r[✓] Fetching commits\033[K", flush=True)
         return final_results
@@ -258,27 +276,27 @@ class GitHubManager:
 
     def _calculate_total_hours(
         self,
-        commit_dates: List[float],
-        session_threshold_seconds: int = 7200,  # 2 horas
-        default_commit_time_seconds: int = 1200,  # 20 minutos de "contexto"
+        commit_timestamps: List[float],
+        session_threshold_seconds: int = 7200,  # 2 hours
+        default_commit_time_seconds: int = 1200,  # 20 minutes of "context"
     ) -> float:
         """
-        Calcula las horas basándose en sesiones de trabajo.
-        Cada salto mayor a threshold inicia una nueva sesión con un tiempo base.
+        Calculates hours based on work sessions.
+        Each jump greater than the threshold starts a new session with a base time.
         """
-        if not commit_dates:
+        if not commit_timestamps:
             return 0.0
 
-        commit_dates.sort()
+        commit_timestamps.sort()
 
         total_seconds = 0.0
 
-        for i in range(len(commit_dates)):
+        for i in range(len(commit_timestamps)):
             if i == 0:
                 total_seconds += default_commit_time_seconds
                 continue
 
-            diff = commit_dates[i] - commit_dates[i - 1]
+            diff = commit_timestamps[i] - commit_timestamps[i - 1]
 
             if diff <= session_threshold_seconds:
                 total_seconds += diff

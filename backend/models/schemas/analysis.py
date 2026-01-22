@@ -25,8 +25,11 @@ class AnalysisFile(BaseSchema):
 
 
 class Analysis(BaseSchema):
-    status: AnalysisStatus
-    file_classes: List[AnalysisFile]
+    id: int | None = None
+    name: str | None = None
+    origin: Origin = Origin.GITHUB
+    status: AnalysisStatus = AnalysisStatus.IN_PROGRESS
+    file_classes: List[AnalysisFile] = []
     repo: Repo | None = None
 
 

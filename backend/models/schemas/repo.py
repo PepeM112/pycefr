@@ -9,7 +9,6 @@ class GitHubUser(BaseSchema):
     github_user: str
     avatar: str
     profile_url: str
-    commits: int = 0
 
 
 class GitHubContributor(GitHubUser):
