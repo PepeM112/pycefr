@@ -29,6 +29,7 @@ class Analysis(BaseSchema):
     name: str | None = None
     origin: Origin = Origin.GITHUB
     status: AnalysisStatus = AnalysisStatus.IN_PROGRESS
+    error_message: str | None = None
     file_classes: List[AnalysisFile] = []
     repo: Repo | None = None
 
@@ -37,6 +38,7 @@ class AnalysisSummary(BaseSchema):
     id: int
     name: str | None = None
     status: AnalysisStatus
+    error_message: str | None = None
     origin: Origin
     repo_name: str | None = None
     repo_url: str | None = None

@@ -43,7 +43,6 @@ class Analyzer:
             print("\r[✓] Analysing code\033[K")
 
         logger.info(f"Analysis completed for {root_path}")
-        self._delete_tmp_files()
 
     def _analyse_directory(self, path: str) -> None:
         try:
@@ -135,7 +134,8 @@ class Analyzer:
     def get_results(self) -> Analysis:
         return self.analysis_result
 
-    def _delete_tmp_files(self) -> None:
+    @staticmethod
+    def delete_tmp_files() -> None:
         tmp_path = Path("backend/tmp")
         if tmp_path.exists():
             try:

@@ -7,6 +7,7 @@ from backend.db import db_utils
 from backend.models.schemas.analysis import (
     Analysis,
     AnalysisCreate,
+    AnalysisStatus,
     AnalysisSummary,
 )
 from backend.models.schemas.common import PaginatedResponse, Pagination
@@ -169,18 +170,28 @@ def delete_analysis(analysis_id: int) -> None:
 async def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
     """This function runs outside the HTTP request cycle."""
     try:
-        gh = GitHubManager(repo_url=repo_url)
+        # IMPORTANTE: is_cli=False silencia los prints y inputs
+        gh = GitHubManager(repo_url=repo_url, is_cli=False)
         gh.validate_repo_url()
         cloned_repo = gh.clone_repo()
 
-        an = Analyzer(cloned_repo)
+        an = Analyzer(cloned_repo, is_cli=False)
         an.analyse_project()
 
         repo_info = gh.get_repo_info()
         analysis_result = an.get_results()
         analysis_result.repo = repo_info
 
+        analysis_result.status = AnalysisStatus.COMPLETED
+
         db_utils.update_analysis_results(analysis_id, analysis_result)
 
+    except (ValueError, FileNotFoundError, PermissionError) as e:
+        logger.error(f"Analysis {analysis_id} validation failed: {e}")
+        db_utils.mark_analysis_as_failed(analysis_id, str(e))
+
     except Exception as e:
-        logger.error(f"Analysis {analysis_id} failed: {e}")
+        logger.error(f"Analysis {analysis_id} crashed: {e}")
+        db_utils.mark_analysis_as_failed(analysis_id, f"Internal Error: {e}")
+    finally:
+        Analyzer.delete_tmp_files()

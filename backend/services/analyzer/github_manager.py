@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -31,41 +30,46 @@ PER_PAGE = 100
 
 
 class GitHubManager:
-    def __init__(self, user: str = "", repo_url: str = "") -> None:
+    def __init__(self, user: str = "", repo_url: str = "", is_cli: bool = True) -> None:
         self.user = user
         self.repo_url = repo_url
         self.repo_name = ""
+        self.is_cli = is_cli
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
 
+    def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
+        """Helper para imprimir solo si estamos en CLI."""
+        if self.is_cli:
+            print(message, end=end, flush=flush)
+
     @property
     def api_url(self) -> str:
-        """Genera la URL base de la API dinámicamente."""
         return f"https://api.github.com/repos/{self.user}/{self.repo_name}"
 
     def validate_repo_url(self) -> None:
-        print("[ ] Validating URL", end="")
+        self._print_status("[ ] Validating URL", end="")
+
         if not self.repo_url:
-            sys.exit("\nERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO")
+            raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
+
         parsed_url = urlparse(self.repo_url)
         if parsed_url.scheme != "https":
-            sys.exit("\nERROR: URL must use the 'https' protocol.")
+            raise ValueError("URL must use the 'https' protocol.")
         if parsed_url.netloc != "github.com":
-            sys.exit("\nERROR: URL must  be from 'github.com'.")
+            raise ValueError("URL must be from 'github.com'.")
 
         path_segments = parsed_url.path.strip("/").split("/")
+        if not path_segments or len(path_segments) < 2:
+            raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
+
         self.user = path_segments[0]
         self.repo_name = path_segments[1].replace(".git", "")
 
-        if not path_segments:
-            sys.exit(
-                "\nERROR: Incorrect URL format. For option -r (repository URL), use: https://github.com/USER/REPO.git"
-            )
-
         if not self.validate_python_language():
-            sys.exit(f"\nERROR: The repository does not contain at least {python_threshold_percentage}% of Python.")
+            raise ValueError(f"The repository does not contain at least {python_threshold_percentage}% of Python.")
 
-        print("\r[✓] Validating URL")
+        self._print_status("\r[✓] Validating URL")
 
     def validate_python_language(self) -> bool:
         response = self.session.get(f"{self.api_url}/languages")
@@ -77,7 +81,7 @@ class GitHubManager:
         return python_bytes >= total_bytes * python_threshold_percentage / 100 if total_bytes > 0 else False
 
     def clone_repo(self) -> str:
-        print("[ ] Cloning repository", end="")
+        self._print_status("[ ] Cloning repository", end="")
         clone_dir = Path("backend/tmp")
         clone_path = clone_dir / self.repo_name
 
@@ -87,10 +91,10 @@ class GitHubManager:
         clone_dir.mkdir(parents=True, exist_ok=True)
 
         command_line = ["git", "clone", self.repo_url, str(clone_path)]
-        # Redirect standard output and error output to subprocess.PIPE
+        # Si falla el clone, subprocess lanzará CalledProcessError, lo cual es correcto
         subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
-        print("\r[✓] Cloning repository")
+        self._print_status("\r[✓] Cloning repository")
         return str(clone_path)
 
     def get_repo_info(self) -> Repo:
@@ -110,17 +114,17 @@ class GitHubManager:
         )
 
     def _get_repo(self) -> RepoSummary:
-        print("[ ] Fetching data", end=" ")
+        self._print_status("[ ] Fetching data", end=" ")
         response = self.session.get(self.api_url)
 
         self._check_response(response)
 
         data = response.json()
         owner_data = data.get("owner", {})
-        print("\r[✓] Fetching data")
+        self._print_status("\r[✓] Fetching data")
 
         owner = GitHubUser(
-            name=owner_data.get("login", "Unknown"),
+            name=owner_data.get("name") or owner_data.get("login"),
             github_user=owner_data.get("login", "Unknown"),
             avatar=owner_data.get("avatar_url", ""),
             profile_url=owner_data.get("html_url", ""),
@@ -138,7 +142,7 @@ class GitHubManager:
     def _get_repo_commits(self) -> List[RepoCommit]:
         total_commits = self._get_total_commits_count()
         if total_commits == 0:
-            print("[✓] Fetching commits")  # TODO: check what to do here, sys.exit?
+            self._print_status("[✓] Fetching commits")
             return []
 
         all_commits = self._fetch_all_pages(total_commits)
@@ -154,38 +158,41 @@ class GitHubManager:
             }
         )
 
-        bar_length = 40
-
-        with ThreadPoolExecutor(max_workers=100) as executor:
+        with ThreadPoolExecutor(max_workers=50) as executor:
             futures = [executor.submit(self._fetch_commit_details, c["url"]) for c in all_commits]
 
             completed = 0
             for future in as_completed(futures):
                 try:
                     details = future.result()
-                    author_name = details["commit"]["committer"]["name"]
+                    author_name = details.get("commit", {}).get("committer", {}).get("name", "")
 
                     stats = user_stats[author_name]
                     stats["username"] = author_name
-                    stats["github_user"] = details.get("author", {}).get("login", "Unknown")
+                    stats["github_user"] = details.get("author", {}).get("login", "")
                     stats["commits"] += 1
 
-                    # Timestamp for total hours calculation
-                    date_str = details["commit"]["committer"]["date"]
-                    stats["commit_timestamps"].append(datetime.fromisoformat(date_str).timestamp())
+                    date_str = details.get("commit", {}).get("committer", {}).get("date")
+                    if date_str:
+                        stats["commit_timestamps"].append(datetime.fromisoformat(date_str).timestamp())
 
-                    # LOC and Files
                     stats["loc"] += details.get("stats", {}).get("total", 0)
                     for f in details.get("files", []):
                         stats["files_set"].add(f["filename"])
 
                     completed += 1
-                    percent = int((completed / total_commits) * 100)
-                    block = int(round(bar_length * completed / total_commits))
-                    progress_bar = "█" * block + "-" * (bar_length - block)
-                    print(f"\r[ ] Fetching commits [{progress_bar}] {percent}%\033[K", end="", flush=True)
+
+                    if self.is_cli:
+                        percent = int((completed / total_commits) * 100)
+                        bar_length = 40
+                        block = int(round(bar_length * completed / total_commits))
+                        progress_bar = "█" * block + "-" * (bar_length - block)
+                        print(f"\r[ ] Fetching commits [{progress_bar}] {percent}%\033[K", end="", flush=True)
+
                 except Exception as e:
-                    print(f"\nERROR: Could not process commit: {e}")
+                    if self.is_cli:
+                        print(f"\nERROR: Could not process commit: {e}")
+                    logger.warning(f"Commit error: {e}")
 
         final_results: List[RepoCommit] = []
         for data in user_stats.values():
@@ -195,11 +202,11 @@ class GitHubManager:
             del data["files_set"]
             final_results.append(RepoCommit(**data))
 
-        print("\r[✓] Fetching commits\033[K", flush=True)
+        self._print_status("\r[✓] Fetching commits\033[K", flush=True)
         return final_results
 
     def _get_repo_contributors(self) -> List[GitHubContributor]:
-        print("[ ] Fetching contributors", end="", flush=True)
+        self._print_status("[ ] Fetching contributors", end="", flush=True)
         response = self.session.get(f"{self.api_url}/contributors")
         self._check_response(response)
 
@@ -215,7 +222,7 @@ class GitHubManager:
             for contributor in contributors_data
         ]
 
-        print("\r[✓] Fetching contributors")
+        self._print_status("\r[✓] Fetching contributors")
         return contributors
 
     def _get_total_commits_count(self) -> int:
@@ -224,10 +231,8 @@ class GitHubManager:
 
         link_header = response.headers.get("Link")
         if not link_header:
-            # No Link header means only one page
             return len(response.json())
 
-        # Search page number before rel="last"
         match = re.search(r'page=(\d+)>; rel="last"', link_header)
         return int(match.group(1)) if match else 1
 
@@ -243,62 +248,42 @@ class GitHubManager:
             self._check_response(res)
             return cast(List[Dict[str, Any]], res.json())
 
-        print("[ ] Fetching commits", end="", flush=True)
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        self._print_status("[ ] Fetching commits", end="", flush=True)
+        with ThreadPoolExecutor(max_workers=20) as executor:
             future_to_page = {executor.submit(_fetch_page, p): p for p in range(1, num_pages + 1)}
 
             all_data: List[Dict[str, Any]] = []
             for future in as_completed(future_to_page):
                 all_data.extend(future.result())
-        all_data.sort(key=lambda x: x["commit"]["author"]["date"])
+        all_data.sort(key=lambda x: x.get("commit", {}).get("author", {}).get("date", ""))
         return all_data
-
-    @staticmethod
-    def display_api_token_error() -> None:
-        """
-        Handle GitHub API token error by displaying a message and exiting the program.
-        """
-        print("ERROR: Looks like you've reached the limit of API requests.")
-        print(
-            "To continue, you will need an API key. You can generate one at:\n\thttps://github.com/settings/tokens\n"
-            "and add it to your .env file."
-        )
-        print("Also see: https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting")
-        sys.exit(1)
 
     def _check_response(self, response: requests.Response) -> None:
         if response.status_code in [401, 403]:
-            print("ERROR: API rate limit or invalid token.")
-            sys.exit(1)
+            # CAMBIO: Raise exception
+            raise PermissionError("API rate limit exceeded or invalid token.")
         if response.status_code == 404:
-            sys.exit(f"ERROR: {self.user}/{self.repo_name} not found.")
+            raise FileNotFoundError(f"Repository {self.user}/{self.repo_name} not found.")
         if response.status_code != 200:
-            sys.exit(f"ERROR: Unexpected error occurred. Status code: {response.status_code}")
+            raise RuntimeError(f"Unexpected API error. Status: {response.status_code}")
 
     def _calculate_estimated_hours(
         self,
         commit_timestamps: List[float],
-        session_threshold_seconds: int = 7200,  # 2 hours
-        default_commit_time_seconds: int = 1200,  # 20 minutes of "context"
+        session_threshold_seconds: int = 7200,
+        default_commit_time_seconds: int = 1200,
     ) -> float:
-        """
-        Calculates hours based on work sessions.
-        Each jump greater than the threshold starts a new session with a base time.
-        """
         if not commit_timestamps:
             return 0.0
 
         commit_timestamps.sort()
-
         total_seconds = 0.0
 
         for i in range(len(commit_timestamps)):
             if i == 0:
                 total_seconds += default_commit_time_seconds
                 continue
-
             diff = commit_timestamps[i] - commit_timestamps[i - 1]
-
             if diff <= session_threshold_seconds:
                 total_seconds += diff
             else:
@@ -307,25 +292,25 @@ class GitHubManager:
         return round(total_seconds / 3600, 2)
 
     def fetch_user(self) -> GitHubUser:
-        print("[ ] Fetching user", end="")
+        self._print_status(f"[ ] Fetching user: {self.user}", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}")
         self._check_response(response)
-        print("\r[✓] Fetching user")
+        self._print_status("\r[✓] Fetching user")
 
         user = response.json()
         return GitHubUser(
-            name=user.get("name"),
+            name=user.get("name", ""),
             github_user=user.get("login"),
             avatar=user.get("avatar_url"),
             profile_url=user.get("html_url"),
         )
 
     def fetch_user_repos(self) -> List[Dict[str, Any]]:
-        print("[ ] Fetching repositories", end="")
+        self._print_status("[ ] Fetching repositories", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}/repos")
         self._check_response(response)
+        self._print_status("\r[✓] Fetching repositories")
 
-        print("\r[✓] Fetching repositories")
         return cast(List[Dict[str, Any]], response.json())
 
     @staticmethod
@@ -345,44 +330,12 @@ class GitHubManager:
             return ""
 
         url = config['remote "origin"'].get("url")
-
         if not url:
             return ""
 
         if url.startswith("git@"):
-            url_part = url[4:]  # Skip 'git@'
+            url_part = url[4:]
             http_url = url_part.replace(":", "/", 1).replace(".git", "")
             return f"https://{http_url}"
 
         return url
-
-    @staticmethod
-    def choose_repo(repos: List[Dict[str, Any]]) -> str:
-        print("Repositories found:")
-        for idx, repo in enumerate(repos, start=1):
-            print(f"\t[{idx}] {repo.get('name')}")
-        while True:
-            repo_input = input("\nSelect which one you want to analyze (Enter [0] to exit): ")
-            if repo_input == "0":
-                sys.exit()
-            elif repo_input.isdigit():
-                repo_pos = int(repo_input) - 1
-                if 0 <= repo_pos < len(repos):
-                    selected_repo = repos[repo_pos]
-                else:
-                    print("Invalid number. Please try again.")
-                    continue
-            else:
-                matching_repos = [repo for repo in repos if repo.get("name") == repo_input]
-                if not matching_repos:
-                    print("Repository name not found. Please try again (Enter [0] to exit).")
-                    continue
-                selected_repo = matching_repos[0]
-
-            # Confirmar la selección
-
-            confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (Y/n) ")
-            if confirm_input.lower() == "y":
-                return str(selected_repo.get("html_url"))
-            elif confirm_input.lower() != "n":
-                print("Not valid. Please enter 'y' or 'n'.")

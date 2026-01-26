@@ -258,10 +258,9 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
         )
 
         conn.commit()
-    except Exception:
+    except Exception as e:
         conn.rollback()
-        cursor.execute("UPDATE analyses SET status = 'failed' WHERE id = ?", (analysis_id,))
-        conn.commit()
+        mark_analysis_as_failed(analysis_id, f"Database update error: {str(e)}")
         raise
     finally:
         conn.close()
@@ -274,6 +273,27 @@ def delete_analysis(analysis_id: int) -> bool:
         cursor.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,))
         conn.commit()
         return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
+    """
+    Marca un análisis como fallido en la base de datos.
+    De momento, el error_message se recibe pero no se guarda hasta que
+    añadamos la columna correspondiente en la tabla 'analyses'.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE analyses SET status = ? WHERE id = ?",
+            (AnalysisStatus.FAILED.value, analysis_id),
+        )
+        conn.commit()
+        logger.info(f"Analysis {analysis_id} marked as FAILED. Reason: {error_message}")
+    except sqlite3.Error as e:
+        logger.error(f"Database error while marking analysis {analysis_id} as failed: {e}")
     finally:
         conn.close()
 
