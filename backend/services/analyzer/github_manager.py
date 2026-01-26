@@ -91,7 +91,6 @@ class GitHubManager:
         clone_dir.mkdir(parents=True, exist_ok=True)
 
         command_line = ["git", "clone", self.repo_url, str(clone_path)]
-        # Si falla el clone, subprocess lanzará CalledProcessError, lo cual es correcto
         subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
         self._print_status("\r[✓] Cloning repository")
@@ -260,7 +259,6 @@ class GitHubManager:
 
     def _check_response(self, response: requests.Response) -> None:
         if response.status_code in [401, 403]:
-            # CAMBIO: Raise exception
             raise PermissionError("API rate limit exceeded or invalid token.")
         if response.status_code == 404:
             raise FileNotFoundError(f"Repository {self.user}/{self.repo_name} not found.")

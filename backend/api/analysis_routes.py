@@ -170,7 +170,6 @@ def delete_analysis(analysis_id: int) -> None:
 async def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
     """This function runs outside the HTTP request cycle."""
     try:
-        # IMPORTANTE: is_cli=False silencia los prints y inputs
         gh = GitHubManager(repo_url=repo_url, is_cli=False)
         gh.validate_repo_url()
         cloned_repo = gh.clone_repo()
