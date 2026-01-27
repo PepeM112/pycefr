@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+from backend.models.schemas import analysis
 from backend.services.analyzer.analyzer_class import Analyzer
 from backend.services.analyzer.github_manager import GitHubManager
 
@@ -20,6 +21,9 @@ def request_url(url: str) -> None:
         analysis_result.repo = repo_info
 
         repo_name = repo_info.name
+        analysis_result.name = repo_name
+        analysis_result.status = analysis.AnalysisStatus.COMPLETED
+
         file_path = Path(f"results/{repo_name}.json")
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -55,14 +59,16 @@ def run_directory(directory: str) -> None:
     try:
         an = Analyzer(directory, is_cli=True)
         an.analyse_project()
-        analysis_results = an.get_results()
+        analysis_result = an.get_results()
 
         repo_name = Path(directory).resolve().name
+        analysis_result.name = repo_name
+        analysis_result.status = analysis.AnalysisStatus.COMPLETED
         file_path = Path(f"results/{repo_name}.json")
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(file_path, "w", encoding="utf-8") as file:
-            file.write(analysis_results.model_dump_json(indent=4))
+            file.write(analysis_result.model_dump_json(indent=4))
     except Exception as e:
         print(f"\nERROR: {e}")
         sys.exit(1)
