@@ -46,7 +46,7 @@ init-db: ## Wipe database and create a fresh one from schema.sql
 	@mkdir -p database
 	@echo "Initializing SQLite database..."
 	@if [ -f "$(DB_SQLITE_PATH)" ]; then rm $(DB_SQLITE_PATH); fi
-	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
+	@sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
 	@echo "Done"
 
 seed: ## Wipe data and fill database with test data (initialize_db.sql)
@@ -55,7 +55,7 @@ seed: ## Wipe data and fill database with test data (initialize_db.sql)
 		echo "Error: Database file not found"; \
 		exit 1; \
 	fi
-	sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
+	@sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
 	@echo "Done"
 
 db-shell: ## Open SQLite interactive shell

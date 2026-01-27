@@ -12,10 +12,15 @@ INSERT INTO analyses (
         origin_id,
         repo_url,
         repo_name,
+        repo_description,
+        repo_owner_name,
         repo_owner_login,
+        repo_owner_avatar,
+        repo_owner_profile_url,
         repo_created_at,
         repo_last_update,
-        estimated_hours
+        estimated_hours,
+        error_message
     )
 VALUES (
         1,
@@ -24,10 +29,15 @@ VALUES (
         2,
         'https://github.com/PepeM112/pycefr',
         'pycefr',
+        'Description of the repo',
         'PepeM112',
+        'PepeM112',
+        'https://avatars.githubusercontent.com/u/129164725?v=4',
+        'https://github.com/PepeM112',
         '2024-05-02 10:26:27',
         '2026-01-06 17:03:47',
-        73.5
+        73.5,
+        NULL
     );
 INSERT INTO analysis_files (id, analysis_id, filename)
 VALUES (1, 1, 'backend/constants/analysis_rules.py');

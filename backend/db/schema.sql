@@ -20,6 +20,7 @@ CREATE TABLE analyses (
     repo_owner_name TEXT,
     repo_owner_login TEXT,
     repo_owner_avatar TEXT,
+    repo_owner_profile_url TEXT,
     repo_created_at DATETIME,
     repo_last_update DATETIME,
     estimated_hours REAL DEFAULT 0.0,

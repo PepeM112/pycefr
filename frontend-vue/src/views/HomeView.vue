@@ -4,39 +4,41 @@
       <h1>{{ $t('summary') }}</h1>
     </header>
     <div class="repo-list">
-      <div class="repo-wrapper" v-for="(repo, index) in reposData" :key="'repo' + index">
+      <div class="repo-wrapper" v-for="(analysis, index) in analysesData" :key="'repo' + index">
         <div class="container h-100">
           <div class="repo-header">
             <img
-              :src="!isLocal(repo) ? repo.data.owner.avatar : '@/assets/img/default_avatar.jpg'"
-              :alt="!isLocal(repo) ? `${repo.data.owner.name}'s avatar` : 'avatar'"
+              :src="analysis?.repo?.owner.avatar || '@/assets/img/default_avatar.jpg'"
+              :alt="`${analysis?.repo?.owner.name}'s avatar`"
             />
             <div>
               <h3>
-                {{ !isLocal(repo) ? repo.data.name : repo.data.name + ' (local)' }}
+                {{ analysis?.repo?.name || analysis.data.name + ' (local)' }}
               </h3>
             </div>
           </div>
           <p class="description">
-            {{ !isLocal(repo) ? repo.data.description || 'No description available' : 'Repositorio local' }}
+            {{ analysis?.repo?.description || 'No description available' }}
           </p>
 
-          <template v-if="!isLocal(repo)">
+          <template v-if="analysis?.repo">
             <p>
               {{ $t('creation_date') }}:
-              <span>{{ formatDate(repo.data.createdDate) }}</span>
+              <span>{{ formatDate(analysis?.repo?.createdAt) }}</span>
             </p>
             <p>
               {{ $t('last_update') }}:
-              <span>{{ formatDate(repo.data.lastUpdateDate) }}</span>
+              <span>{{ formatDate(analysis?.repo?.lastUpdatedAt) }}</span>
             </p>
-            <p>
+            <!-- <p>
               {{ $t('commits') }}:
-              <span>{{ totalCommits(repo.commits) }}</span>
-            </p>
+              <span>{{ totalCommits(analysis?.repo?.commits) }}</span>
+            </p> -->
           </template>
 
-          <a :href="`/repo/${repo.data.name}${isLocal(repo) ? '_local' : ''}`" class="glb-btn-main">{{ $t('see_more') }}</a>
+          <a :href="`/repo/${analysis?.name}`" class="glb-btn-main">
+            {{ $t('see_more') }}
+          </a>
         </div>
       </div>
     </div>
@@ -45,141 +47,27 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { formatDate } from '@/utils/utils';
+import { listAnalysisApiV1AnalysesGet } from '@/client';
+import type { AnalysisSummary, Pagination } from '@/client';
 /* import axios from 'axios'; */
 
-const reposData = ref();
+const analysesData = ref<AnalysisSummary[]>([]);
+const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 
 async function loadData() {
-  try {
-    /* const resp = await axios.get('/api/repos');
-    reposData.value = resp.data; */
-    reposData.value = [
-      {
-        data: {
-          name: 'pycefr',
-          url: 'https://github.com/PepeM112/pycefr',
-          description: null,
-          createdDate: '2024-05-02T10:26:27Z',
-          lastUpdateDate: '2024-11-18T12:52:51Z',
-          owner: {
-            name: 'PepeM112',
-            avatar: 'https://avatars.githubusercontent.com/u/129164725?v=4',
-            profile_url: 'https://github.com/PepeM112',
-          },
-        },
-        commits: [
-          {
-            name: 'jmatas',
-            github_user: 'PepeM112',
-            loc: 20162,
-            commits: 81,
-            total_hours: 23,
-            total_files_modified: 59,
-          },
-          {
-            name: 'PepeM112',
-            github_user: 'PepeM112',
-            loc: 1077,
-            commits: 5,
-            total_hours: 2,
-            total_files_modified: 14,
-          },
-          {
-            name: 'GitHub',
-            github_user: 'anapgh',
-            loc: 2663,
-            commits: 19,
-            total_hours: 4,
-            total_files_modified: 19,
-          },
-          {
-            name: 'anapgh',
-            github_user: 'anapgh',
-            loc: 21355,
-            commits: 227,
-            total_hours: 38,
-            total_files_modified: 32,
-          },
-          {
-            name: 'Gregorio',
-            github_user: 'gregoriorobles',
-            loc: 1107,
-            commits: 8,
-            total_hours: 2,
-            total_files_modified: 8,
-          },
-        ],
-        contributors: [
-          {
-            name: 'anapgh',
-            avatar: 'https://avatars.githubusercontent.com/u/60195957?v=4',
-            profile_url: 'https://github.com/anapgh',
-            commits: 246,
-          },
-          {
-            name: 'PepeM112',
-            avatar: 'https://avatars.githubusercontent.com/u/129164725?v=4',
-            profile_url: 'https://github.com/PepeM112',
-            commits: 86,
-          },
-          {
-            name: 'gregoriorobles',
-            avatar: 'https://avatars.githubusercontent.com/u/842692?v=4',
-            profile_url: 'https://github.com/gregoriorobles',
-            commits: 8,
-          },
-        ],
-      },
-      {
-        data: {
-          name: 'semi-supervised-pytorch',
-          url: 'https://github.com/wohlert/semi-supervised-pytorch',
-          description: 'Implementations of various VAE-based semi-supervised and generative models in PyTorch',
-          createdDate: '2017-09-28T09:41:18Z',
-          lastUpdateDate: '2024-11-12T17:48:47Z',
-          owner: {
-            name: 'wohlert',
-            avatar: 'https://avatars.githubusercontent.com/u/7689122?v=4',
-            profile_url: 'https://github.com/wohlert',
-          },
-        },
-        commits: [
-          {
-            name: 'wohlert',
-            github_user: 'wohlert',
-            loc: 21326,
-            commits: 34,
-            total_hours: 6,
-            total_files_modified: 65,
-          },
-        ],
-        contributors: [
-          {
-            name: 'wohlert',
-            avatar: 'https://avatars.githubusercontent.com/u/7689122?v=4',
-            profile_url: 'https://github.com/wohlert',
-            commits: 34,
-          },
-        ],
-      },
-      {
-        data: {
-          name: 'semi-supervised-pytorch',
-        },
-      },
-    ];
-  } catch (error) {
-    console.error('Error loading repositories:', error);
+  const { data, error } = await listAnalysisApiV1AnalysesGet();
+
+  if (error) {
+    console.error('Error fetching repos data:', error);
+    return;
   }
+  analysesData.value = data.elements;
+  pagination.value = data.pagination;
 }
 
-function isLocal(repo: any) {
-  return !repo.commits;
-}
-
-function totalCommits(commits: Array<{ commits: number }>) {
+/* function totalCommits(commits: Array<{ commits: number }>) {
   return commits.reduce((acc, curr) => acc + curr.commits, 0);
-}
+} */
 
 onMounted(async () => {
   await loadData();
