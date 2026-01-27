@@ -19,6 +19,7 @@ from backend.models.schemas.repo import (
     GitHubUser,
     Repo,
     RepoCommit,
+    RepoSummary,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,8 +46,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
         cursor = conn.cursor()
         rows = cursor.execute(
             """
-            SELECT id, name, status, origin_id, repo_name, repo_url, created_at, estimated_hours
-            FROM analyses
+            SELECT * FROM analyses
             ORDER BY created_at DESC LIMIT ? OFFSET ?
             """,
             (per_page, offset),
@@ -56,35 +56,26 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
         analyses: List[AnalysisSummary] = []
 
         for row in rows:
-            aggregated_classes = cursor.execute(
-                """
-                SELECT c.class_id, SUM(c.instances) as total_instances
-                FROM analysis_files f
-                JOIN analysis_file_classes c ON f.id = c.file_id
-                WHERE f.analysis_id = ?
-                GROUP BY c.class_id
-                """,
-                (row["id"],),
-            ).fetchall()
-
             analyses.append(
                 AnalysisSummary(
                     id=row["id"],
                     name=row["name"],
                     status=AnalysisStatus(row["status"]),
                     origin=Origin(row["origin_id"]),
-                    repo_name=row["repo_name"],
-                    repo_url=row["repo_url"],
                     created_at=datetime.fromisoformat(row["created_at"]),
-                    estimated_hours=row["estimated_hours"],
-                    classes=[
-                        AnalysisClass(
-                            class_id=ClassId(c["class_id"]),
-                            instances=c["total_instances"],
-                            level=get_class_level(ClassId(c["class_id"])),
-                        )
-                        for c in aggregated_classes
-                    ],
+                    repo=RepoSummary(
+                        name=row["repo_name"],
+                        url=row["repo_url"],
+                        description=None,
+                        created_at=datetime.fromisoformat(row["created_at"]),
+                        last_updated_at=datetime.fromisoformat(row["created_at"]),
+                        owner=GitHubUser(
+                            name=row["repo_owner_name"],
+                            github_user=row["repo_owner_login"],
+                            avatar=row["repo_owner_avatar"],
+                            profile_url=row["repo_owner_profile_url"]
+                        ),
+                    ),
                 )
             )
         return analyses, total

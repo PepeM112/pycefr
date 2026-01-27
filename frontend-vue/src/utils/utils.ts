@@ -17,7 +17,8 @@ export function getExtensionIcon(extension: FileExtension): string {
 }
 
 // Formatting
-export function formatDate(dateString: string) {
+export function formatDate(dateString: string = '') {
+  if (!dateString) return 'N/A';
   const options = { day: '2-digit', month: '2-digit', year: 'numeric' } as Intl.DateTimeFormatOptions;
   const date = new Date(dateString);
   return date.toLocaleDateString('es-ES', options);

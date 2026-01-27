@@ -4,6 +4,11 @@ import vuetify from '@/plugins/vuetify';
 import i18n from '@/plugins/i18n';
 import router from '@/router';
 import CountryFlag from 'vue-country-flag-next';
+import { client } from './client/client.gen';
+
+client.setConfig({
+    baseURL: 'http://localhost:8000',
+});
 
 import '@mdi/font/css/materialdesignicons.css';
 
