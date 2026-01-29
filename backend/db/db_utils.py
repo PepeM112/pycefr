@@ -5,20 +5,20 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from backend.models.schemas.analysis import (
-    Analysis,
-    AnalysisClass,
-    AnalysisFile,
+    AnalysisClassPublic,
+    AnalysisFilePublic,
+    AnalysisPublic,
     AnalysisStatus,
-    AnalysisSummary,
+    AnalysisSummaryPublic,
 )
 from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import Origin
 from backend.models.schemas.repo import (
-    GitHubContributor,
-    GitHubUser,
-    Repo,
-    RepoCommit,
-    RepoSummary,
+    GitHubContributorPublic,
+    GitHubUserPublic,
+    RepoCommitPublic,
+    RepoPublic,
+    RepoSummaryPublic,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def get_db_connection() -> sqlite3.Connection:
 # --- READ OPERATIONS ---
 
 
-def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
+def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummaryPublic], int]:
     offset = (page - 1) * per_page
     conn = get_db_connection()
     try:
@@ -52,29 +52,33 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
         ).fetchall()
 
         total = cursor.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
-        analyses: List[AnalysisSummary] = []
+        analyses: List[AnalysisSummaryPublic] = []
 
         for row in rows:
+            owner = GitHubUserPublic(
+                name=row["repo_owner_name"],
+                github_user=row["repo_owner_login"] or "Unknown",
+                avatar=row["repo_owner_avatar"] or "",
+                profile_url=row["repo_owner_profile_url"] or "",
+            )
+
+            repo_summary = RepoSummaryPublic(
+                name=row["repo_name"],
+                url=row["repo_url"],
+                description=row["repo_description"],  # Puede ser None, y el Schema lo permite
+                created_at=datetime.fromisoformat(row["created_at"]),
+                last_updated_at=datetime.fromisoformat(row["created_at"]),
+                owner=owner,
+            )
+
             analyses.append(
-                AnalysisSummary(
+                AnalysisSummaryPublic(
                     id=row["id"],
                     name=row["name"],
                     status=AnalysisStatus(row["status"]),
-                    origin=Origin(row["origin_id"]),
+                    origin=Origin(row["origin"]),
                     created_at=datetime.fromisoformat(row["created_at"]),
-                    repo=RepoSummary(
-                        name=row["repo_name"],
-                        url=row["repo_url"],
-                        description=None,
-                        created_at=datetime.fromisoformat(row["created_at"]),
-                        last_updated_at=datetime.fromisoformat(row["created_at"]),
-                        owner=GitHubUser(
-                            name=row["repo_owner_name"],
-                            github_user=row["repo_owner_login"],
-                            avatar=row["repo_owner_avatar"],
-                            profile_url=row["repo_owner_profile_url"],
-                        ),
-                    ),
+                    repo=repo_summary,
                 )
             )
         return analyses, total
@@ -82,7 +86,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
         conn.close()
 
 
-def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
+def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -93,7 +97,7 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
         # Reconstruir estructura de archivos y clases
         file_rows = cursor.execute(
             """
-            SELECT f.filename, c.class_id, c.level, c.instances
+            SELECT f.filename, c.class_id, c.instances
             FROM analysis_files f
             LEFT JOIN analysis_file_classes c ON f.id = c.file_id
             WHERE f.analysis_id = ?
@@ -101,22 +105,21 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
             (analysis_id,),
         ).fetchall()
 
-        file_classes: List[AnalysisFile] = []
+        files_list: List[AnalysisFilePublic] = []
         current_file = None
 
         for r in file_rows:
             if current_file is None or current_file.filename != r["filename"]:
-                current_file = next((f for f in file_classes if f.filename == r["filename"]), None)
+                current_file = next((f for f in files_list if f.filename == r["filename"]), None)
 
                 if not current_file:
-                    current_file = AnalysisFile(filename=r["filename"], classes=[])
-                    file_classes.append(current_file)
+                    current_file = AnalysisFilePublic(filename=r["filename"], classes=[])
+                    files_list.append(current_file)
 
             if r["class_id"]:
                 current_file.classes.append(
-                    AnalysisClass(
+                    AnalysisClassPublic(
                         class_id=ClassId(r["class_id"]),
-                        level=r["level"],
                         instances=r["instances"],
                     )
                 )
@@ -131,7 +134,7 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
             for r in cursor.execute("SELECT * FROM repo_contributors WHERE analysis_id = ?", (analysis_id,)).fetchall()
         ]
 
-        repo = Repo(
+        repo = RepoPublic(
             name=row["repo_name"],
             url=row["repo_url"],
             description=row["repo_description"],
@@ -139,7 +142,7 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
             last_updated_at=datetime.fromisoformat(row["repo_last_update"])
             if row["repo_last_update"]
             else datetime.now(),
-            owner=GitHubUser(
+            owner=GitHubUserPublic(
                 name=row["repo_owner_name"] or "",
                 github_user=row["repo_owner_login"] or "",
                 avatar=row["repo_owner_avatar"] or "",
@@ -149,7 +152,16 @@ def get_analysis_details(analysis_id: int) -> Optional[Analysis]:
             contributors=contributors,
         )
 
-        return Analysis(status=AnalysisStatus(row["status"]), file_classes=file_classes, repo=repo)
+        return AnalysisPublic(
+            id=row["id"],
+            name=row["name"],
+            origin=Origin(row["origin"]),
+            status=AnalysisStatus(row["status"]),
+            error_message=row["error_message"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            file_classes=files_list,
+            repo=repo,
+        )
     finally:
         conn.close()
 
@@ -166,7 +178,7 @@ def create_empty_analysis(repo_url: str) -> int | None:
         name = f"{datetime.now().strftime('%Y%m%d')}_{repo_name}"
 
         cursor.execute(
-            "INSERT INTO analyses (name, status, origin_id, repo_url) VALUES (?, ?, ?, ?)",
+            "INSERT INTO analyses (name, status, origin, repo_url) VALUES (?, ?, ?, ?)",
             (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value, repo_url),
         )
         conn.commit()
@@ -183,7 +195,7 @@ def create_empty_analysis(repo_url: str) -> int | None:
         conn.close()
 
 
-def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
+def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> None:
     """Actualiza un análisis existente con los resultados finales."""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -222,11 +234,11 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
 
             for cls in file.classes:
                 cursor.execute(
-                    "INSERT INTO analysis_file_classes (file_id, class_id, level, instances) VALUES (?, ?, ?, ?)",
-                    (file_id, cls.class_id.value, cls.level, cls.instances),
+                    "INSERT INTO analysis_file_classes (file_id, class_id, instances) VALUES (?, ?, ?)",
+                    (file_id, cls.class_id.value, cls.instances),
                 )
 
-        # 3. Insertar Commits y Contributors (Omitido por brevedad, misma lógica INSERT)
+        # Inserción de Commits
         cursor.executemany(
             """
             INSERT INTO repo_commits
@@ -244,6 +256,26 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
                     commit.total_files_modified,
                 )
                 for commit in analysis_data.repo.commits
+            ],
+        )
+
+        # Inserción de Contributors
+        cursor.executemany(
+            """
+            INSERT INTO repo_contributors
+            (analysis_id, name, github_user, avatar, profile_url, contributions)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    analysis_id,
+                    contributor.name,
+                    contributor.github_user,
+                    contributor.avatar,
+                    contributor.profile_url,
+                    contributor.contributions,
+                )
+                for contributor in analysis_data.repo.contributors
             ],
         )
 
@@ -268,11 +300,6 @@ def delete_analysis(analysis_id: int) -> bool:
 
 
 def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
-    """
-    Marca un análisis como fallido en la base de datos.
-    De momento, el error_message se recibe pero no se guarda hasta que
-    añadamos la columna correspondiente en la tabla 'analyses'.
-    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -291,8 +318,8 @@ def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
 # --- HELPERS ---
 
 
-def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommit:
-    return RepoCommit(
+def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommitPublic:
+    return RepoCommitPublic(
         username=row["username"],
         github_user=row["github_user"],
         loc=row["loc"],
@@ -302,8 +329,8 @@ def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommit:
     )
 
 
-def _map_row_to_repo_contributor(row: sqlite3.Row) -> GitHubContributor:
-    return GitHubContributor(
+def _map_row_to_repo_contributor(row: sqlite3.Row) -> GitHubContributorPublic:
+    return GitHubContributorPublic(
         name=row["name"],
         github_user=row["github_user"],
         avatar=row["avatar"],
