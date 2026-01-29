@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum
+from enum import Enum
 from typing import Generic, List, TypeVar
 
 from pydantic import BaseModel, ConfigDict
@@ -11,21 +11,21 @@ class BaseSchema(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
 
 
-class Level(IntEnum, Enum):
-    UNKNOWN = 0
-    A1 = 1
-    A2 = 2
-    B1 = 3
-    B2 = 4
-    C1 = 5
-    C2 = 6
+class Level(str, Enum):
+    UNKNOWN = "unknown"
+    A1 = "A1"
+    A2 = "A2"
+    B1 = "B1"
+    B2 = "B2"
+    C1 = "C1"
+    C2 = "C2"
 
 
-class Origin(IntEnum, Enum):
-    UNKNOWN = 0
-    USER = 1
-    GITHUB = 2
-    LOCAL = 3
+class Origin(str, Enum):
+    UNKNOWN = "UNKNOWN"
+    USER = "USER"
+    GITHUB = "GITHUB"
+    LOCAL = "LOCAL"
 
 
 class Pagination(BaseSchema):

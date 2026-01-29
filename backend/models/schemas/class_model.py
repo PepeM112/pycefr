@@ -1,15 +1,9 @@
-from enum import Enum
+from enum import IntEnum
 
 from backend.models.schemas.common import BaseSchema, Level
 
 
-class ClassItem(BaseSchema):
-    id: int
-    name: str
-    level: Level
-
-
-class ClassId(Enum):
+class ClassId(IntEnum):
     UNKNOWN = 0
     # --- List ---
     LIST_SIMPLE = 1
@@ -126,3 +120,11 @@ class ClassId(Enum):
     EXCEPTION_ASSERT = 89
     # --- With ---
     WITH_SIMPLE = 90
+
+
+class ClassItem(BaseSchema):
+    id: ClassId
+    name: str
+    level: Level
+
+

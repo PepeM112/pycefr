@@ -4,7 +4,6 @@ import sqlite3
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from backend.constants.analysis_rules import get_class_level
 from backend.models.schemas.analysis import (
     Analysis,
     AnalysisClass,
@@ -73,7 +72,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummary], int]:
                             name=row["repo_owner_name"],
                             github_user=row["repo_owner_login"],
                             avatar=row["repo_owner_avatar"],
-                            profile_url=row["repo_owner_profile_url"]
+                            profile_url=row["repo_owner_profile_url"],
                         ),
                     ),
                 )
@@ -202,7 +201,7 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
             WHERE id = ?
             """,
             (
-                analysis_data.status.value,
+                analysis_data.status,
                 analysis_data.repo.name,
                 analysis_data.repo.description,
                 analysis_data.repo.owner.name,
@@ -215,7 +214,7 @@ def update_analysis_results(analysis_id: int, analysis_data: Analysis) -> None:
             ),
         )
 
-        for file in analysis_data.file_classes:
+        for file in analysis_data.file_classes or []:
             cursor.execute(
                 "INSERT INTO analysis_files (analysis_id, filename) VALUES (?, ?)", (analysis_id, file.filename)
             )

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyses", tags=["Analysis"])
 
 
-@router.get("", response_model=PaginatedResponse[AnalysisSummary])
+@router.get("", response_model=PaginatedResponse[AnalysisSummary], operation_id="list_analysis")
 def list_analysis(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(10, ge=1, description="Number of items per page"),
@@ -58,7 +58,7 @@ def list_analysis(
         ) from e
 
 
-@router.get("/{analysis_id}", response_model=Analysis)
+@router.get("/{analysis_id}", response_model=Analysis, operation_id="get_analysis_detail")
 def get_analysis_detail(analysis_id: int) -> Analysis | None:
     """
     Fetches the full details of a specific analysis.
@@ -96,7 +96,7 @@ def get_analysis_detail(analysis_id: int) -> Analysis | None:
         ) from e
 
 
-@router.post("", response_model=Analysis, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Analysis, status_code=status.HTTP_201_CREATED, operation_id="create_analysis")
 def create_analysis(analysis_create: AnalysisCreate, background_tasks: BackgroundTasks) -> Analysis | None:
     """
     Creates a new analysis record.
@@ -135,6 +135,7 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
         ) from e
 
 
+@router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT, operation_id="delete_analysis")
 def delete_analysis(analysis_id: int) -> None:
     """
     Deletes an analysis and all associated classes.
