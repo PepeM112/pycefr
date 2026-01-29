@@ -4,15 +4,15 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status
 
 from backend.db.label_utils import get_class_labels
-from backend.models.schemas.class_model import ClassItem
+from backend.models.schemas.class_model import ClassPublic
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/labels", tags=["Labels"])
 
 
-@router.get("/class", response_model=List[ClassItem], operation_id="class_label")
-def class_label() -> List[ClassItem]:
+@router.get("/class", response_model=List[ClassPublic], operation_id="class_label")
+def class_label() -> List[ClassPublic]:
     """
     Retrieves the complete list of code construct labels and their associated
     CEFR levels from the database.
