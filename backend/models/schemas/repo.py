@@ -1,21 +1,21 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from backend.models.schemas.common import BaseSchema
 
 
-class GitHubUser(BaseSchema):
-    name: str | None = None
+class GitHubUserPublic(BaseSchema):
+    name: Optional[str] = None
     github_user: str
     avatar: str
     profile_url: str
 
 
-class GitHubContributor(GitHubUser):
+class GitHubContributorPublic(GitHubUserPublic):
     contributions: int
 
 
-class RepoCommit(BaseSchema):
+class RepoCommitPublic(BaseSchema):
     username: str
     github_user: str
     loc: int
@@ -24,15 +24,15 @@ class RepoCommit(BaseSchema):
     total_files_modified: int
 
 
-class RepoSummary(BaseSchema):
+class RepoSummaryPublic(BaseSchema):
     name: str
     url: str
-    description: str | None = None
+    description: Optional[str] = None
     created_at: datetime
     last_updated_at: datetime
-    owner: GitHubUser
+    owner: GitHubUserPublic
 
 
-class Repo(RepoSummary):
-    commits: List[RepoCommit] = []
-    contributors: List[GitHubContributor] = []
+class RepoPublic(RepoSummaryPublic):
+    commits: List[RepoCommitPublic] = []
+    contributors: List[GitHubContributorPublic] = []

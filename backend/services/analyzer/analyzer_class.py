@@ -3,13 +3,14 @@ import logging
 import os
 import shutil
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
 from backend.config.settings import settings
-from backend.constants.analysis_rules import get_class_level
-from backend.models.schemas.analysis import Analysis, AnalysisClass, AnalysisFile
+from backend.models.schemas.analysis import AnalysisClassPublic, AnalysisFilePublic, AnalysisPublic, AnalysisStatus
 from backend.models.schemas.class_model import ClassId
+from backend.models.schemas.common import Origin
 from backend.services.analyzer.levels import get_class_from_ast_node
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,14 @@ class Analyzer:
     def __init__(self, root_path: str, is_cli: bool = True) -> None:
         self.root_path = root_path
         self.is_cli = is_cli
-        self.analysis_result = Analysis()
+        self.analysis_result = AnalysisPublic(
+            id=0,
+            name="",
+            origin=Origin.LOCAL,
+            status=AnalysisStatus.IN_PROGRESS,
+            created_at=datetime.now(),
+            file_classes=[],
+        )
         self._file_count = 0
         self._processed_files = 0
 
@@ -88,13 +96,15 @@ class Analyzer:
 
                 tree = ast.parse(my_code)
                 file_classes = self._analyse_ast(tree)
-                self.analysis_result.file_classes.append(AnalysisFile(filename=relative_path, classes=file_classes))
+                self.analysis_result.file_classes.append(
+                    AnalysisFilePublic(filename=relative_path, classes=file_classes)
+                )
         except SyntaxError as e:
             logger.warning(f"Syntax error in {file_path}: {e}")
         except Exception as e:
             logger.error(f"Could not analyse file {file_path}: {e}")
 
-    def _analyse_ast(self, tree: ast.AST) -> List[AnalysisClass]:
+    def _analyse_ast(self, tree: ast.AST) -> List[AnalysisClassPublic]:
         counter: defaultdict[ClassId, int] = defaultdict(int)
         for node in ast.walk(tree):
             class_id = get_class_from_ast_node(node)
@@ -102,12 +112,11 @@ class Analyzer:
             if class_id != ClassId.UNKNOWN:
                 counter[class_id] += 1
 
-        elements: List[AnalysisClass] = []
+        elements: List[AnalysisClassPublic] = []
         for class_id, count in counter.items():
             elements.append(
-                AnalysisClass(
+                AnalysisClassPublic(
                     class_id=class_id,
-                    level=get_class_level(class_id),
                     instances=count,
                 )
             )
@@ -131,7 +140,7 @@ class Analyzer:
             count += sum(1 for f in files if f.endswith((".py", ".PY")))
         return count
 
-    def get_results(self) -> Analysis:
+    def get_results(self) -> AnalysisPublic:
         return self.analysis_result
 
     @staticmethod

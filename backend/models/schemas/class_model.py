@@ -1,5 +1,7 @@
 from enum import IntEnum
 
+from pydantic import BaseModel
+
 from backend.models.schemas.common import BaseSchema, Level
 
 
@@ -122,9 +124,10 @@ class ClassId(IntEnum):
     WITH_SIMPLE = 90
 
 
-class ClassItem(BaseSchema):
+class ClassBase(BaseModel):
     id: ClassId
-    name: str
     level: Level
 
 
+class ClassPublic(BaseSchema, ClassBase):
+    pass

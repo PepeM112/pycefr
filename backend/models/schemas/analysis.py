@@ -1,48 +1,46 @@
 from datetime import datetime
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from backend.models.schemas.class_model import ClassId
-from backend.models.schemas.common import BaseSchema, Level, Origin
-from backend.models.schemas.repo import Repo, RepoSummary
+from backend.models.schemas.common import BaseSchema, Origin
+from backend.models.schemas.repo import RepoPublic, RepoSummaryPublic
 
 
-class AnalysisStatus(Enum):
+class AnalysisStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class AnalysisClass(BaseSchema):
+class AnalysisClassPublic(BaseSchema):
     class_id: ClassId
-    level: Level | None = None
     instances: int
 
 
-class AnalysisFile(BaseSchema):
+class AnalysisFilePublic(BaseSchema):
     filename: str
-    classes: List[AnalysisClass] = []
+    classes: List[AnalysisClassPublic] = []
 
 
-class Analysis(BaseSchema):
-    id: int | None = None
-    name: str | None = None
-    origin: Origin | None = None
-    status: AnalysisStatus | None = None
-    error_message: str | None = None
-    file_classes: List[AnalysisFile] | None = None
-    created_at: datetime | None = None
-    repo: Repo | None = None
-
-
-class AnalysisSummary(BaseSchema):
+class AnalysisPublic(BaseSchema):
     id: int
-    name: str | None = None
-    origin: Origin | None = None
-    status: AnalysisStatus | None = None
-    error_message: str | None = None
-    created_at: datetime | None = None
-    repo: RepoSummary | None = None
+    name: str
+    origin: Origin
+    status: AnalysisStatus
+    error_message: Optional[str] = None
+    file_classes: List[AnalysisFilePublic] = []
+    created_at: datetime
+    repo: Optional[RepoPublic] = None
+
+
+class AnalysisSummaryPublic(BaseSchema):
+    id: int
+    name: str
+    origin: Origin
+    status: AnalysisStatus
+    created_at: datetime
+    repo: Optional[RepoSummaryPublic] = None
 
 
 class AnalysisCreate(BaseSchema):

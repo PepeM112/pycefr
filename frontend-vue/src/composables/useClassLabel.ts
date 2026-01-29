@@ -1,9 +1,9 @@
-import { type ClassItem, classLabel } from '@/client';
+import { type ClassPublic, classLabel } from '@/client';
 import { ref } from 'vue';
 
-const cache = ref<Array<ClassItem>>([]);
+const cache = ref<Array<ClassPublic>>([]);
 
-export function useClassLabel<T = ClassItem>(options?: { mapper?: (item: ClassItem) => T; force?: boolean }) {
+export function useClassLabel<T = ClassPublic>(options?: { mapper?: (item: ClassPublic) => T; force?: boolean }) {
   const items = ref<T[]>([]);
   const loading = ref<boolean>(false);
 
@@ -30,7 +30,7 @@ export function useClassLabel<T = ClassItem>(options?: { mapper?: (item: ClassIt
     }
   }
 
-  function applyData(data: ClassItem[]) {
+  function applyData(data: ClassPublic[]) {
     items.value = options?.mapper ? data.map(options.mapper) : (data as T[]);
   }
 

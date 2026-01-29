@@ -16,11 +16,11 @@ import requests
 
 from backend.config.settings import settings
 from backend.models.schemas.repo import (
-    GitHubContributor,
-    GitHubUser,
-    Repo,
-    RepoCommit,
-    RepoSummary,
+    GitHubContributorPublic,
+    GitHubUserPublic,
+    RepoCommitPublic,
+    RepoPublic,
+    RepoSummaryPublic,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ class GitHubManager:
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
-        """Helper para imprimir solo si estamos en CLI."""
         if self.is_cli:
             print(message, end=end, flush=flush)
 
@@ -49,32 +48,25 @@ class GitHubManager:
 
     def validate_repo_url(self) -> None:
         self._print_status("[ ] Validating URL", end="")
-
         if not self.repo_url:
             raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
-
         parsed_url = urlparse(self.repo_url)
         if parsed_url.scheme != "https":
             raise ValueError("URL must use the 'https' protocol.")
         if parsed_url.netloc != "github.com":
             raise ValueError("URL must be from 'github.com'.")
-
         path_segments = parsed_url.path.strip("/").split("/")
         if not path_segments or len(path_segments) < 2:
             raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
-
         self.user = path_segments[0]
         self.repo_name = path_segments[1].replace(".git", "")
-
         if not self.validate_python_language():
             raise ValueError(f"The repository does not contain at least {python_threshold_percentage}% of Python.")
-
         self._print_status("\r[✓] Validating URL")
 
     def validate_python_language(self) -> bool:
         response = self.session.get(f"{self.api_url}/languages")
         self._check_response(response)
-
         languages = response.json()
         total_bytes = sum(languages.values())
         python_bytes = languages.get("Python", 0)
@@ -84,24 +76,20 @@ class GitHubManager:
         self._print_status("[ ] Cloning repository", end="")
         clone_dir = Path("backend/tmp")
         clone_path = clone_dir / self.repo_name
-
         if clone_dir.exists():
             shutil.rmtree(clone_dir)
-
         clone_dir.mkdir(parents=True, exist_ok=True)
-
         command_line = ["git", "clone", self.repo_url, str(clone_path)]
         subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-
         self._print_status("\r[✓] Cloning repository")
         return str(clone_path)
 
-    def get_repo_info(self) -> Repo:
+    def get_repo_info(self) -> RepoPublic:
         repo_data = self._get_repo()
         repo_commits = self._get_repo_commits()
         repo_contributors = self._get_repo_contributors()
 
-        return Repo(
+        return RepoPublic(
             name=repo_data.name,
             url=repo_data.url,
             description=repo_data.description,
@@ -112,24 +100,22 @@ class GitHubManager:
             contributors=repo_contributors,
         )
 
-    def _get_repo(self) -> RepoSummary:
+    def _get_repo(self) -> RepoSummaryPublic:
         self._print_status("[ ] Fetching data", end=" ")
         response = self.session.get(self.api_url)
-
         self._check_response(response)
-
         data = response.json()
         owner_data = data.get("owner", {})
         self._print_status("\r[✓] Fetching data")
 
-        owner = GitHubUser(
+        owner = GitHubUserPublic(
             name=owner_data.get("name") or owner_data.get("login"),
             github_user=owner_data.get("login", "Unknown"),
             avatar=owner_data.get("avatar_url", ""),
             profile_url=owner_data.get("html_url", ""),
         )
 
-        return RepoSummary(
+        return RepoSummaryPublic(
             name=data["name"],
             url=data["html_url"],
             description=data.get("description"),
@@ -138,14 +124,13 @@ class GitHubManager:
             owner=owner,
         )
 
-    def _get_repo_commits(self) -> List[RepoCommit]:
+    def _get_repo_commits(self) -> List[RepoCommitPublic]:
         total_commits = self._get_total_commits_count()
         if total_commits == 0:
             self._print_status("[✓] Fetching commits")
             return []
 
         all_commits = self._fetch_all_pages(total_commits)
-
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "username": "",
@@ -159,59 +144,50 @@ class GitHubManager:
 
         with ThreadPoolExecutor(max_workers=50) as executor:
             futures = [executor.submit(self._fetch_commit_details, c["url"]) for c in all_commits]
-
             completed = 0
             for future in as_completed(futures):
                 try:
                     details = future.result()
                     author_name = details.get("commit", {}).get("committer", {}).get("name", "")
-
                     stats = user_stats[author_name]
                     stats["username"] = author_name
                     stats["github_user"] = details.get("author", {}).get("login", "")
                     stats["commits"] += 1
-
                     date_str = details.get("commit", {}).get("committer", {}).get("date")
                     if date_str:
                         stats["commit_timestamps"].append(datetime.fromisoformat(date_str).timestamp())
-
                     stats["loc"] += details.get("stats", {}).get("total", 0)
                     for f in details.get("files", []):
                         stats["files_set"].add(f["filename"])
-
                     completed += 1
-
                     if self.is_cli:
                         percent = int((completed / total_commits) * 100)
                         bar_length = 40
                         block = int(round(bar_length * completed / total_commits))
                         progress_bar = "█" * block + "-" * (bar_length - block)
                         print(f"\r[ ] Fetching commits [{progress_bar}] {percent}%\033[K", end="", flush=True)
-
                 except Exception as e:
                     if self.is_cli:
                         print(f"\nERROR: Could not process commit: {e}")
                     logger.warning(f"Commit error: {e}")
 
-        final_results: List[RepoCommit] = []
+        final_results: List[RepoCommitPublic] = []
         for data in user_stats.values():
             data["estimated_hours"] = self._calculate_estimated_hours(data["commit_timestamps"])
             data["total_files_modified"] = len(data["files_set"])
             del data["commit_timestamps"]
             del data["files_set"]
-            final_results.append(RepoCommit(**data))
-
+            final_results.append(RepoCommitPublic(**data))
         self._print_status("\r[✓] Fetching commits\033[K", flush=True)
         return final_results
 
-    def _get_repo_contributors(self) -> List[GitHubContributor]:
+    def _get_repo_contributors(self) -> List[GitHubContributorPublic]:
         self._print_status("[ ] Fetching contributors", end="", flush=True)
         response = self.session.get(f"{self.api_url}/contributors")
         self._check_response(response)
-
         contributors_data = response.json()
         contributors = [
-            GitHubContributor(
+            GitHubContributorPublic(
                 name=contributor.get("login", "Unknown"),
                 github_user=contributor.get("login", "Unknown"),
                 avatar=contributor.get("avatar_url", ""),
@@ -220,18 +196,15 @@ class GitHubManager:
             )
             for contributor in contributors_data
         ]
-
         self._print_status("\r[✓] Fetching contributors")
         return contributors
 
     def _get_total_commits_count(self) -> int:
         url = f"{self.api_url}/commits?per_page=1&page=1"
         response = self.session.get(url)
-
         link_header = response.headers.get("Link")
         if not link_header:
             return len(response.json())
-
         match = re.search(r'page=(\d+)>; rel="last"', link_header)
         return int(match.group(1)) if match else 1
 
@@ -250,7 +223,6 @@ class GitHubManager:
         self._print_status("[ ] Fetching commits", end="", flush=True)
         with ThreadPoolExecutor(max_workers=20) as executor:
             future_to_page = {executor.submit(_fetch_page, p): p for p in range(1, num_pages + 1)}
-
             all_data: List[Dict[str, Any]] = []
             for future in as_completed(future_to_page):
                 all_data.extend(future.result())
@@ -273,10 +245,8 @@ class GitHubManager:
     ) -> float:
         if not commit_timestamps:
             return 0.0
-
         commit_timestamps.sort()
         total_seconds = 0.0
-
         for i in range(len(commit_timestamps)):
             if i == 0:
                 total_seconds += default_commit_time_seconds
@@ -286,29 +256,27 @@ class GitHubManager:
                 total_seconds += diff
             else:
                 total_seconds += default_commit_time_seconds
-
         return round(total_seconds / 3600, 2)
 
-    def fetch_user(self) -> GitHubUser:
+    def fetch_user(self) -> GitHubUserPublic:
         self._print_status(f"[ ] Fetching user: {self.user}", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}")
         self._check_response(response)
         self._print_status("\r[✓] Fetching user")
-
         user = response.json()
-        return GitHubUser(
+        return GitHubUserPublic(
             name=user.get("name", ""),
             github_user=user.get("login"),
             avatar=user.get("avatar_url"),
             profile_url=user.get("html_url"),
         )
 
+    # ... (fetch_user_repos y get_git_repo_url se mantienen igual) ...
     def fetch_user_repos(self) -> List[Dict[str, Any]]:
         self._print_status("[ ] Fetching repositories", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}/repos")
         self._check_response(response)
         self._print_status("\r[✓] Fetching repositories")
-
         return cast(List[Dict[str, Any]], response.json())
 
     @staticmethod
@@ -316,24 +284,18 @@ class GitHubManager:
         git_dir = os.path.join(dir, ".git")
         if not os.path.isdir(git_dir):
             return ""
-
         config_file = os.path.join(git_dir, "config")
         if not os.path.isfile(config_file):
             return ""
-
         config = configparser.ConfigParser()
         config.read(config_file)
-
         if 'remote "origin"' not in config:
             return ""
-
         url = config['remote "origin"'].get("url")
         if not url:
             return ""
-
         if url.startswith("git@"):
             url_part = url[4:]
             http_url = url_part.replace(":", "/", 1).replace(".git", "")
             return f"https://{http_url}"
-
         return url
