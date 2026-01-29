@@ -70,30 +70,34 @@ def get_analysis_detail(analysis_id: int) -> AnalysisPublic | None:
 
 @router.post("", response_model=AnalysisPublic, status_code=status.HTTP_201_CREATED, operation_id="create_analysis")
 def create_analysis(analysis_create: AnalysisCreate, background_tasks: BackgroundTasks) -> AnalysisPublic | None:
+    analysis: AnalysisPublic | None = None
+
     try:
-        analysis_id = db_utils.create_empty_analysis(analysis_create.repo_url)
-        if analysis_id is None:
+        analysis = db_utils.create_empty_analysis(analysis_create.repo_url)
+
+        if analysis is None:
             logger.error(f"Failed to create database entry for: {analysis_create.repo_url}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating the analysis")
 
-        background_tasks.add_task(run_full_analysis_process, analysis_id, analysis_create.repo_url)
-        analysis_result = db_utils.get_analysis_details(analysis_id)
+        background_tasks.add_task(run_full_analysis_process, analysis.id, analysis_create.repo_url)
 
-        if analysis_result is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Analysis created but could not be retrieved."
-            )
-        return analysis_result
+        return analysis
 
-    except HTTPException:
-        raise
-    except (sqlite3.OperationalError, ConnectionError) as e:
-        logger.critical(f"Database connection error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database is currently unavailable.",
-        ) from e
     except Exception as e:
+        if analysis and analysis.id:
+            logger.warning(f"Marking analysis {analysis.id} as failed due to request error")
+            db_utils.mark_analysis_as_failed(analysis.id, f"Initialization error: {str(e)}")
+
+        if isinstance(e, HTTPException):
+            raise e
+
+        if isinstance(e, (sqlite3.OperationalError, ConnectionError)):
+            logger.critical(f"Database connection error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database is currently unavailable.",
+            ) from e
+
         logger.error(f"Unexpected error in create_analysis: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating the analysis"
@@ -122,7 +126,7 @@ def delete_analysis(analysis_id: int) -> None:
         ) from e
 
 
-async def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
+def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
     """This function runs outside the HTTP request cycle."""
     try:
         gh = GitHubManager(repo_url=repo_url, is_cli=False)
@@ -134,10 +138,8 @@ async def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
 
         repo_info = gh.get_repo_info()
 
-        # Obtenemos los resultados parciales del analizador
         analysis_result = an.get_results()
 
-        # Enriquecemos el objeto
         analysis_result.repo = repo_info
         analysis_result.status = AnalysisStatus.COMPLETED
 

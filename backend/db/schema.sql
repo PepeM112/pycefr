@@ -24,7 +24,7 @@ CREATE TABLE analyses (
     repo_last_update DATETIME,
     estimated_hours REAL DEFAULT 0.0,
     error_message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL
 );
 CREATE TABLE analysis_files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

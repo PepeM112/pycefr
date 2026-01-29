@@ -1,7 +1,7 @@
 import logging
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from backend.models.schemas.analysis import (
@@ -65,7 +65,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummaryPublic],
             repo_summary = RepoSummaryPublic(
                 name=row["repo_name"],
                 url=row["repo_url"],
-                description=row["repo_description"],  # Puede ser None, y el Schema lo permite
+                description=row["repo_description"],
                 created_at=datetime.fromisoformat(row["created_at"]),
                 last_updated_at=datetime.fromisoformat(row["created_at"]),
                 owner=owner,
@@ -76,6 +76,7 @@ def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummaryPublic],
                     id=row["id"],
                     name=row["name"],
                     status=AnalysisStatus(row["status"]),
+                    error_message=row["error_message"],
                     origin=Origin(row["origin"]),
                     created_at=datetime.fromisoformat(row["created_at"]),
                     repo=repo_summary,
@@ -169,22 +170,41 @@ def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
 # --- WRITE OPERATIONS ---
 
 
-def create_empty_analysis(repo_url: str) -> int | None:
-    """Crea el registro inicial en estado IN_PROGRESS."""
+def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         repo_name = repo_url.rstrip("/").split("/")[-1]
-        name = f"{datetime.now().strftime('%Y%m%d')}_{repo_name}"
+
+        now_utc = datetime.now(timezone.utc)
+
+        name = f"{now_utc.strftime('%Y%m%d')}_{repo_name}"
 
         cursor.execute(
-            "INSERT INTO analyses (name, status, origin, repo_url) VALUES (?, ?, ?, ?)",
-            (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value, repo_url),
+            "INSERT INTO analyses (name, status, origin, repo_url, created_at) VALUES (?, ?, ?, ?, ?)",
+            (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value, repo_url, now_utc.isoformat()),
         )
         conn.commit()
         analysis_id = cursor.lastrowid
-        logger.info(f"Created initial analysis record with ID {analysis_id} for {repo_url}")
-        return analysis_id
+
+        if analysis_id is None:
+            raise sqlite3.Error("Failed to retrieve lastrowid after INSERT")
+
+        return AnalysisPublic(
+            id=analysis_id,
+            name=name,
+            status=AnalysisStatus.IN_PROGRESS,
+            origin=Origin.GITHUB,
+            created_at=now_utc,
+            file_classes=[],
+            repo=RepoPublic(
+                url=repo_url,
+                name=repo_name,
+                owner=None,
+                commits=[],
+                contributors=[],
+            ),
+        )
     except sqlite3.Error as e:
         logger.error(f"Database error while creating empty analysis: {e}")
         return None
@@ -216,11 +236,11 @@ def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> 
                 analysis_data.status,
                 analysis_data.repo.name,
                 analysis_data.repo.description,
-                analysis_data.repo.owner.name,
-                analysis_data.repo.owner.github_user,
-                analysis_data.repo.owner.avatar,
-                analysis_data.repo.created_at.isoformat(),
-                analysis_data.repo.last_updated_at.isoformat(),
+                analysis_data.repo.owner.name if analysis_data.repo.owner else None,
+                analysis_data.repo.owner.github_user if analysis_data.repo.owner else None,
+                analysis_data.repo.owner.avatar if analysis_data.repo.owner else None,
+                analysis_data.repo.created_at.isoformat() if analysis_data.repo.created_at else None,
+                analysis_data.repo.last_updated_at.isoformat() if analysis_data.repo.last_updated_at else None,
                 sum(c.estimated_hours for c in analysis_data.repo.commits),
                 analysis_id,
             ),
@@ -300,12 +320,13 @@ def delete_analysis(analysis_id: int) -> bool:
 
 
 def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE analyses SET status = ? WHERE id = ?",
-            (AnalysisStatus.FAILED.value, analysis_id),
+            "UPDATE analyses SET status = ?, error_message = ? WHERE id = ?",
+            (AnalysisStatus.FAILED.value, error_message, analysis_id),
         )
         conn.commit()
         logger.info(f"Analysis {analysis_id} marked as FAILED. Reason: {error_message}")

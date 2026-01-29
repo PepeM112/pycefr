@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List
 
 from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import BaseSchema, Origin
@@ -28,10 +28,10 @@ class AnalysisPublic(BaseSchema):
     name: str
     origin: Origin
     status: AnalysisStatus
-    error_message: Optional[str] = None
+    error_message: str | None = None
     file_classes: List[AnalysisFilePublic] = []
     created_at: datetime
-    repo: Optional[RepoPublic] = None
+    repo: RepoPublic | None = None
 
 
 class AnalysisSummaryPublic(BaseSchema):
@@ -39,8 +39,9 @@ class AnalysisSummaryPublic(BaseSchema):
     name: str
     origin: Origin
     status: AnalysisStatus
+    error_message: str | None = None
     created_at: datetime
-    repo: Optional[RepoSummaryPublic] = None
+    repo: RepoSummaryPublic | None = None
 
 
 class AnalysisCreate(BaseSchema):

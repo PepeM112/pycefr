@@ -111,7 +111,8 @@ INSERT INTO analyses (
         repo_owner_profile_url,
         repo_created_at,
         repo_last_update,
-        estimated_hours
+        estimated_hours,
+        created_at
     )
 VALUES (
         1,
@@ -125,9 +126,10 @@ VALUES (
         'PepeM112',
         'https://avatars...v=4',
         'https://github.com/PepeM112',
-        '2024-05-02 10:26:27',
-        '2026-01-06 17:03:47',
-        73.5
+        '2024-05-02T10:26:27Z',
+        '2026-01-06T17:03:47Z',
+        73.5,
+        '2026-01-30T10:00:00Z'
     );
 INSERT INTO analysis_files (id, analysis_id, filename)
 VALUES (1, 1, 'backend/constants/analysis_rules.py'),

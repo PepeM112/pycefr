@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from backend.models.schemas.common import BaseSchema
 
 
 class GitHubUserPublic(BaseSchema):
-    name: Optional[str] = None
+    name: str | None = None
     github_user: str
     avatar: str
     profile_url: str
@@ -25,12 +25,12 @@ class RepoCommitPublic(BaseSchema):
 
 
 class RepoSummaryPublic(BaseSchema):
-    name: str
-    url: str
-    description: Optional[str] = None
-    created_at: datetime
-    last_updated_at: datetime
-    owner: GitHubUserPublic
+    name: str | None = None
+    url: str | None = None
+    description: str | None = None
+    created_at: datetime | None = None
+    last_updated_at: datetime | None = None
+    owner: GitHubUserPublic | None = None
 
 
 class RepoPublic(RepoSummaryPublic):
