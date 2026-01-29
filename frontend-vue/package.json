@@ -18,7 +18,7 @@
     "clean": "rimraf dist node_modules/.vite",
     "build:analyze": "vite build --mode analyze",
     "prepare": "husky install",
-    "gen-client": "npx @hey-api/openapi-ts -i http://127.0.0.1:8000/openapi.json -o src/client -c @hey-api/client-axios"
+    "gen-client": "openapi-ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
