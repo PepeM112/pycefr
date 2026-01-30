@@ -8,8 +8,8 @@
         <div class="container h-100">
           <div class="repo-header">
             <img
-              :src="analysis?.repo?.owner.avatar || '@/assets/img/default_avatar.jpg'"
-              :alt="`${analysis?.repo?.owner.name}'s avatar`"
+              :src="analysis?.repo?.owner?.avatar || '@/assets/img/default_avatar.jpg'"
+              :alt="`${analysis?.repo?.owner?.name}'s avatar`"
             />
             <div>
               <h3>

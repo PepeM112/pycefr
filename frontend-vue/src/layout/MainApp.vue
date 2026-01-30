@@ -1,54 +1,21 @@
 <template>
-  <v-app class="app-layout">
+  <v-app>
     <sidebar v-model:showMenu="showSidebar" />
-    <v-main app class="m-app" :class="{ 'sidebar-hidden': !showSidebar }">
-      <transition name="fade" mode="out-in">
-        <v-container fluid class="main-container-app pa-0">
+    <v-main class="m-app">
+      <v-container fluid class="pa-0 fill-height align-start">
+        <transition name="fade" mode="out-in">
           <router-view />
-        </v-container>
-      </transition>
+        </transition>
+      </v-container>
     </v-main>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import Sidebar from '@/components/Sidebar.vue';
 
-const showSidebar = ref<boolean>(true);
-
-const sidebarWidth = computed(() => {
-  return showSidebar.value ? '240px' : '44px';
-});
-
+const showSidebar = ref(true);
 </script>
-<style lang="scss">
-.app-layout {
-  display: flex !important;
-  flex-direction: row !important;
-  min-height: 100vh;
-  max-width: 100vw;
-  width: 100vw;
-}
-.m-app {
-  display: flex;
-  flex: 1;
-  overflow-y: auto;
-  max-width: calc(100% - v-bind(sidebarWidth)) !important;
-  transition: all 0.3 ease;
 
-  &.sidebar-hidden {
-    max-width: calc(100% - v-bind(sidebarWidth)) !important;
-  }
-}
-
-.main-container-app {
-  width: 100%;
-  height: 100%;
-}
-</style>
-<style>
-.app-layout .v-application__wrap {
-  flex-direction: unset !important;
-}
-</style>
+<style lang="scss" scoped></style>

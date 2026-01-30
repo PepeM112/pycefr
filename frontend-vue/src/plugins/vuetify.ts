@@ -1,5 +1,7 @@
-import 'vuetify/dist/vuetify.min.css';
+import { Icon } from '@iconify/vue';
+import { h } from 'vue';
 import { createVuetify } from 'vuetify';
+import 'vuetify/dist/vuetify.min.css';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
 
 export default createVuetify({
@@ -8,6 +10,9 @@ export default createVuetify({
     aliases,
     sets: {
       mdi,
+      iconify: {
+        component: (props: any) => h(Icon, { ...props }),
+      },
     },
   },
   defaults: {
