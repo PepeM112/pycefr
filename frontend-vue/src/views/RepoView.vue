@@ -51,39 +51,47 @@ import { computed, onMounted, ref } from 'vue';
 import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
 import PropertiesTable from '@/components/repo/PropertiesTable.vue';
 import Enums from '@/utils/enums';
-import { getLevelColor, Level, type RepoData, type TableDataItem } from '@/components/repo/utils';
-import mockReportData from '@/utils/mocked-results/pycefr.json';
+import { getLevelColor, type TableDataItem } from '@/components/repo/utils';
+import { type AnalysisPublic, type AnalysisClassPublic, ClassId, Level } from '@/client';
+import { getAnalysisDetail } from '@/client';
+import { useRoute } from 'vue-router';
 
 const LEVELS = Enums.buildList(Level);
 
+const route = useRoute();
+const analysisId = Number(route.params.id);
 const isLoading = ref<boolean>(false);
 const repoTitle = ref<string>('');
 const search = ref<string>('');
-const repoData = ref<RepoData>({});
+const analysisData = ref<AnalysisPublic>({});
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
 const selectedLevels = ref<Level[]>(LEVELS.map(level => Level[level.value]));
 
 const ID_PATH_MAP: Record<number, string> = {};
 
-const tableData = computed<TableDataItem[]>(() => {
-  const elements = repoData.value.elements;
-  if (!elements || Object.keys(elements).length === 0) return [];
+const tableData = computed<AnalysisClassPublic[]>(() => {
+  const elements = analysisData.value.fileClasses;
+  if (!elements || elements.length === 0) return [];
 
-  return Object.entries(elements)
-    .filter(([key, _value]) => isFileSelected(key))
-    .flatMap(([_, items]) => items)
-    .reduce((acc: TableDataItem[], item: TableDataItem) => {
-      const classAlreadyAdded = acc.find(i => i.class === item.class);
-      classAlreadyAdded ? (classAlreadyAdded.instances += item.instances) : acc.push({ ...item });
+  return elements
+    .filter(it => isFileSelected(it.filename))
+    .flatMap(it => it.classes ?? [])
+    .reduce((acc: AnalysisClassPublic[], item: AnalysisClassPublic) => {
+      const classAlreadyAdded = acc.find(i => i.classId === item.classId);
+      if (classAlreadyAdded) {
+        classAlreadyAdded.instances += item.instances;
+      } else {
+        acc.push({ ...item });
+      }
       return acc;
     }, [])
-    .filter(item => selectedLevels.value.includes(item.level));
+    .filter(item => selectedLevels.value.includes(item.level)); // TODO: fix this, multiple declarations of Level
 });
 
 function isFileSelected(filePath: string): boolean {
-  const elements = repoData.value.elements;
-  if (!elements || Object.keys(elements).length === 0) return false;
+  const elements = analysisData.value.fileClasses;
+  if (!elements || elements.length === 0) return false;
 
   return selectedTreeNodeIds.value.some(id => ID_PATH_MAP[id] === filePath);
 }
@@ -96,9 +104,9 @@ function toggleLevel(level: Level) {
   }
 }
 
-function buildRepoDataTree(data: RepoData): TreeNode[] {
-  if (!data?.elements) return [];
-  const paths = Object.keys(data.elements);
+function buildRepoDataTree(data: AnalysisPublic): TreeNode[] {
+  if (!data?.fileClasses) return [];
+  const paths = data.fileClasses.map(fc => fc.filename);
 
   const treeSkeleton: Record<string, any> = {};
 
@@ -149,9 +157,8 @@ function onUpdateSelected(value: number[] | 'all') {
   }
 }
 
-async function fetch() {
-  // get Repo data
-  try {
+async function loadData() {
+  /* try {
     isLoading.value = true;
     await new Promise(resolve => setTimeout(resolve, 500));
     const response = mockReportData as RepoData;
@@ -162,12 +169,20 @@ async function fetch() {
     console.error('Error fetching repo data:', error);
   } finally {
     isLoading.value = false;
+  } */
+  isLoading.value = true;
+  const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId ?? 0 } });
+  if (error) {
+    console.error('Error fetching repo data:', error);
+    return;
   }
+  analysisData.value = data;
+  isLoading.value = false;
 }
 
 onMounted(async () => {
-  await fetch();
-  fileTreeData.value = buildRepoDataTree(repoData.value);
+  await loadData();
+  fileTreeData.value = buildRepoDataTree(analysisData.value);
 });
 </script>
 <style lang="scss" scoped>

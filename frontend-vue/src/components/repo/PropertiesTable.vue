@@ -17,9 +17,9 @@
     </thead>
     <tbody>
       <tr v-for="(item, index) in displayedTableData" :key="index">
-        <td>{{ item.class }}</td>
+        <td>{{ item.classId }}</td>
         <td>
-          <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level) }]">
+          <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
             {{ item.level }}
           </span>
         </td>
@@ -31,31 +31,25 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import {
-  type Header,
-  getLevelColor,
-  Level,
-  type Sorting,
-  SortDirection,
-  type TableDataItem,
-} from '@/components/repo/utils';
+import { type Header, getLevelColor, type Sorting, SortDirection } from '@/components/repo/utils';
 import Pagination, { type PaginationItem } from '@/components/repo/Pagination.vue';
+import type { AnalysisClassPublic, Level } from '@/client';
 
 defineProps<{
-  modelValue: TableDataItem[];
+  modelValue: AnalysisClassPublic[];
   levels: Level[];
   search?: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: TableDataItem[]): void;
+  (e: 'update:modelValue', value: AnalysisClassPublic[]): void;
 }>();
 
 const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOWN });
 const pagination = ref<PaginationItem>({ page: 1, itemsPerPage: 10, total: 0 });
-const localModelValue = defineModel<TableDataItem[]>('modelValue');
+const localModelValue = defineModel<AnalysisClassPublic[]>('modelValue');
 
-const displayedTableData = computed<TableDataItem[]>(() => {
+const displayedTableData = computed<AnalysisClassPublic[]>(() => {
   if (!localModelValue.value) return [];
 
   return (
@@ -64,11 +58,11 @@ const displayedTableData = computed<TableDataItem[]>(() => {
       .sort((a, b) => {
         if (sortingColumn.value.direction === SortDirection.UNKNOWN || !sortingColumn.value.column) return 0;
 
-        const column = sortingColumn.value.column as keyof TableDataItem;
+        const column = sortingColumn.value.column as keyof AnalysisClassPublic;
         let comparison = 0;
 
-        if (a[column] < b[column]) comparison = -1;
-        else if (a[column] > b[column]) comparison = 1;
+        if ((a[column] ?? 0) < (b[column] ?? 0)) comparison = -1;
+        else if ((a[column] ?? 0) > (b[column] ?? 0)) comparison = 1;
 
         return sortingColumn.value.direction === SortDirection.ASC ? comparison : -comparison;
       })
@@ -81,7 +75,7 @@ const displayedTableData = computed<TableDataItem[]>(() => {
 });
 
 const headers: Header[] = [
-  { text: 'Clase', value: 'class', sort: true },
+  { text: 'Clase', value: 'classId', sort: true },
   { text: 'Nivel', value: 'level', sort: true, width: '1px' },
   { text: 'Instancias', value: 'instances', sort: true, width: '1px' },
 ];

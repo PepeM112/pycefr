@@ -13,7 +13,7 @@
             />
             <div>
               <h3>
-                {{ analysis?.repo?.name || analysis.data.name + ' (local)' }}
+                {{ analysis?.repo?.name || 'Unknown Repository' }}
               </h3>
             </div>
           </div>
@@ -36,7 +36,7 @@
             </p> -->
           </template>
 
-          <a :href="`/repo/${analysis?.name}`" class="glb-btn-main">
+          <a :href="`/repo/${analysis?.id}`" class="glb-btn-main">
             {{ $t('see_more') }}
           </a>
         </div>
@@ -47,15 +47,15 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { formatDate } from '@/utils/utils';
-import { listAnalysisApiV1AnalysesGet } from '@/client';
-import type { AnalysisSummary, Pagination } from '@/client';
+import { listAnalysis } from '@/client';
+import type { AnalysisSummaryPublic, Pagination } from '@/client';
 /* import axios from 'axios'; */
 
-const analysesData = ref<AnalysisSummary[]>([]);
+const analysesData = ref<AnalysisSummaryPublic[]>([]);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 
 async function loadData() {
-  const { data, error } = await listAnalysisApiV1AnalysesGet();
+  const { data, error } = await listAnalysis();
 
   if (error) {
     console.error('Error fetching repos data:', error);
