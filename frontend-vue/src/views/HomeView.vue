@@ -1,55 +1,55 @@
 <template>
-  <div class="content">
+  <page-view>
     <header>
       <h1>{{ $t('summary') }}</h1>
     </header>
-    <div class="repo-list">
-      <div class="repo-wrapper" v-for="(analysis, index) in analysesData" :key="'repo' + index">
-        <div class="container h-100">
-          <div class="repo-header">
-            <img
-              :src="analysis?.repo?.owner?.avatar || '@/assets/img/default_avatar.jpg'"
-              :alt="`${analysis?.repo?.owner?.name}'s avatar`"
-            />
-            <div>
-              <h3>
-                {{ analysis?.repo?.name || 'Unknown Repository' }}
-              </h3>
-            </div>
+
+    <v-row gutter="16">
+      <v-col v-for="(analysis, index) in analysesData" :key="index" cols="12" sm="6" md="4">
+        <v-card variant="flat" class="pa-4 border h-100">
+          <div class="d-flex align-center gap-4 mb-4">
+            <v-avatar size="48">
+              <v-img :src="analysis?.repo?.owner?.avatar || '@/assets/img/default_avatar.jpg'" alt="Avatar" />
+            </v-avatar>
+            <h3 class="font-weight-bold text-truncate">
+              {{ analysis?.repo?.name || 'Unknown' }}
+            </h3>
           </div>
-          <p class="description">
+
+          <p class="description mb-2">
             {{ analysis?.repo?.description || 'No description available' }}
           </p>
 
-          <template v-if="analysis?.repo">
-            <p>
-              {{ $t('creation_date') }}:
-              <span>{{ formatDate(analysis?.repo?.createdAt) }}</span>
-            </p>
-            <p>
-              {{ $t('last_update') }}:
-              <span>{{ formatDate(analysis?.repo?.lastUpdatedAt) }}</span>
-            </p>
-            <!-- <p>
-              {{ $t('commits') }}:
-              <span>{{ totalCommits(analysis?.repo?.commits) }}</span>
-            </p> -->
-          </template>
+          <v-divider class="mb-4" />
 
-          <a :href="`/repo/${analysis?.id}`" class="glb-btn-main">
-            {{ $t('see_more') }}
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
+          <div v-if="analysis?.repo" class="mb-4" style="font-size: 0.75rem">
+            <div class="d-flex justify-space-between mb-1">
+              <span class="font-weight-bold">{{ $t('creation_date') }}:</span>
+              <span>{{ formatDate(analysis?.repo?.createdAt) }}</span>
+            </div>
+            <div class="d-flex justify-space-between">
+              <span class="font-weight-bold">{{ $t('last_update') }}:</span>
+              <span>{{ formatDate(analysis?.repo?.lastUpdatedAt) }}</span>
+            </div>
+          </div>
+
+          <v-card-actions class="pa-0 align-end">
+            <v-spacer />
+            <v-btn color="primary" variant="flat" rounded="md" :to="`/repo/${analysis?.id}`">
+              {{ $t('see_more') }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+  </page-view>
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { formatDate } from '@/utils/utils';
 import { listAnalysis } from '@/client';
 import type { AnalysisSummaryPublic, Pagination } from '@/client';
-/* import axios from 'axios'; */
+import PageView from '@/components/PageView.vue';
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
@@ -65,70 +65,24 @@ async function loadData() {
   pagination.value = data.pagination;
 }
 
-/* function totalCommits(commits: Array<{ commits: number }>) {
-  return commits.reduce((acc, curr) => acc + curr.commits, 0);
-} */
-
 onMounted(async () => {
   await loadData();
 });
 </script>
 <style lang="scss" scoped>
-.repo-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2em;
-}
-
-.repo-list {
-  h3 {
-    font-weight: 600;
-    line-height: 1.75rem;
-    margin: 0;
-  }
-
-  p:not(.description) {
-    font-size: 0.875rem;
-    font-weight: bold;
-    margin: 0 0 1rem;
-
-    span {
-      font-weight: normal;
-    }
-  }
-
-  a {
-    position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-  }
-}
-
-p.description {
+.description {
   display: -webkit-box;
-  line-clamp: 2;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
-  white-space: normal;
   overflow: hidden;
-  word-break: break-word;
-  text-overflow: ellipsis !important;
-  line-height: 1.125rem;
-  height: calc(2 * 1.125rem);
-  text-overflow: ellipsis;
+  line-height: 1.25;
   font-size: 0.875rem;
-  margin: 0 0 1.25rem;
+  height: 2.5em;
+  color: rgb(var(--v-theme-on-surface), 0.7);
 }
 
-.repo-header {
-  display: flex;
+.gap-4 {
   gap: 1rem;
-  margin-bottom: 1rem;
-
-  img {
-    border-radius: 50%;
-    height: 48px;
-    width: 48px;
-  }
 }
 </style>

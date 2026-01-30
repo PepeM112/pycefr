@@ -1,5 +1,5 @@
 <template>
-  <div class="content">
+  <page-view>
     <header>
       <h1>{{ repoTitle }}</h1>
     </header>
@@ -12,12 +12,12 @@
           v-model:selected="selectedTreeNodeIds"
           @update:selected="onUpdateSelected"
         />
-        <v-divider class="mx-8" vertical thickness="2px" color="primary" opacity="100" />
+        <v-divider class="mx-8" vertical thickness="2px" color="on-surface" opacity="100" />
         <v-card class="pa-4 w-100">
           <div class="d-flex align-center ga-4 mb-4">
             <v-text-field
               v-model="search"
-              class="bg-white"
+              class="bg-background rounded-lg"
               density="compact"
               variant="outlined"
               placeholder="Search..."
@@ -44,17 +44,21 @@
         </v-card>
       </div>
     </div>
-  </div>
+  </page-view>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
 import PropertiesTable from '@/components/repo/PropertiesTable.vue';
 import Enums from '@/utils/enums';
 import { getLevelColor, type TableDataItem } from '@/components/repo/utils';
-import { type AnalysisPublic, type AnalysisClassPublic, ClassId, Level } from '@/client';
+import { type AnalysisPublic, type AnalysisClassPublic, type AnalysisFilePublic, Level } from '@/client';
 import { getAnalysisDetail } from '@/client';
 import { useRoute } from 'vue-router';
+import { useClassLabel } from '@/composables/useClassLabel';
+import PageView from '@/components/PageView.vue';
+
+const classLabel = useClassLabel();
 
 const LEVELS = Enums.buildList(Level);
 
@@ -63,35 +67,40 @@ const analysisId = Number(route.params.id);
 const isLoading = ref<boolean>(false);
 const repoTitle = ref<string>('');
 const search = ref<string>('');
-const analysisData = ref<AnalysisPublic>({});
+const analysisData = ref<AnalysisPublic | undefined>(undefined);
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
-const selectedLevels = ref<Level[]>(LEVELS.map(level => Level[level.value]));
+const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
 
 const ID_PATH_MAP: Record<number, string> = {};
 
-const tableData = computed<AnalysisClassPublic[]>(() => {
-  const elements = analysisData.value.fileClasses;
+const tableData = computed<TableDataItem[]>(() => {
+  const elements: AnalysisFilePublic[] = analysisData.value?.fileClasses ?? [];
   if (!elements || elements.length === 0) return [];
 
   return elements
     .filter(it => isFileSelected(it.filename))
     .flatMap(it => it.classes ?? [])
-    .reduce((acc: AnalysisClassPublic[], item: AnalysisClassPublic) => {
-      const classAlreadyAdded = acc.find(i => i.classId === item.classId);
+    .reduce((acc: TableDataItem[], item: AnalysisClassPublic) => {
+      const classAlreadyAdded = acc.find(i => i.class === item.classId);
       if (classAlreadyAdded) {
-        classAlreadyAdded.instances += item.instances;
+        classAlreadyAdded.instances = (classAlreadyAdded.instances ?? 0) + item.instances;
       } else {
-        acc.push({ ...item });
+        acc.push({
+          class: item.classId,
+          instances: item.instances,
+          level: classLabel.getClassLevel(item.classId),
+        });
       }
       return acc;
     }, [])
-    .filter(item => selectedLevels.value.includes(item.level)); // TODO: fix this, multiple declarations of Level
+    .filter(item => selectedLevels.value.includes(item.level));
 });
 
 function isFileSelected(filePath: string): boolean {
-  const elements = analysisData.value.fileClasses;
+  const elements = analysisData.value?.fileClasses;
   if (!elements || elements.length === 0) return false;
+  if (!selectedTreeNodeIds.value || selectedTreeNodeIds.value.length === 0) return true;
 
   return selectedTreeNodeIds.value.some(id => ID_PATH_MAP[id] === filePath);
 }
@@ -104,7 +113,7 @@ function toggleLevel(level: Level) {
   }
 }
 
-function buildRepoDataTree(data: AnalysisPublic): TreeNode[] {
+function buildRepoDataTree(data: AnalysisPublic | undefined): TreeNode[] {
   if (!data?.fileClasses) return [];
   const paths = data.fileClasses.map(fc => fc.filename);
 
@@ -158,18 +167,6 @@ function onUpdateSelected(value: number[] | 'all') {
 }
 
 async function loadData() {
-  /* try {
-    isLoading.value = true;
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const response = mockReportData as RepoData;
-
-    repoData.value = response;
-    repoTitle.value = repoData.value.repoInfo.data.name;
-  } catch (error) {
-    console.error('Error fetching repo data:', error);
-  } finally {
-    isLoading.value = false;
-  } */
   isLoading.value = true;
   const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId ?? 0 } });
   if (error) {
@@ -177,10 +174,19 @@ async function loadData() {
     return;
   }
   analysisData.value = data;
+  repoTitle.value = analysisData.value?.repo?.name || '';
   isLoading.value = false;
 }
 
+watch(
+  () => tableData.value,
+  newValue => {
+    console.log('Table data updated:', newValue);
+  }
+);
+
 onMounted(async () => {
+  classLabel.fetch();
   await loadData();
   fileTreeData.value = buildRepoDataTree(analysisData.value);
 });

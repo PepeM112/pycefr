@@ -6,7 +6,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: HomeView },
-    { path: '/repo/:repoName', component: RepoView },
+    { path: '/repo/:id', component: RepoView },
   ],
 });
 

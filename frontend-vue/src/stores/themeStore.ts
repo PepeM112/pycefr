@@ -3,8 +3,6 @@ import { defineStore } from 'pinia';
 import { useTheme } from 'vuetify';
 
 export const useThemeStore = defineStore('theme', () => {
-  const vTheme = useTheme();
-
   const savedTheme = localStorage.getItem('user-theme') as 'light' | 'dark' | null;
   const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -12,16 +10,20 @@ export const useThemeStore = defineStore('theme', () => {
 
   function toggleTheme() {
     currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light';
-    syncTheme();
-  }
-
-  function syncTheme() {
-    vTheme.global.name.value = currentTheme.value;
-    localStorage.setItem('user-theme', currentTheme.value);
   }
 
   function initTheme() {
-    syncTheme();
+    const vTheme = useTheme();
+    vTheme.global.name.value = currentTheme.value;
+
+    watch(
+      currentTheme,
+      newVal => {
+        vTheme.global.name.value = newVal;
+        localStorage.setItem('user-theme', newVal);
+      },
+      { immediate: true }
+    );
   }
 
   return {

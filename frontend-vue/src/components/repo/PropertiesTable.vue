@@ -8,7 +8,7 @@
           :class="{ sortable: header.sort, 'text-center': header.value !== 'class' }"
           :style="{ whiteSpace: 'nowrap', width: header.width || 'auto' }"
         >
-          <span>{{ header.text }}</span>
+          <span>{{ $t(header.text) }}</span>
           <v-btn v-if="header.sort" class="ml-2" density="compact" icon @click="sortColumn(header.value)">
             <v-icon size="20">{{ getSortIcon(header.value) }}</v-icon>
           </v-btn>
@@ -17,7 +17,7 @@
     </thead>
     <tbody>
       <tr v-for="(item, index) in displayedTableData" :key="index">
-        <td>{{ item.classId }}</td>
+        <td>{{ $t(Enums.getLabel(ClassId, item.class)) }}</td>
         <td>
           <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
             {{ item.level }}
@@ -31,25 +31,29 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { type Header, getLevelColor, type Sorting, SortDirection } from '@/components/repo/utils';
+import { type Header, getLevelColor, type Sorting, SortDirection, type TableDataItem } from '@/components/repo/utils';
 import Pagination, { type PaginationItem } from '@/components/repo/Pagination.vue';
-import type { AnalysisClassPublic, Level } from '@/client';
+import { ClassId, type Level } from '@/client';
+import Enums from '@/utils/enums';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 defineProps<{
-  modelValue: AnalysisClassPublic[];
+  modelValue: TableDataItem[];
   levels: Level[];
   search?: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: AnalysisClassPublic[]): void;
+  (e: 'update:modelValue', value: TableDataItem[]): void;
 }>();
 
 const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOWN });
 const pagination = ref<PaginationItem>({ page: 1, itemsPerPage: 10, total: 0 });
-const localModelValue = defineModel<AnalysisClassPublic[]>('modelValue');
+const localModelValue = defineModel<TableDataItem[]>('modelValue');
 
-const displayedTableData = computed<AnalysisClassPublic[]>(() => {
+const displayedTableData = computed<TableDataItem[]>(() => {
   if (!localModelValue.value) return [];
 
   return (
@@ -58,11 +62,23 @@ const displayedTableData = computed<AnalysisClassPublic[]>(() => {
       .sort((a, b) => {
         if (sortingColumn.value.direction === SortDirection.UNKNOWN || !sortingColumn.value.column) return 0;
 
-        const column = sortingColumn.value.column as keyof AnalysisClassPublic;
         let comparison = 0;
 
-        if ((a[column] ?? 0) < (b[column] ?? 0)) comparison = -1;
-        else if ((a[column] ?? 0) > (b[column] ?? 0)) comparison = 1;
+        console.log('Sorting by:', sortingColumn.value);
+
+        if (sortingColumn.value.column === 'classId') {
+          const labelA = t(Enums.getLabel(ClassId, a.class));
+          const labelB = t(Enums.getLabel(ClassId, b.class));
+
+          comparison = labelA.localeCompare(labelB);
+        } else {
+          const column = sortingColumn.value.column as keyof TableDataItem;
+          const valA = a[column] ?? 0;
+          const valB = b[column] ?? 0;
+
+          if (valA < valB) comparison = -1;
+          else if (valA > valB) comparison = 1;
+        }
 
         return sortingColumn.value.direction === SortDirection.ASC ? comparison : -comparison;
       })
@@ -75,9 +91,9 @@ const displayedTableData = computed<AnalysisClassPublic[]>(() => {
 });
 
 const headers: Header[] = [
-  { text: 'Clase', value: 'classId', sort: true },
-  { text: 'Nivel', value: 'level', sort: true, width: '1px' },
-  { text: 'Instancias', value: 'instances', sort: true, width: '1px' },
+  { text: 'class', value: 'classId', sort: true },
+  { text: 'level', value: 'level', sort: true, width: '1px' },
+  { text: 'instances', value: 'instances', sort: true, width: '1px' },
 ];
 
 function getSortIcon(column: string): string {

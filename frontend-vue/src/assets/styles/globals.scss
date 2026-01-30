@@ -1,0 +1,52 @@
+:root {
+  --border-radius: 0.5rem;
+}
+
+.v-theme--dark {
+  --v-border-color: 255, 0, 0; /* Formato RGB */
+  --v-border-opacity: 1;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+header {
+  margin-bottom: 2rem;
+  background-color: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-on-primary));
+  border-radius: var(--border-radius);
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+
+  h1 {
+    font-size: 1.5rem;
+  }
+}
+
+.container {
+  position: relative;
+  background-color: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  padding: 1.5rem;
+
+  h2 {
+    margin: 0 0 2rem;
+  }
+}
+
+.text-none {
+  text-transform: none !important;
+}
+
+.font-weight-bold {
+  font-weight: 700 !important;
+}

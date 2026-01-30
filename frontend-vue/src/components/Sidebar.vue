@@ -44,7 +44,7 @@ import LanguageSelector from '@/components/LanguageSelector.vue';
 import { useThemeStore } from '@/stores/themeStore';
 
 const themeStore = useThemeStore();
-// showMenu ahora solo controla si estamos en modo expandido o rail
+
 const showMenu = defineModel<boolean>('showMenu', { default: true });
 
 function toggleSidebar() {

@@ -1,4 +1,4 @@
-import { Level } from '@/client';
+import { ClassId, Level } from '@/client';
 
 const LEVEL_COLOR_MAP: Record<Level, string> = {
   [Level.UNKNOWN]: 'rgba(201, 203, 207, 1)',
@@ -49,7 +49,7 @@ export interface TableData {
 }
 
 export interface TableDataItem {
-  class: string;
+  class: ClassId;
   level: Level;
   instances: number;
 }

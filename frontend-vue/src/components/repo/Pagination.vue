@@ -11,7 +11,13 @@
       hide-details
     />
     <span>de {{ localModel?.total }}</span>
-    <v-pagination v-model="localModel.page" :length="totalPages" :total-visible="3" density="compact" style="transform: scale(0.85) translate(0, 0)"/>
+    <v-pagination
+      v-model="localModel.page"
+      :length="totalPages"
+      :total-visible="3"
+      density="compact"
+      style="transform: scale(0.85) translate(0, 0)"
+    />
   </div>
 </template>
 <script setup lang="ts">
@@ -43,11 +49,14 @@ const localModel = computed<PaginationItem>({
 
 const totalPages = computed<number>(() => Math.ceil(localModel.value.total / localModel.value.itemsPerPage));
 
-watch(() => localModel.value.itemsPerPage, () => {
-  if (localModel.value.page > totalPages.value) {
-    localModel.value = { ...localModel.value, page: totalPages.value || 1 };
+watch(
+  () => localModel.value.itemsPerPage,
+  () => {
+    if (localModel.value.page > totalPages.value) {
+      localModel.value = { ...localModel.value, page: totalPages.value || 1 };
+    }
   }
-});
+);
 </script>
 <style scoped>
 .items-per-page-select {

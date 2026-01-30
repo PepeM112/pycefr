@@ -6,9 +6,10 @@ import { useLangStore } from '@/stores/langStore';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import { client } from './client/client.gen';
+import './assets/styles/globals.scss';
 
 client.setConfig({
-    baseUrl: 'http://localhost:8000',
+  baseUrl: 'http://localhost:8000',
 });
 
 import '@mdi/font/css/materialdesignicons.css';

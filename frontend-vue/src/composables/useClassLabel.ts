@@ -1,4 +1,4 @@
-import { type ClassPublic, classLabel } from '@/client';
+import { type ClassPublic, classLabel, Level } from '@/client';
 import { ref } from 'vue';
 
 const cache = ref<Array<ClassPublic>>([]);
@@ -34,9 +34,14 @@ export function useClassLabel<T = ClassPublic>(options?: { mapper?: (item: Class
     items.value = options?.mapper ? data.map(options.mapper) : (data as T[]);
   }
 
+  function getClassLevel(classId: number): Level {
+    return cache.value.find(item => item.id === classId)?.level ?? Level.UNKNOWN;
+  }
+
   return {
     items,
     loading,
     fetch,
+    getClassLevel,
   };
 }

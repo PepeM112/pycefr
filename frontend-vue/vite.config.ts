@@ -25,13 +25,6 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
   },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@use "@/styles/globals.scss";`,
-      },
-    },
-  },
   build: {
     rollupOptions: {
       output: {
