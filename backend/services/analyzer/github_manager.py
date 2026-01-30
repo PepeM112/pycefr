@@ -13,6 +13,7 @@ from typing import Any, Dict, List, cast
 from urllib.parse import urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
 
 from backend.config.settings import settings
 from backend.models.schemas.repo import (
@@ -36,6 +37,8 @@ class GitHubManager:
         self.repo_name = ""
         self.is_cli = is_cli
         self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=1, pool_maxsize=50)
+        self.session.mount("https://", adapter)
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
