@@ -5,6 +5,7 @@
         <th
           v-for="header in headers"
           :key="header.value"
+          class="text-primary-on-surface"
           :class="{ sortable: header.sort, 'text-center': header.value !== 'class' }"
           :style="{ whiteSpace: 'nowrap', width: header.width || 'auto' }"
         >
@@ -66,7 +67,7 @@ const displayedTableData = computed<TableDataItem[]>(() => {
 
         console.log('Sorting by:', sortingColumn.value);
 
-        if (sortingColumn.value.column === 'classId') {
+        if (sortingColumn.value.column === 'class') {
           const labelA = t(Enums.getLabel(ClassId, a.class));
           const labelB = t(Enums.getLabel(ClassId, b.class));
 
@@ -91,7 +92,7 @@ const displayedTableData = computed<TableDataItem[]>(() => {
 });
 
 const headers: Header[] = [
-  { text: 'class', value: 'classId', sort: true },
+  { text: 'class', value: 'class', sort: true },
   { text: 'level', value: 'level', sort: true, width: '1px' },
   { text: 'instances', value: 'instances', sort: true, width: '1px' },
 ];
