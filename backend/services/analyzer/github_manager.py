@@ -34,7 +34,8 @@ class GitHubManager:
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
         self.graphql_url = "https://api.github.com/graphql"
         self._temp_pr_data: List[Dict[str, Any]] = []
-        self._temp_contributors: List[GitHubContributorPublic] = []
+        self._avatar_cache: Dict[str, str] = {}
+        self._profile_url_cache: Dict[str, str] = {}
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.is_cli:
@@ -102,6 +103,27 @@ class GitHubManager:
         self._print_status("[ ] Fetching data via GraphQL...", end="")
         repo_data = self._get_repo_base_data()
         repo_commits = self._get_repo_commits_graphql()
+
+        # Build Contributors List based on Commits Stats
+        contributors: List[GitHubContributorPublic] = []
+        for committer in repo_commits:
+            avatar = self._avatar_cache.get(committer.github_user) or self._avatar_cache.get(committer.username, "")
+            profile = self._profile_url_cache.get(committer.github_user) or self._profile_url_cache.get(
+                committer.username, ""
+            )
+
+            contributors.append(
+                GitHubContributorPublic(
+                    name=committer.username,
+                    github_user=committer.github_user,
+                    avatar=avatar,
+                    profile_url=profile,
+                    contributions=committer.commits,
+                )
+            )
+
+        contributors.sort(key=lambda x: x.contributions, reverse=True)
+
         self._print_status("\r[✓] Data fetched successfully")
 
         return RepoPublic(
@@ -112,11 +134,11 @@ class GitHubManager:
             last_updated_at=repo_data.last_updated_at,
             owner=repo_data.owner,
             commits=repo_commits,
-            contributors=self._temp_contributors,
+            contributors=contributors,
         )
 
     def _get_repo_base_data(self) -> RepoSummaryPublic:
-        """Consolidated GraphQL query for metadata, PRs, and contributors."""
+        """Consolidated GraphQL query for metadata, PRs, and initial user cache."""
         query = """
         query($owner: String!, $name: String!) {
           repository(owner: $owner, name: $name) {
@@ -156,18 +178,19 @@ class GitHubManager:
         variables = {"owner": self.user, "name": self.repo_name}
         data = self._query_graphql(query, variables)["repository"]
 
-        # Store PRs and contributors for later processing
+        # Store PRs
         self._temp_pr_data = data.get("pullRequests", {}).get("nodes", [])
-        self._temp_contributors = [
-            GitHubContributorPublic(
-                name=node.get("name") or node["login"],
-                github_user=node["login"],
-                avatar=node["avatarUrl"],
-                profile_url=node["url"],
-                contributions=0,  # Contributions count is harder via mentionableUsers, set to 0 for now
-            )
-            for node in data.get("mentionableUsers", {}).get("nodes", [])
-        ]
+
+        # Pre-populate Cache
+        for node in data.get("mentionableUsers", {}).get("nodes", []):
+            login = node.get("login")
+            if login:
+                self._avatar_cache[login] = node.get("avatarUrl", "")
+                self._profile_url_cache[login] = node.get("url", "")
+                # Cache by name just in case
+                if node.get("name"):
+                    self._avatar_cache[node["name"]] = node.get("avatarUrl", "")
+                    self._profile_url_cache[node["name"]] = node.get("url", "")
 
         return RepoSummaryPublic(
             name=data["name"],
@@ -213,7 +236,10 @@ class GitHubManager:
                       deletions
                       changedFiles
                       committedDate
-                      author { name user { login } }
+                      author {
+                        name
+                        user { login avatarUrl url }
+                      }
                     }
                   }
                 }
@@ -242,6 +268,11 @@ class GitHubManager:
                 author_name: str = str(author_data.get("name") or "Unknown")
                 user_obj: Dict[str, Any] | None = author_data.get("user")
                 github_login: str = (user_obj.get("login") if user_obj else None) or "ghost"
+
+                # Cache avatar if not already
+                if user_obj and github_login not in self._avatar_cache:
+                    self._avatar_cache[github_login] = user_obj.get("avatarUrl", "")
+                    self._profile_url_cache[github_login] = user_obj.get("url", "")
 
                 stats = user_stats[author_name]
                 stats.update({"username": author_name, "github_user": github_login})
