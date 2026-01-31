@@ -209,13 +209,20 @@ class GitHubManager:
             variables: Dict[str, Any] = {"owner": self.user, "name": self.repo_name, "cursor": cursor}
             data = self._query_graphql(query, variables)
 
-            history = data["repository"]["defaultBranchRef"]["target"]["history"]
+            repo_ref = data["repository"].get("defaultBranchRef")
+            if not repo_ref:
+                break
+
+            history = repo_ref["target"]["history"]
             total_count = history["totalCount"]
             nodes = history["nodes"]
 
             for node in nodes:
-                author_name = node["author"]["name"]
-                github_login = node["author"]["user"]["login"] if node["author"]["user"] else "ghost"
+                author_data: Dict[str, Any] = node.get("author") or {}
+                author_name: str = author_data.get("name") or "Unknown"
+
+                user_obj: Dict[str, Any] | None = author_data.get("user")
+                github_login: str = (user_obj.get("login") if user_obj else None) or "ghost"
 
                 stats = user_stats[author_name]
                 stats["username"] = author_name
