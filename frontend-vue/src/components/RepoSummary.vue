@@ -2,10 +2,15 @@
   <v-card variant="flat" class="pa-4 border h-100">
     <div class="d-flex align-center ga-4 mb-4">
       <v-avatar size="48">
-        <v-img :src="analysis?.repo?.owner?.avatar || '@/assets/img/default_avatar.jpg'" alt="Avatar" />
+        <v-img :src="analysis?.repo?.owner?.avatar || defaultAvatar" alt="Avatar" />
       </v-avatar>
       <h3 class="font-weight-bold text-truncate">
-        {{ analysis?.repo?.name || 'Unknown' }}
+        <router-link v-if="analysis?.status === 'completed'" :to="`/repo/${analysis?.id}`" class="analysis-link">
+          {{ analysis?.name || 'N/A' }}
+        </router-link>
+        <span v-else>
+          {{ analysis?.name || 'N/A' }}
+        </span>
       </h3>
       <v-spacer />
       <span class="status-badge" :class="`bg-${getAnalysisStatusColor(analysis?.status)}`">
@@ -22,7 +27,7 @@
     <div v-if="analysis?.repo" class="mb-4" style="font-size: 0.75rem">
       <div class="d-flex justify-space-between mb-1">
         <span class="font-weight-bold">{{ $t('creation_date') }}:</span>
-        <span>{{ formatDate(analysis?.repo?.createdAt) }}</span>
+        <span>{{ formatDate(analysis?.createdAt) }}</span>
       </div>
       <div class="d-flex justify-space-between">
         <span class="font-weight-bold">{{ $t('last_update') }}:</span>
@@ -32,7 +37,13 @@
 
     <v-card-actions class="pa-0 align-end">
       <v-spacer />
-      <v-btn color="primary" variant="flat" rounded="md" :to="`/repo/${analysis?.id}`">
+      <v-btn
+        v-if="analysis?.status === 'completed'"
+        color="primary-on-surface"
+        variant="flat"
+        rounded="md"
+        :to="`/repo/${analysis?.id}`"
+      >
         {{ $t('see_more') }}
       </v-btn>
     </v-card-actions>
@@ -41,6 +52,7 @@
 <script setup lang="ts">
 import { formatDate } from '@/utils/utils';
 import type { AnalysisSummaryPublic } from '@/client';
+import defaultAvatar from '@/assets/img/default_avatar.jpg';
 
 const props = defineProps<{
   analysis: AnalysisSummaryPublic;
@@ -76,5 +88,15 @@ function getAnalysisStatusColor(status: string): string {
   font-size: 0.875rem;
   height: 2.5em;
   color: rgba(var(--v-theme-on-surface), 0.7);
+}
+
+.analysis-link {
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+  }
 }
 </style>
