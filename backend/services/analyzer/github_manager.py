@@ -33,6 +33,7 @@ class GitHubManager:
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
         self.graphql_url = "https://api.github.com/graphql"
+        self._temp_pr_data: List[Dict[str, Any]] = []
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.is_cli:
@@ -133,6 +134,17 @@ class GitHubManager:
               ... on User { name }
               ... on Organization { name }
             }
+            pullRequests(states: MERGED, last: 50) {
+              nodes {
+                author { login }
+                commits(last: 100) {
+                  totalCount
+                  nodes {
+                    commit { committedDate }
+                  }
+                }
+              }
+            }
           }
         }
         """
@@ -140,6 +152,9 @@ class GitHubManager:
 
         self._print_status("[ ] Fetching repository data", end=" ")
         data = self._query_graphql(query, variables)["repository"]
+
+        # Store PRs for later processing
+        self._temp_pr_data = data.get("pullRequests", {}).get("nodes", [])
 
         return RepoSummaryPublic(
             name=data["name"],
@@ -217,9 +232,9 @@ class GitHubManager:
             total_count = history["totalCount"]
             nodes = history["nodes"]
 
-            for node in nodes:
+            for node in cast(List[Dict[str, Any]], nodes):
                 author_data: Dict[str, Any] = node.get("author") or {}
-                author_name: str = author_data.get("name") or "Unknown"
+                author_name: str = str(author_data.get("name") or "Unknown")
 
                 user_obj: Dict[str, Any] | None = author_data.get("user")
                 github_login: str = (user_obj.get("login") if user_obj else None) or "ghost"
@@ -243,7 +258,28 @@ class GitHubManager:
             has_next_page = page_info["hasNextPage"]
             cursor = page_info["endCursor"]
 
-        # Formatear resultados finales
+        # Apply PR compensation
+        for pr in self._temp_pr_data:
+            author_obj = pr.get("author")
+            if not author_obj:
+                continue
+
+            login = author_obj.get("login")
+            for stats in user_stats.values():
+                if stats["github_user"] == login:
+                    pr_commits = pr.get("commits", {})
+                    # Add extra commits (subtracting the 1 squash commit already counted in main)
+                    stats["commits"] += max(0, pr_commits.get("totalCount", 0) - 1)
+
+                    # Extract real timestamps from the PR's internal commits
+                    for c_node in pr_commits.get("nodes", []):
+                        c_date = c_node.get("commit", {}).get("committedDate")
+                        if c_date:
+                            dt = datetime.fromisoformat(c_date.replace("Z", "+00:00"))
+                            stats["commit_timestamps"].append(dt.timestamp())
+                    break
+
+        # Format final results
         final_results: List[RepoCommitPublic] = []
         for data in user_stats.values():
             data["estimated_hours"] = self._calculate_estimated_hours(data["commit_timestamps"])
