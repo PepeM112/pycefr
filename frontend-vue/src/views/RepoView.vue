@@ -12,7 +12,7 @@
           v-model:selected="selectedTreeNodeIds"
           @update:selected="onUpdateSelected"
         />
-        <v-divider class="mx-8" vertical thickness="2px" color="on-surface" opacity="100" />
+        <v-divider class="mx-8" vertical thickness="2px" color="secondary" opacity="100" />
         <v-card class="pa-4 w-100">
           <div class="d-flex align-center ga-4 mb-4">
             <v-text-field
@@ -100,7 +100,6 @@ const tableData = computed<TableDataItem[]>(() => {
 function isFileSelected(filePath: string): boolean {
   const elements = analysisData.value?.fileClasses;
   if (!elements || elements.length === 0) return false;
-  if (!selectedTreeNodeIds.value || selectedTreeNodeIds.value.length === 0) return true;
 
   return selectedTreeNodeIds.value.some(id => ID_PATH_MAP[id] === filePath);
 }
@@ -133,6 +132,8 @@ function buildRepoDataTree(data: AnalysisPublic | undefined): TreeNode[] {
   let id = 1;
 
   function fillTree(parentNode: Record<string, any>, currentPath: string = ''): TreeNode[] {
+    if (currentPath === '') clearIDPathMap();
+
     return Object.keys(parentNode).map(key => {
       const child: Record<string, any> = parentNode[key];
       const fullPath = currentPath ? `${currentPath}/${key}` : key;
@@ -178,12 +179,9 @@ async function loadData() {
   isLoading.value = false;
 }
 
-watch(
-  () => tableData.value,
-  newValue => {
-    console.log('Table data updated:', newValue);
-  }
-);
+function clearIDPathMap() {
+  Object.keys(ID_PATH_MAP).forEach(key => delete ID_PATH_MAP[Number(key)]);
+}
 
 onMounted(async () => {
   classLabel.fetch();
