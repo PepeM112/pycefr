@@ -1,15 +1,27 @@
-import { createApp } from 'vue';
 import MainApp from '@/layout/MainApp.vue';
-import vuetify from '@/plugins/vuetify';
 import i18n from '@/plugins/i18n';
+import vuetify from '@/plugins/vuetify';
 import router from '@/router';
-import CountryFlag from 'vue-country-flag-next';
+import { useLangStore } from '@/stores/langStore';
+import { createPinia } from 'pinia';
+import { createApp } from 'vue';
+import { client } from './client/client.gen';
+import './assets/styles/globals.scss';
+
+client.setConfig({
+  baseUrl: 'http://localhost:8000',
+});
 
 import '@mdi/font/css/materialdesignicons.css';
 
 const app = createApp(MainApp);
-app.component('CountryFlag', CountryFlag)
+const pinia = createPinia();
+app.use(pinia);
 app.use(vuetify);
 app.use(i18n);
 app.use(router);
+
+const langStore = useLangStore();
+langStore.initLanguage();
+
 app.mount('#app');

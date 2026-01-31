@@ -1,26 +1,51 @@
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/es';
+
+dayjs.extend(relativeTime);
+dayjs.locale('es');
+
 // File Extensions
 export type FileExtension = 'py' | 'js' | 'ts' | 'vue' | 'html' | 'css' | 'json' | 'md';
 
 const EXTENSION_ICON_MAP: Record<FileExtension, string> = {
-  py: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg',
-  js: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg',
-  ts: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg',
-  vue: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg',
-  html: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg',
-  css: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg',
-  json: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/json/json-original.svg',
-  md: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/markdown/markdown-original.svg',
+  py: 'logos:python',
+  js: 'logos:javascript',
+  ts: 'logos:typescript-icon',
+  vue: 'logos:vue',
+  html: 'logos:html-5',
+  css: 'logos:css-3',
+  json: 'vscode-icons:file-type-json',
+  md: 'logos:markdown',
 };
 
 export function getExtensionIcon(extension: FileExtension): string {
   return EXTENSION_ICON_MAP[extension];
 }
 
-// Formatting
-export function formatDate(dateString: string) {
-  const options = { day: '2-digit', month: '2-digit', year: 'numeric' } as Intl.DateTimeFormatOptions;
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-ES', options);
+/**
+ * Formats a date using the browser's local timezone.
+ * @param value - Date in Date, String (ISO), or Timestamp format
+ * @param format - Format pattern (e.g., 'DD-MM-YYYY')
+ */
+export function formatDate(
+  value: Date | string | number | null | undefined,
+  format: string = 'DD-MM-YYYY',
+  relative: boolean = false
+): string {
+  if (!value) return 'N/A';
+
+  const date = dayjs(value);
+
+  if (!date.isValid()) {
+    return 'Invalid date';
+  }
+
+  if (relative) {
+    return date.fromNow();
+  }
+
+  return date.format(format);
 }
 
 // Manage dark mode

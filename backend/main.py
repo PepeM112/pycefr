@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.logging import DefaultFormatter
 
-from backend.api import analysis_routes
+from backend.api import analysis_routes, labels
 
 # --- LOGGING CONFIGURATION ---
 formatter = DefaultFormatter(fmt="%(levelprefix)-10s %(message)s", use_colors=True)
@@ -21,7 +21,7 @@ app = FastAPI(title="PyCEFR API", description="API para el análisis y clasifica
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +29,7 @@ app.add_middleware(
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(analysis_routes.router)
+api_v1_router.include_router(labels.router)
 
 app.include_router(api_v1_router)
 

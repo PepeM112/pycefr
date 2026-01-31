@@ -1,6 +1,10 @@
-import 'vuetify/dist/vuetify.min.css';
+import { Icon } from '@iconify/vue';
+import { h } from 'vue';
 import { createVuetify } from 'vuetify';
+import 'vuetify/dist/vuetify.min.css';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
+
+const savedTheme = localStorage.getItem('theme') || 'light';
 
 export default createVuetify({
   icons: {
@@ -8,6 +12,9 @@ export default createVuetify({
     aliases,
     sets: {
       mdi,
+      iconify: {
+        component: (props: any) => h(Icon, { ...props }),
+      },
     },
   },
   defaults: {
@@ -15,13 +22,14 @@ export default createVuetify({
       ripple: false,
     },
     VBtn: {
+      class: 'text-none',
       elevation: 0,
       rounded: 'md',
-      variant: 'text',
-      class: 'text-none',
       style: 'text-transform: none; letter-spacing: normal;',
+      variant: 'flat',
     },
     VCard: {
+      class: 'border-thin',
       rounded: 'lg',
     },
     VIcon: {
@@ -29,36 +37,54 @@ export default createVuetify({
     },
     VTextField: {
       density: 'compact',
-      variant: 'outlined',
       hideDetails: 'auto',
       rounded: 'lg',
+      variant: 'outlined',
     },
   },
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: savedTheme,
     themes: {
       light: {
+        dark: false,
         colors: {
-          primary: '#1f2937',
-          'primary-light': '#374151',
-          secondary: '#e2e8f0',
-          'secondary-light': '#e5e7eb',
-          error: '#f44336',
-          info: '#2196f3',
-          success: '#4caf50',
-          warning: '#ff9800',
+          background: '#f8fafc',
+          surface: '#ffffff',
+          'on-surface': '#1e293b',
+          primary: '#1e293b',
+          'primary-on-surface': '#1e293b',
+          secondary: '#64748b',
+          'secondary-light': '#94a3b8',
+          error: '#ef4444',
+          info: '#3b82f6',
+          success: '#22c55e',
+          warning: '#f59e0b',
+          text: '#1e293b',
+        },
+        variables: {
+          'border-color': '#1e293b',
+          'border-opacity': 0.12,
         },
       },
       dark: {
+        dark: true,
         colors: {
-          primary: '#d1d5db',
-          'primary-light': '#e5e7eb',
-          secondary: '#4b5563',
-          'secondary-light': '#6b7280',
-          error: '#ef5350',
-          info: '#42a5f5',
-          success: '#66bb6a',
-          warning: '#ffa726',
+          background: '#1e293b',
+          surface: '#0f172a',
+          'on-surface': '#ffffff',
+          primary: '#0f172a',
+          'primary-on-surface': '#ffffff',
+          secondary: '#475569',
+          'secondary-light': '#64748b',
+          error: '#f87171',
+          info: '#60a5fa',
+          success: '#4ade80',
+          warning: '#fbbf24',
+          text: '#ffffff',
+        },
+        variables: {
+          'border-color': '#94a3b8',
+          'border-opacity': 0.12,
         },
       },
     },

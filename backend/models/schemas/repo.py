@@ -4,18 +4,18 @@ from typing import List
 from backend.models.schemas.common import BaseSchema
 
 
-class GitHubUser(BaseSchema):
+class GitHubUserPublic(BaseSchema):
     name: str | None = None
     github_user: str
     avatar: str
     profile_url: str
 
 
-class GitHubContributor(GitHubUser):
+class GitHubContributorPublic(GitHubUserPublic):
     contributions: int
 
 
-class RepoCommit(BaseSchema):
+class RepoCommitPublic(BaseSchema):
     username: str
     github_user: str
     loc: int
@@ -24,15 +24,15 @@ class RepoCommit(BaseSchema):
     total_files_modified: int
 
 
-class RepoSummary(BaseSchema):
-    name: str
-    url: str
+class RepoSummaryPublic(BaseSchema):
+    name: str | None = None
+    url: str | None = None
     description: str | None = None
-    created_at: datetime
-    last_updated_at: datetime
-    owner: GitHubUser
+    created_at: datetime | None = None
+    last_updated_at: datetime | None = None
+    owner: GitHubUserPublic | None = None
 
 
-class Repo(RepoSummary):
-    commits: List[RepoCommit] = []
-    contributors: List[GitHubContributor] = []
+class RepoPublic(RepoSummaryPublic):
+    commits: List[RepoCommitPublic] = []
+    contributors: List[GitHubContributorPublic] = []

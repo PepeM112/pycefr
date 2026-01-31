@@ -1,184 +1,68 @@
 <template>
-  <div class="content">
+  <page-view>
     <header>
       <h1>{{ $t('summary') }}</h1>
     </header>
-    <div class="repo-list">
-      <div class="repo-wrapper" v-for="(repo, index) in reposData" :key="'repo' + index">
-        <div class="container h-100">
-          <div class="repo-header">
-            <img
-              :src="!isLocal(repo) ? repo.data.owner.avatar : '@/assets/img/default_avatar.jpg'"
-              :alt="!isLocal(repo) ? `${repo.data.owner.name}'s avatar` : 'avatar'"
-            />
-            <div>
-              <h3>
-                {{ !isLocal(repo) ? repo.data.name : repo.data.name + ' (local)' }}
-              </h3>
-            </div>
+
+    <v-row gutter="16">
+      <v-col v-for="(analysis, index) in analysesData" :key="index" cols="12" sm="6" md="4">
+        <v-card variant="flat" class="pa-4 border h-100">
+          <div class="d-flex align-center gap-4 mb-4">
+            <v-avatar size="48">
+              <v-img :src="analysis?.repo?.owner?.avatar || '@/assets/img/default_avatar.jpg'" alt="Avatar" />
+            </v-avatar>
+            <h3 class="font-weight-bold text-truncate">
+              {{ analysis?.repo?.name || 'Unknown' }}
+            </h3>
           </div>
-          <p class="description">
-            {{ !isLocal(repo) ? repo.data.description || 'No description available' : 'Repositorio local' }}
+
+          <p class="description mb-2">
+            {{ analysis?.repo?.description || 'No description available' }}
           </p>
 
-          <template v-if="!isLocal(repo)">
-            <p>
-              {{ $t('creation_date') }}:
-              <span>{{ formatDate(repo.data.createdDate) }}</span>
-            </p>
-            <p>
-              {{ $t('last_update') }}:
-              <span>{{ formatDate(repo.data.lastUpdateDate) }}</span>
-            </p>
-            <p>
-              {{ $t('commits') }}:
-              <span>{{ totalCommits(repo.commits) }}</span>
-            </p>
-          </template>
+          <v-divider class="mb-4" />
 
-          <a :href="`/repo/${repo.data.name}${isLocal(repo) ? '_local' : ''}`" class="glb-btn-main">{{ $t('see_more') }}</a>
-        </div>
-      </div>
-    </div>
-  </div>
+          <div v-if="analysis?.repo" class="mb-4" style="font-size: 0.75rem">
+            <div class="d-flex justify-space-between mb-1">
+              <span class="font-weight-bold">{{ $t('creation_date') }}:</span>
+              <span>{{ formatDate(analysis?.repo?.createdAt) }}</span>
+            </div>
+            <div class="d-flex justify-space-between">
+              <span class="font-weight-bold">{{ $t('last_update') }}:</span>
+              <span>{{ formatDate(analysis?.repo?.lastUpdatedAt) }}</span>
+            </div>
+          </div>
+
+          <v-card-actions class="pa-0 align-end">
+            <v-spacer />
+            <v-btn color="primary" variant="flat" rounded="md" :to="`/repo/${analysis?.id}`">
+              {{ $t('see_more') }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+  </page-view>
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { formatDate } from '@/utils/utils';
-/* import axios from 'axios'; */
+import { listAnalysis } from '@/client';
+import type { AnalysisSummaryPublic, Pagination } from '@/client';
+import PageView from '@/components/PageView.vue';
 
-const reposData = ref();
+const analysesData = ref<AnalysisSummaryPublic[]>([]);
+const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 
 async function loadData() {
-  try {
-    /* const resp = await axios.get('/api/repos');
-    reposData.value = resp.data; */
-    reposData.value = [
-      {
-        data: {
-          name: 'pycefr',
-          url: 'https://github.com/PepeM112/pycefr',
-          description: null,
-          createdDate: '2024-05-02T10:26:27Z',
-          lastUpdateDate: '2024-11-18T12:52:51Z',
-          owner: {
-            name: 'PepeM112',
-            avatar: 'https://avatars.githubusercontent.com/u/129164725?v=4',
-            profile_url: 'https://github.com/PepeM112',
-          },
-        },
-        commits: [
-          {
-            name: 'jmatas',
-            github_user: 'PepeM112',
-            loc: 20162,
-            commits: 81,
-            total_hours: 23,
-            total_files_modified: 59,
-          },
-          {
-            name: 'PepeM112',
-            github_user: 'PepeM112',
-            loc: 1077,
-            commits: 5,
-            total_hours: 2,
-            total_files_modified: 14,
-          },
-          {
-            name: 'GitHub',
-            github_user: 'anapgh',
-            loc: 2663,
-            commits: 19,
-            total_hours: 4,
-            total_files_modified: 19,
-          },
-          {
-            name: 'anapgh',
-            github_user: 'anapgh',
-            loc: 21355,
-            commits: 227,
-            total_hours: 38,
-            total_files_modified: 32,
-          },
-          {
-            name: 'Gregorio',
-            github_user: 'gregoriorobles',
-            loc: 1107,
-            commits: 8,
-            total_hours: 2,
-            total_files_modified: 8,
-          },
-        ],
-        contributors: [
-          {
-            name: 'anapgh',
-            avatar: 'https://avatars.githubusercontent.com/u/60195957?v=4',
-            profile_url: 'https://github.com/anapgh',
-            commits: 246,
-          },
-          {
-            name: 'PepeM112',
-            avatar: 'https://avatars.githubusercontent.com/u/129164725?v=4',
-            profile_url: 'https://github.com/PepeM112',
-            commits: 86,
-          },
-          {
-            name: 'gregoriorobles',
-            avatar: 'https://avatars.githubusercontent.com/u/842692?v=4',
-            profile_url: 'https://github.com/gregoriorobles',
-            commits: 8,
-          },
-        ],
-      },
-      {
-        data: {
-          name: 'semi-supervised-pytorch',
-          url: 'https://github.com/wohlert/semi-supervised-pytorch',
-          description: 'Implementations of various VAE-based semi-supervised and generative models in PyTorch',
-          createdDate: '2017-09-28T09:41:18Z',
-          lastUpdateDate: '2024-11-12T17:48:47Z',
-          owner: {
-            name: 'wohlert',
-            avatar: 'https://avatars.githubusercontent.com/u/7689122?v=4',
-            profile_url: 'https://github.com/wohlert',
-          },
-        },
-        commits: [
-          {
-            name: 'wohlert',
-            github_user: 'wohlert',
-            loc: 21326,
-            commits: 34,
-            total_hours: 6,
-            total_files_modified: 65,
-          },
-        ],
-        contributors: [
-          {
-            name: 'wohlert',
-            avatar: 'https://avatars.githubusercontent.com/u/7689122?v=4',
-            profile_url: 'https://github.com/wohlert',
-            commits: 34,
-          },
-        ],
-      },
-      {
-        data: {
-          name: 'semi-supervised-pytorch',
-        },
-      },
-    ];
-  } catch (error) {
-    console.error('Error loading repositories:', error);
+  const { data, error } = await listAnalysis();
+
+  if (error) {
+    console.error('Error fetching repos data:', error);
+    return;
   }
-}
-
-function isLocal(repo: any) {
-  return !repo.commits;
-}
-
-function totalCommits(commits: Array<{ commits: number }>) {
-  return commits.reduce((acc, curr) => acc + curr.commits, 0);
+  analysesData.value = data.elements;
+  pagination.value = data.pagination;
 }
 
 onMounted(async () => {
@@ -186,61 +70,19 @@ onMounted(async () => {
 });
 </script>
 <style lang="scss" scoped>
-.repo-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2em;
-}
-
-.repo-list {
-  h3 {
-    font-weight: 600;
-    line-height: 1.75rem;
-    margin: 0;
-  }
-
-  p:not(.description) {
-    font-size: 0.875rem;
-    font-weight: bold;
-    margin: 0 0 1rem;
-
-    span {
-      font-weight: normal;
-    }
-  }
-
-  a {
-    position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-  }
-}
-
-p.description {
+.description {
   display: -webkit-box;
-  line-clamp: 2;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
-  white-space: normal;
   overflow: hidden;
-  word-break: break-word;
-  text-overflow: ellipsis !important;
-  line-height: 1.125rem;
-  height: calc(2 * 1.125rem);
-  text-overflow: ellipsis;
+  line-height: 1.25;
   font-size: 0.875rem;
-  margin: 0 0 1.25rem;
+  height: 2.5em;
+  color: rgb(var(--v-theme-on-surface), 0.7);
 }
 
-.repo-header {
-  display: flex;
+.gap-4 {
   gap: 1rem;
-  margin-bottom: 1rem;
-
-  img {
-    border-radius: 50%;
-    height: 48px;
-    width: 48px;
-  }
 }
 </style>

@@ -8,14 +8,7 @@
           :icon="searchOptions.visible ? 'mdi-chevron-up' : 'mdi-chevron-down'"
           @click="searchOptions.visible = !searchOptions.visible"
         />
-        <v-text-field
-          v-model="searchOptions.searchText"
-          class="bg-white"
-          density="compact"
-          variant="outlined"
-          hide-details
-          style="font-size: 6px !important"
-        />
+        <v-text-field v-model="searchOptions.searchText" class="bg-background rounded-lg" hide-details />
       </div>
       <div v-if="searchOptions.visible" class="d-flex justify-space-between align-center pt-2">
         <v-tooltip>
@@ -24,12 +17,13 @@
               v-bind="props"
               class="px-2"
               style="min-width: unset"
-              color="primary"
+              color="primary-on-surface"
               density="compact"
               variant="text"
+              icon
               @click="toggleAllowFilterByFiles"
             >
-              <v-icon>
+              <v-icon size="sm">
                 {{ searchOptions.allowFilterByFiles ? 'mdi-filter' : 'mdi-filter-off-outline' }}
               </v-icon>
             </v-btn>
@@ -41,7 +35,7 @@
         <div v-if="searchOptions.allowFilterByFiles" style="display: flex; gap: 0.5rem">
           <v-btn
             v-if="selectedNodes?.length"
-            color="primary"
+            color="primary-on-surface"
             density="compact"
             size="small"
             variant="text"
@@ -51,7 +45,7 @@
             {{ $t('clear') }}
           </v-btn>
           <v-btn
-            color="primary"
+            color="primary-on-surface"
             density="compact"
             size="small"
             variant="text"
@@ -67,7 +61,7 @@
     <v-treeview
       class="pa-0 pb-8"
       v-model:selected="selectedNodes"
-      color="primary"
+      color="primary-on-surface"
       density="compact"
       :items="localModelValue"
       item-value="id"
@@ -80,9 +74,7 @@
     >
       <template #prepend="{ item, isOpen }">
         <v-icon v-if="item.children" :icon="isOpen ? 'mdi-folder-open' : 'mdi-folder'" size="small" />
-        <v-icon v-else size="small">
-          <img :src="getTreeNodeIcon(item)" />
-        </v-icon>
+        <v-icon v-else size="18" :icon="`iconify:${getTreeNodeIcon(item)}`" />
       </template>
     </v-treeview>
   </v-card>
@@ -124,10 +116,15 @@ function toggleAllowFilterByFiles() {
 }
 
 function getTreeNodeIcon(node: TreeNode): string {
+  // Shouldn't happen
   if (node.children && node.children.length > 0) return 'mdi-folder';
 
-  const extension = (node.title.split('.').pop()?.toString() || '') as FileExtension;
-  return getExtensionIcon(extension);
+  const parts = node.title.split('.');
+  const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
+
+  const icon = getExtensionIcon(extension);
+
+  return icon || 'mdi-file-outline';
 }
 </script>
 <style lang="scss" scoped>

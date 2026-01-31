@@ -5,10 +5,11 @@
         <th
           v-for="header in headers"
           :key="header.value"
+          class="text-primary-on-surface"
           :class="{ sortable: header.sort, 'text-center': header.value !== 'class' }"
           :style="{ whiteSpace: 'nowrap', width: header.width || 'auto' }"
         >
-          <span>{{ header.text }}</span>
+          <span>{{ $t(header.text) }}</span>
           <v-btn v-if="header.sort" class="ml-2" density="compact" icon @click="sortColumn(header.value)">
             <v-icon size="20">{{ getSortIcon(header.value) }}</v-icon>
           </v-btn>
@@ -17,9 +18,9 @@
     </thead>
     <tbody>
       <tr v-for="(item, index) in displayedTableData" :key="index">
-        <td>{{ item.class }}</td>
+        <td>{{ $t(Enums.getLabel(ClassId, item.class)) }}</td>
         <td>
-          <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level) }]">
+          <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
             {{ item.level }}
           </span>
         </td>
@@ -31,15 +32,13 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import {
-  type Header,
-  getLevelColor,
-  Level,
-  type Sorting,
-  SortDirection,
-  type TableDataItem,
-} from '@/components/repo/utils';
+import { type Header, getLevelColor, type Sorting, SortDirection, type TableDataItem } from '@/components/repo/utils';
 import Pagination, { type PaginationItem } from '@/components/repo/Pagination.vue';
+import { ClassId, type Level } from '@/client';
+import Enums from '@/utils/enums';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 defineProps<{
   modelValue: TableDataItem[];
@@ -64,11 +63,23 @@ const displayedTableData = computed<TableDataItem[]>(() => {
       .sort((a, b) => {
         if (sortingColumn.value.direction === SortDirection.UNKNOWN || !sortingColumn.value.column) return 0;
 
-        const column = sortingColumn.value.column as keyof TableDataItem;
         let comparison = 0;
 
-        if (a[column] < b[column]) comparison = -1;
-        else if (a[column] > b[column]) comparison = 1;
+        console.log('Sorting by:', sortingColumn.value);
+
+        if (sortingColumn.value.column === 'class') {
+          const labelA = t(Enums.getLabel(ClassId, a.class));
+          const labelB = t(Enums.getLabel(ClassId, b.class));
+
+          comparison = labelA.localeCompare(labelB);
+        } else {
+          const column = sortingColumn.value.column as keyof TableDataItem;
+          const valA = a[column] ?? 0;
+          const valB = b[column] ?? 0;
+
+          if (valA < valB) comparison = -1;
+          else if (valA > valB) comparison = 1;
+        }
 
         return sortingColumn.value.direction === SortDirection.ASC ? comparison : -comparison;
       })
@@ -81,9 +92,9 @@ const displayedTableData = computed<TableDataItem[]>(() => {
 });
 
 const headers: Header[] = [
-  { text: 'Clase', value: 'class', sort: true },
-  { text: 'Nivel', value: 'level', sort: true, width: '1px' },
-  { text: 'Instancias', value: 'instances', sort: true, width: '1px' },
+  { text: 'class', value: 'class', sort: true },
+  { text: 'level', value: 'level', sort: true, width: '1px' },
+  { text: 'instances', value: 'instances', sort: true, width: '1px' },
 ];
 
 function getSortIcon(column: string): string {

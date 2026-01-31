@@ -1,14 +1,7 @@
-// Level
-export enum Level {
-  A1 = 'A1',
-  A2 = 'A2',
-  B1 = 'B1',
-  B2 = 'B2',
-  C1 = 'C1',
-  C2 = 'C2',
-}
+import { ClassId, Level } from '@/client';
 
 const LEVEL_COLOR_MAP: Record<Level, string> = {
+  [Level.UNKNOWN]: 'rgba(201, 203, 207, 1)',
   [Level.A1]: 'rgba(255, 99, 132, 1)',
   [Level.A2]: 'rgba(255, 159, 64, 1)',
   [Level.B1]: 'rgba(255, 206, 86, 1)',
@@ -56,7 +49,7 @@ export interface TableData {
 }
 
 export interface TableDataItem {
-  class: string;
+  class: ClassId;
   level: Level;
   instances: number;
 }

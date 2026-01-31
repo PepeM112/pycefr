@@ -3,29 +3,28 @@ DROP TABLE IF EXISTS repo_commits;
 DROP TABLE IF EXISTS analysis_file_classes;
 DROP TABLE IF EXISTS analysis_files;
 DROP TABLE IF EXISTS analyses;
-DROP TABLE IF EXISTS origins;
-CREATE TABLE origins (
+DROP TABLE IF EXISTS class_model;
+CREATE TABLE class_model (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    level TEXT NOT NULL CHECK (level IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2'))
 );
 CREATE TABLE analyses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    status TEXT NOT NULL,
-    -- 'in_progress', 'completed', 'failed'
-    origin_id INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed', 'failed')),
+    origin TEXT NOT NULL CHECK (origin IN ('USER', 'GITHUB', 'LOCAL', 'UNKNOWN')),
     repo_url TEXT,
     repo_name TEXT,
     repo_description TEXT,
     repo_owner_name TEXT,
     repo_owner_login TEXT,
     repo_owner_avatar TEXT,
+    repo_owner_profile_url TEXT,
     repo_created_at DATETIME,
     repo_last_update DATETIME,
     estimated_hours REAL DEFAULT 0.0,
     error_message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (origin_id) REFERENCES origins (id)
+    created_at DATETIME NOT NULL
 );
 CREATE TABLE analysis_files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,9 +37,9 @@ CREATE TABLE analysis_file_classes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     file_id INTEGER NOT NULL,
     class_id INTEGER NOT NULL,
-    level INTEGER,
     instances INTEGER DEFAULT 0,
-    FOREIGN KEY (file_id) REFERENCES analysis_files(id) ON DELETE CASCADE
+    FOREIGN KEY (file_id) REFERENCES analysis_files(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES class_model(id)
 );
 CREATE TABLE repo_commits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,8 +65,3 @@ CREATE TABLE repo_contributors (
 CREATE INDEX idx_analysis_status ON analyses(status);
 CREATE INDEX idx_files_analysis_id ON analysis_files(analysis_id);
 CREATE INDEX idx_classes_file_id ON analysis_file_classes(file_id);
-INSERT INTO origins (id, name)
-VALUES (0, 'UNKNOWN'),
-    (1, 'USER'),
-    (2, 'GITHUB'),
-    (3, 'LOCAL');
