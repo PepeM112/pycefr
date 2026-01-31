@@ -1,12 +1,9 @@
 import configparser
 import logging
-import math
 import os
-import re
 import shutil
 import subprocess
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, cast
@@ -25,8 +22,6 @@ from backend.models.schemas.repo import (
 
 logger = logging.getLogger(__name__)
 python_threshold_percentage = settings.python_threshold_percentage
-
-PER_PAGE = 100
 
 
 class GitHubManager:
@@ -267,36 +262,6 @@ class GitHubManager:
         ]
         self._print_status("\r[✓] Fetching contributors")
         return contributors
-
-    def _get_total_commits_count(self) -> int:
-        url = f"{self.api_url}/commits?per_page=1&page=1"
-        response = self.session.get(url)
-        link_header = response.headers.get("Link")
-        if not link_header:
-            return len(response.json())
-        match = re.search(r'page=(\d+)>; rel="last"', link_header)
-        return int(match.group(1)) if match else 1
-
-    def _fetch_commit_details(self, url: str) -> Dict[str, Any]:
-        res = self.session.get(url)
-        return cast(Dict[str, Any], res.json())
-
-    def _fetch_all_pages(self, total: int) -> List[Dict[str, Any]]:
-        num_pages = math.ceil(total / PER_PAGE)
-
-        def _fetch_page(page_num: int) -> List[Dict[str, Any]]:
-            res = self.session.get(f"{self.api_url}/commits", params={"per_page": PER_PAGE, "page": page_num})
-            self._check_response(res)
-            return cast(List[Dict[str, Any]], res.json())
-
-        self._print_status("[ ] Fetching commits", end="", flush=True)
-        with ThreadPoolExecutor(max_workers=20) as executor:
-            future_to_page = {executor.submit(_fetch_page, p): p for p in range(1, num_pages + 1)}
-            all_data: List[Dict[str, Any]] = []
-            for future in as_completed(future_to_page):
-                all_data.extend(future.result())
-        all_data.sort(key=lambda x: x.get("commit", {}).get("author", {}).get("date", ""))
-        return all_data
 
     def _check_response(self, response: requests.Response) -> None:
         if response.status_code in [401, 403]:
