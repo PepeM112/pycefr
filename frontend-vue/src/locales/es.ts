@@ -1,5 +1,3 @@
-import { Level } from "@/client";
-
 export default {
   analysis_rules: {
     list_simple: 'Lista simple',
@@ -96,10 +94,13 @@ export default {
   class: 'Clase',
   clear: 'Borrar',
   commits: 'Commits',
+  completed: 'Completado',
   creation_date: 'Fecha de creación',
   disable_filtering_by_files: 'Desactivar filtrado por archivos',
   enable_filtering_by_files: 'Activar filtrado por archivos',
   english: 'Inglés',
+  failed: 'Fallido',
+  in_progress: 'En progreso',
   instances: 'Instancias',
   last_update: 'Última actualización',
   level: 'Nivel',

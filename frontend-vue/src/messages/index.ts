@@ -1,6 +1,6 @@
-import { ClassId } from '@/client';
+import { AnalysisStatus, ClassId } from '@/client';
 
-type Enum = typeof ClassId;
+type Enum = typeof AnalysisStatus | typeof ClassId;
 
 interface EnumsLabelsItem<T extends Record<string | number, string | number> = any> {
   enum: T;
@@ -14,6 +14,14 @@ function createEnumsLabelsItem<T extends Record<keyof T, string | number>>(
 }
 
 const enumsLabels: EnumsLabelsItem<Enum>[] = [
+  createEnumsLabelsItem({
+    enum: AnalysisStatus,
+    labels: {
+      [AnalysisStatus.IN_PROGRESS]: 'in_progress',
+      [AnalysisStatus.COMPLETED]: 'completed',
+      [AnalysisStatus.FAILED]: 'failed',
+    },
+  }),
   createEnumsLabelsItem({
     enum: ClassId,
     labels: {
