@@ -1,6 +1,6 @@
 <template>
   <v-card class="file-tree-card" rounded="lg">
-    <div class="pa-2 pt-4 pr-4" style="border-bottom: 1px solid #dedede">
+    <div class="file-tree-header">
       <div class="d-flex align-center">
         <v-btn
           class="mr-2"
@@ -135,12 +135,14 @@ function getTreeNodeIcon(node: TreeNode): string {
   min-width: 300px;
   max-height: 900px;
   height: fit-content;
-  overflow: scroll;
+  overflow: auto;
 }
 
-.v-card {
-  overflow-x: scroll;
+.file-tree-header {
+  border-bottom: 1px solid rgba(var(--v-theme-border-color), 0.5);
+  padding: 1rem 1rem 0.5rem 0.5rem;
 }
+
 .v-treeview {
   display: inline-block;
   min-width: 100%;

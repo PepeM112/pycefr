@@ -60,6 +60,7 @@ export default createVuetify({
           success: '#22c55e',
           warning: '#f59e0b',
           text: '#1e293b',
+          'border-color': '#1e293b',
         },
         variables: {
           'border-color': '#1e293b',
@@ -81,10 +82,11 @@ export default createVuetify({
           success: '#4ade80',
           warning: '#fbbf24',
           text: '#ffffff',
+          'border-color': '#94a3b8',
         },
         variables: {
           'border-color': '#94a3b8',
-          'border-opacity': 0.12,
+          'border-opacity': 0.5,
         },
       },
     },
