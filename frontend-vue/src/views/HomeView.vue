@@ -1,9 +1,5 @@
 <template>
-  <page-view>
-    <header>
-      <h1>{{ $t('summary') }}</h1>
-    </header>
-
+  <page-view :header="$t('summary')">
     <v-row gutter="16">
       <v-col v-for="(analysis, index) in analysesData" :key="index" cols="12" sm="6" md="4">
         <v-card variant="flat" class="pa-4 border h-100">

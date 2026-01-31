@@ -1,8 +1,5 @@
 <template>
-  <page-view>
-    <header>
-      <h1>{{ repoTitle }}</h1>
-    </header>
+  <page-view :header="repoTitle" :back="{ name: 'home' }">
     <div class="charts"></div>
     <div class="container">
       <h2>{{ $t('properties') }}</h2>
