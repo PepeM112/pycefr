@@ -13,7 +13,6 @@ from typing import Any, Dict, List, cast
 from urllib.parse import urlparse
 
 import requests
-from requests.adapters import HTTPAdapter
 
 from backend.config.settings import settings
 from backend.models.schemas.repo import (
@@ -37,9 +36,8 @@ class GitHubManager:
         self.repo_name = ""
         self.is_cli = is_cli
         self.session = requests.Session()
-        adapter = HTTPAdapter(pool_connections=1, pool_maxsize=50)
-        self.session.mount("https://", adapter)
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
+        self.graphql_url = "https://api.github.com/graphql"
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.is_cli:
@@ -48,6 +46,22 @@ class GitHubManager:
     @property
     def api_url(self) -> str:
         return f"https://api.github.com/repos/{self.user}/{self.repo_name}"
+
+    def _query_graphql(self, query: str, variables: Dict[str, Any]) -> Dict[str, Any]:
+        """Helper para ejecutar consultas GraphQL."""
+        response = self.session.post(self.graphql_url, json={"query": query, "variables": variables})
+
+        self._check_response(response)
+
+        data = response.json()
+        if "errors" in data:
+            if any(err.get("type") == "NOT_FOUND" for err in data["errors"]):
+                raise FileNotFoundError(f"Repository {self.user}/{self.repo_name} not found.")
+
+            logger.error(f"GraphQL Errors: {data['errors']}")
+            raise RuntimeError(f"GraphQL error: {data['errors'][0]['message']}")
+
+        return cast(Dict[str, Any], data["data"])
 
     def validate_repo_url(self) -> None:
         self._print_status("[ ] Validating URL", end="")
@@ -88,8 +102,14 @@ class GitHubManager:
         return str(clone_path)
 
     def get_repo_info(self) -> RepoPublic:
-        repo_data = self._get_repo()
-        repo_commits = self._get_repo_commits()
+        """
+        Obtiene toda la información del repositorio usando GraphQL.
+        Optimiza la obtención de info básica, contribuidores y commits.
+        """
+        self._print_status("[ ] Fetching data via GraphQL...", end="")
+        repo_data = self._get_repo_base_data()
+        repo_commits = self._get_repo_commits_graphql()
+        self._print_status("\r[✓] Data fetched successfully")
         repo_contributors = self._get_repo_contributors()
 
         return RepoPublic(
@@ -103,37 +123,48 @@ class GitHubManager:
             contributors=repo_contributors,
         )
 
-    def _get_repo(self) -> RepoSummaryPublic:
-        self._print_status("[ ] Fetching data", end=" ")
-        response = self.session.get(self.api_url)
-        self._check_response(response)
-        data = response.json()
-        owner_data = data.get("owner", {})
-        self._print_status("\r[✓] Fetching data")
+    def _get_repo_base_data(self) -> RepoSummaryPublic:
+        query = """
+        query($owner: String!, $name: String!) {
+          repository(owner: $owner, name: $name) {
+            name
+            url
+            description
+            createdAt
+            updatedAt
+            owner {
+              login
+              avatarUrl
+              ... on User { name }
+              ... on Organization { name }
+            }
+          }
+        }
+        """
+        variables = {"owner": self.user, "name": self.repo_name}
 
-        owner = GitHubUserPublic(
-            name=owner_data.get("name") or owner_data.get("login"),
-            github_user=owner_data.get("login", "Unknown"),
-            avatar=owner_data.get("avatar_url", ""),
-            profile_url=owner_data.get("html_url", ""),
-        )
+        self._print_status("[ ] Fetching repository data", end=" ")
+        data = self._query_graphql(query, variables)["repository"]
 
         return RepoSummaryPublic(
             name=data["name"],
-            url=data["html_url"],
-            description=data.get("description"),
-            created_at=data["created_at"],
-            last_updated_at=data["updated_at"],
-            owner=owner,
+            url=data["url"],
+            description=data["description"],
+            created_at=data["createdAt"],
+            last_updated_at=data["updatedAt"],
+            owner=GitHubUserPublic(
+                name=data["owner"].get("name") or data["owner"]["login"],
+                github_user=data["owner"]["login"],
+                avatar=data["owner"]["avatarUrl"],
+                profile_url=f"https://github.com/{data['owner']['login']}",
+            ),
         )
 
-    def _get_repo_commits(self) -> List[RepoCommitPublic]:
-        total_commits = self._get_total_commits_count()
-        if total_commits == 0:
-            self._print_status("[✓] Fetching commits")
-            return []
-
-        all_commits = self._fetch_all_pages(total_commits)
+    def _get_repo_commits_graphql(self) -> List[RepoCommitPublic]:
+        """
+        Obtiene el historial de commits paginado mediante cursores de GraphQL.
+        Trae additions, deletions y changedFiles en cada nodo.
+        """
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "username": "",
@@ -141,47 +172,82 @@ class GitHubManager:
                 "loc": 0,
                 "commits": 0,
                 "commit_timestamps": [],
-                "files_set": set(),
+                "total_files_modified": 0,
             }
         )
 
-        with ThreadPoolExecutor(max_workers=50) as executor:
-            futures = [executor.submit(self._fetch_commit_details, c["url"]) for c in all_commits]
-            completed = 0
-            for future in as_completed(futures):
-                try:
-                    details = future.result()
-                    author_name = details.get("commit", {}).get("committer", {}).get("name", "")
-                    stats = user_stats[author_name]
-                    stats["username"] = author_name
-                    stats["github_user"] = details.get("author", {}).get("login", "")
-                    stats["commits"] += 1
-                    date_str = details.get("commit", {}).get("committer", {}).get("date")
-                    if date_str:
-                        stats["commit_timestamps"].append(datetime.fromisoformat(date_str).timestamp())
-                    stats["loc"] += details.get("stats", {}).get("total", 0)
-                    for f in details.get("files", []):
-                        stats["files_set"].add(f["filename"])
-                    completed += 1
-                    if self.is_cli:
-                        percent = int((completed / total_commits) * 100)
-                        bar_length = 40
-                        block = int(round(bar_length * completed / total_commits))
-                        progress_bar = "█" * block + "-" * (bar_length - block)
-                        print(f"\r[ ] Fetching commits [{progress_bar}] {percent}%\033[K", end="", flush=True)
-                except Exception as e:
-                    if self.is_cli:
-                        print(f"\nERROR: Could not process commit: {e}")
-                    logger.warning(f"Commit error: {e}")
+        query = """
+        query($owner: String!, $name: String!, $cursor: String) {
+          repository(owner: $owner, name: $name) {
+            defaultBranchRef {
+              target {
+                ... on Commit {
+                  history(first: 100, after: $cursor) {
+                    totalCount
+                    pageInfo {
+                      hasNextPage
+                      endCursor
+                    }
+                    nodes {
+                      additions
+                      deletions
+                      changedFiles
+                      committedDate
+                      author {
+                        name
+                        user { login }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
 
+        has_next_page = True
+        cursor = None
+        total_processed = 0
+
+        while has_next_page:
+            variables: Dict[str, Any] = {"owner": self.user, "name": self.repo_name, "cursor": cursor}
+            data = self._query_graphql(query, variables)
+
+            history = data["repository"]["defaultBranchRef"]["target"]["history"]
+            total_count = history["totalCount"]
+            nodes = history["nodes"]
+
+            for node in nodes:
+                author_name = node["author"]["name"]
+                github_login = node["author"]["user"]["login"] if node["author"]["user"] else "ghost"
+
+                stats = user_stats[author_name]
+                stats["username"] = author_name
+                stats["github_user"] = github_login
+                stats["commits"] += 1
+                stats["loc"] += node["additions"] + node["deletions"]
+                stats["total_files_modified"] += node["changedFiles"]
+
+                if node["committedDate"]:
+                    dt = datetime.fromisoformat(node["committedDate"].replace("Z", "+00:00"))
+                    stats["commit_timestamps"].append(dt.timestamp())
+
+            total_processed += len(nodes)
+            if self.is_cli:
+                print(f"\r[ ] Fetching commits: {total_processed}/{total_count}", end="", flush=True)
+
+            page_info = history["pageInfo"]
+            has_next_page = page_info["hasNextPage"]
+            cursor = page_info["endCursor"]
+
+        # Formatear resultados finales
         final_results: List[RepoCommitPublic] = []
         for data in user_stats.values():
             data["estimated_hours"] = self._calculate_estimated_hours(data["commit_timestamps"])
-            data["total_files_modified"] = len(data["files_set"])
             del data["commit_timestamps"]
-            del data["files_set"]
             final_results.append(RepoCommitPublic(**data))
-        self._print_status("\r[✓] Fetching commits\033[K", flush=True)
+
         return final_results
 
     def _get_repo_contributors(self) -> List[GitHubContributorPublic]:
