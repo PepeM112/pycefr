@@ -39,7 +39,7 @@ class GitHubManager:
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.is_cli:
-            print(f"{message}\033[K", end=end, flush=flush)
+            print(f"\r{message}\033[K", end=end, flush=flush)
 
     @property
     def api_url(self) -> str:
@@ -75,7 +75,7 @@ class GitHubManager:
         self.repo_name = path_segments[1].replace(".git", "")
         if not self.validate_python_language():
             raise ValueError(f"The repository does not contain at least {python_threshold_percentage}% of Python.")
-        self._print_status("\r[✓] Validating URL")
+        self._print_status("[✓] Validating URL")
 
     def validate_python_language(self) -> bool:
         """Fast check for Python threshold using REST."""
@@ -95,7 +95,7 @@ class GitHubManager:
         clone_dir.mkdir(parents=True, exist_ok=True)
         command_line = ["git", "clone", self.repo_url, str(clone_path)]
         subprocess.run(command_line, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        self._print_status("\r[✓] Cloning repository")
+        self._print_status("[✓] Cloning repository")
         return str(clone_path)
 
     def get_repo_info(self) -> RepoPublic:
@@ -122,7 +122,7 @@ class GitHubManager:
 
         contributors.sort(key=lambda x: x.contributions, reverse=True)
 
-        self._print_status("\r[✓] Data fetched successfully")
+        self._print_status("[✓] Data fetched successfully")
 
         return RepoPublic(
             name=repo_data.name,
@@ -284,7 +284,7 @@ class GitHubManager:
 
             total_processed += len(nodes)
             if self.is_cli:
-                print(f"\r[ ] Fetching commits: {total_processed}/{total_count}\033[K", end="", flush=True)
+                self._print_status(f"[ ] Fetching commits: {total_processed}/{total_count}", end="", flush=True)
 
             page_info = history["pageInfo"]
             has_next_page, cursor = page_info["hasNextPage"], page_info["endCursor"]
@@ -360,7 +360,7 @@ class GitHubManager:
         self._print_status(f"[ ] Fetching user: {self.user}", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}")
         self._check_response(response)
-        self._print_status("\r[✓] Fetching user")
+        self._print_status("[✓] Fetching user")
         user = response.json()
         return GitHubUserPublic(
             name=user.get("name", ""),
@@ -373,7 +373,7 @@ class GitHubManager:
         self._print_status("[ ] Fetching repositories", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}/repos")
         self._check_response(response)
-        self._print_status("\r[✓] Fetching repositories")
+        self._print_status("[✓] Fetching repositories")
         return cast(List[Dict[str, Any]], response.json())
 
     @staticmethod
