@@ -1,6 +1,6 @@
 <template>
-  <v-card class="position-relative" :min-width="300" rounded="lg">
-    <div class="pa-2 pt-4 pr-4" style="border-bottom: 1px solid #dedede">
+  <v-card class="file-tree-card" rounded="lg">
+    <div class="file-tree-header">
       <div class="d-flex align-center">
         <v-btn
           class="mr-2"
@@ -32,6 +32,7 @@
             {{ searchOptions.allowFilterByFiles ? $t('enable_filtering_by_files') : $t('disable_filtering_by_files') }}
           </span>
         </v-tooltip>
+
         <div v-if="searchOptions.allowFilterByFiles" style="display: flex; gap: 0.5rem">
           <v-btn
             v-if="selectedNodes?.length"
@@ -57,7 +58,7 @@
         </div>
       </div>
     </div>
-    <!-- activatable props does the opposite. I believe its a component mistake -->
+
     <v-treeview
       class="pa-0 pb-8"
       v-model:selected="selectedNodes"
@@ -79,6 +80,7 @@
     </v-treeview>
   </v-card>
 </template>
+
 <script setup lang="ts">
 import { ref } from 'vue';
 import { getExtensionIcon, type FileExtension } from '@/utils/utils';
@@ -121,20 +123,43 @@ function getTreeNodeIcon(node: TreeNode): string {
 
   const parts = node.title.split('.');
   const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
-
-  const icon = getExtensionIcon(extension);
-
-  return icon || 'mdi-file-outline';
+  return getExtensionIcon(extension) || 'mdi-file-outline';
 }
 </script>
+
 <style lang="scss" scoped>
-.v-card {
-  overflow-x: scroll;
+.file-tree-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  max-height: 900px;
+  height: fit-content;
+  overflow: auto;
 }
+
+.file-tree-header {
+  border-bottom: 1px solid rgba(var(--v-theme-border-color), 0.5);
+  padding: 1rem 1rem 0.5rem 0.5rem;
+}
+
 .v-treeview {
-  overflow: scroll;
+  display: inline-block;
+  min-width: 100%;
+
+  ::v-deep(.v-list-item) {
+    overflow: visible !important;
+  }
+
+  ::v-deep(.v-list-item__content) {
+    overflow: visible !important;
+  }
+
   ::v-deep(.v-list-item-title) {
     font-size: 14px !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
   }
 }
 </style>
