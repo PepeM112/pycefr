@@ -6,7 +6,7 @@ import subprocess
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Set, cast
 from urllib.parse import urlparse
 
 import requests
@@ -171,10 +171,6 @@ class GitHubManager:
         )
 
     def _get_repo_commits_graphql(self) -> List[RepoCommitPublic]:
-        """
-        Obtiene el historial de commits paginado mediante cursores de GraphQL.
-        Trae additions, deletions y changedFiles en cada nodo.
-        """
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "username": "",
@@ -185,6 +181,8 @@ class GitHubManager:
                 "total_files_modified": 0,
             }
         )
+        # Tracking SHAs to avoid double-counting non-squashed commits
+        processed_shas: Set[str] = set()
 
         query = """
         query($owner: String!, $name: String!, $cursor: String) {
@@ -194,19 +192,14 @@ class GitHubManager:
                 ... on Commit {
                   history(first: 100, after: $cursor) {
                     totalCount
-                    pageInfo {
-                      hasNextPage
-                      endCursor
-                    }
+                    pageInfo { hasNextPage endCursor }
                     nodes {
+                      oid
                       additions
                       deletions
                       changedFiles
                       committedDate
-                      author {
-                        name
-                        user { login }
-                      }
+                      author { name user { login } }
                     }
                   }
                 }
@@ -233,9 +226,10 @@ class GitHubManager:
             nodes = history["nodes"]
 
             for node in cast(List[Dict[str, Any]], nodes):
+                processed_shas.add(node["oid"])
+
                 author_data: Dict[str, Any] = node.get("author") or {}
                 author_name: str = str(author_data.get("name") or "Unknown")
-
                 user_obj: Dict[str, Any] | None = author_data.get("user")
                 github_login: str = (user_obj.get("login") if user_obj else None) or "ghost"
 
@@ -258,7 +252,7 @@ class GitHubManager:
             has_next_page = page_info["hasNextPage"]
             cursor = page_info["endCursor"]
 
-        # Apply PR compensation
+        # Apply PR compensation with de-duplication
         for pr in self._temp_pr_data:
             author_obj = pr.get("author")
             if not author_obj:
@@ -268,18 +262,30 @@ class GitHubManager:
             for stats in user_stats.values():
                 if stats["github_user"] == login:
                     pr_commits = pr.get("commits", {})
-                    # Add extra commits (subtracting the 1 squash commit already counted in main)
-                    stats["commits"] += max(0, pr_commits.get("totalCount", 0) - 1)
+                    added_from_pr = 0
 
-                    # Extract real timestamps from the PR's internal commits
                     for c_node in pr_commits.get("nodes", []):
-                        c_date = c_node.get("commit", {}).get("committedDate")
-                        if c_date:
-                            dt = datetime.fromisoformat(c_date.replace("Z", "+00:00"))
-                            stats["commit_timestamps"].append(dt.timestamp())
+                        commit_data = c_node.get("commit", {})
+                        sha = commit_data.get("oid")
+
+                        # Only count if this commit wasn't already in the main history
+                        if sha and sha not in processed_shas:
+                            added_from_pr += 1
+                            c_date = commit_data.get("committedDate")
+                            if c_date:
+                                dt = datetime.fromisoformat(c_date.replace("Z", "+00:00"))
+                                stats["commit_timestamps"].append(dt.timestamp())
+
+                    if added_from_pr > 0:
+                        # Squash and merge: We subtract the 1 summary commit that was already counted in the main
+                        # history loop.
+                        stats["commits"] += added_from_pr - 1
+
+                    # Merge/Rebase: added_from_pr will be 0 because SHAs are already in processed_shas. stats["commits"]
+                    # remains unchanged.
                     break
 
-        # Format final results
+        # Final formatting
         final_results: List[RepoCommitPublic] = []
         for data in user_stats.values():
             data["estimated_hours"] = self._calculate_estimated_hours(data["commit_timestamps"])
