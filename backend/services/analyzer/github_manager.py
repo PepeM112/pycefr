@@ -140,7 +140,7 @@ class GitHubManager:
                 commits(last: 100) {
                   totalCount
                   nodes {
-                    commit { committedDate }
+                    commit { oid committedDate }
                   }
                 }
               }
