@@ -107,10 +107,8 @@ class GitHubManager:
         # Build Contributors List based on Commits Stats
         contributors: List[GitHubContributorPublic] = []
         for committer in repo_commits:
-            avatar = self._avatar_cache.get(committer.github_user) or self._avatar_cache.get(committer.username, "")
-            profile = self._profile_url_cache.get(committer.github_user) or self._profile_url_cache.get(
-                committer.username, ""
-            )
+            avatar = self._avatar_cache.get(committer.github_user, "")
+            profile = self._profile_url_cache.get(committer.github_user, "")
 
             contributors.append(
                 GitHubContributorPublic(
@@ -187,10 +185,6 @@ class GitHubManager:
             if login:
                 self._avatar_cache[login] = node.get("avatarUrl", "")
                 self._profile_url_cache[login] = node.get("url", "")
-                # Cache by name just in case
-                if node.get("name"):
-                    self._avatar_cache[node["name"]] = node.get("avatarUrl", "")
-                    self._profile_url_cache[node["name"]] = node.get("url", "")
 
         return RepoSummaryPublic(
             name=data["name"],
@@ -207,7 +201,7 @@ class GitHubManager:
         )
 
     def _get_repo_commits_graphql(self) -> List[RepoCommitPublic]:
-        """Fetch paginated commit history with deduplication and PR compensation."""
+        """Fetch paginated commit history with unifications and PR compensation."""
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "username": "",
@@ -269,13 +263,17 @@ class GitHubManager:
                 user_obj: Dict[str, Any] | None = author_data.get("user")
                 github_login: str = (user_obj.get("login") if user_obj else None) or "ghost"
 
-                # Cache avatar if not already
+                # Cache avatar/profile
                 if user_obj and github_login not in self._avatar_cache:
                     self._avatar_cache[github_login] = user_obj.get("avatarUrl", "")
                     self._profile_url_cache[github_login] = user_obj.get("url", "")
 
-                stats = user_stats[author_name]
-                stats.update({"username": author_name, "github_user": github_login})
+                stats = user_stats[github_login]
+
+                if not stats["username"] or stats["username"] == "Unknown":
+                    stats["username"] = author_name
+
+                stats["github_user"] = github_login
                 stats["commits"] += 1
                 stats["loc"] += node["additions"] + node["deletions"]
                 stats["total_files_modified"] += node["changedFiles"]
@@ -297,30 +295,31 @@ class GitHubManager:
             if not author_obj:
                 continue
 
-            login, added_from_pr = author_obj.get("login"), 0
-            for stats in user_stats.values():
-                if stats["github_user"] == login:
-                    pr_commits = pr.get("commits", {}).get("nodes", [])
-                    for c_node in pr_commits:
-                        commit_data = c_node.get("commit", {})
-                        sha = commit_data.get("oid")
+            login = author_obj.get("login")
+            if login in user_stats:
+                stats = user_stats[login]
+                added_from_pr = 0
+                pr_commits = pr.get("commits", {}).get("nodes", [])
 
-                        # Only count if this commit wasn't already in the main history
-                        if sha and sha not in processed_shas:
-                            added_from_pr += 1
-                            c_date = commit_data.get("committedDate")
-                            if c_date:
-                                dt = datetime.fromisoformat(c_date.replace("Z", "+00:00"))
-                                stats["commit_timestamps"].append(dt.timestamp())
+                for c_node in pr_commits:
+                    commit_data = c_node.get("commit", {})
+                    sha = commit_data.get("oid")
 
-                    if added_from_pr > 0:
-                        # Squash and merge: We subtract the 1 summary commit that was already counted in the main
-                        # history loop.
-                        stats["commits"] += added_from_pr - 1
+                    # Only count if this commit wasn't already in the main history
+                    if sha and sha not in processed_shas:
+                        added_from_pr += 1
+                        c_date = commit_data.get("committedDate")
+                        if c_date:
+                            dt = datetime.fromisoformat(c_date.replace("Z", "+00:00"))
+                            stats["commit_timestamps"].append(dt.timestamp())
+
+                if added_from_pr > 0:
+                    # Squash and merge: We subtract the 1 summary commit that was already counted in the main
+                    # history loop.
+                    stats["commits"] += added_from_pr - 1
 
                     # Merge/Rebase: added_from_pr will be 0 because SHAs are already in processed_shas. stats["commits"]
                     # remains unchanged.
-                    break
 
         # Generate final results
         final_results: List[RepoCommitPublic] = []
