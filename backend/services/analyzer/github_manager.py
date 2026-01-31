@@ -34,17 +34,18 @@ class GitHubManager:
         self.session.headers.update({"Authorization": f"Bearer {settings.api_key}"})
         self.graphql_url = "https://api.github.com/graphql"
         self._temp_pr_data: List[Dict[str, Any]] = []
+        self._temp_contributors: List[GitHubContributorPublic] = []
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
         if self.is_cli:
-            print(message, end=end, flush=flush)
+            print(f"{message}\033[K", end=end, flush=flush)
 
     @property
     def api_url(self) -> str:
         return f"https://api.github.com/repos/{self.user}/{self.repo_name}"
 
     def _query_graphql(self, query: str, variables: Dict[str, Any]) -> Dict[str, Any]:
-        """Helper para ejecutar consultas GraphQL."""
+        """Helper to execute GraphQL queries."""
         response = self.session.post(self.graphql_url, json={"query": query, "variables": variables})
 
         self._check_response(response)
@@ -64,12 +65,10 @@ class GitHubManager:
         if not self.repo_url:
             raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
         parsed_url = urlparse(self.repo_url)
-        if parsed_url.scheme != "https":
-            raise ValueError("URL must use the 'https' protocol.")
-        if parsed_url.netloc != "github.com":
-            raise ValueError("URL must be from 'github.com'.")
+        if parsed_url.scheme != "https" or parsed_url.netloc != "github.com":
+            raise ValueError("URL must be a valid https://github.com/USER/REPO")
         path_segments = parsed_url.path.strip("/").split("/")
-        if not path_segments or len(path_segments) < 2:
+        if len(path_segments) < 2:
             raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
         self.user = path_segments[0]
         self.repo_name = path_segments[1].replace(".git", "")
@@ -78,6 +77,7 @@ class GitHubManager:
         self._print_status("\r[✓] Validating URL")
 
     def validate_python_language(self) -> bool:
+        """Fast check for Python threshold using REST."""
         response = self.session.get(f"{self.api_url}/languages")
         self._check_response(response)
         languages = response.json()
@@ -98,15 +98,11 @@ class GitHubManager:
         return str(clone_path)
 
     def get_repo_info(self) -> RepoPublic:
-        """
-        Obtiene toda la información del repositorio usando GraphQL.
-        Optimiza la obtención de info básica, contribuidores y commits.
-        """
+        """Fetch all repository info using optimized GraphQL calls."""
         self._print_status("[ ] Fetching data via GraphQL...", end="")
         repo_data = self._get_repo_base_data()
         repo_commits = self._get_repo_commits_graphql()
         self._print_status("\r[✓] Data fetched successfully")
-        repo_contributors = self._get_repo_contributors()
 
         return RepoPublic(
             name=repo_data.name,
@@ -116,10 +112,11 @@ class GitHubManager:
             last_updated_at=repo_data.last_updated_at,
             owner=repo_data.owner,
             commits=repo_commits,
-            contributors=repo_contributors,
+            contributors=self._temp_contributors,
         )
 
     def _get_repo_base_data(self) -> RepoSummaryPublic:
+        """Consolidated GraphQL query for metadata, PRs, and contributors."""
         query = """
         query($owner: String!, $name: String!) {
           repository(owner: $owner, name: $name) {
@@ -133,6 +130,14 @@ class GitHubManager:
               avatarUrl
               ... on User { name }
               ... on Organization { name }
+            }
+            mentionableUsers(first: 50) {
+              nodes {
+                login
+                name
+                avatarUrl
+                url
+              }
             }
             pullRequests(states: MERGED, last: 50) {
               nodes {
@@ -149,12 +154,20 @@ class GitHubManager:
         }
         """
         variables = {"owner": self.user, "name": self.repo_name}
-
-        self._print_status("[ ] Fetching repository data", end=" ")
         data = self._query_graphql(query, variables)["repository"]
 
-        # Store PRs for later processing
+        # Store PRs and contributors for later processing
         self._temp_pr_data = data.get("pullRequests", {}).get("nodes", [])
+        self._temp_contributors = [
+            GitHubContributorPublic(
+                name=node.get("name") or node["login"],
+                github_user=node["login"],
+                avatar=node["avatarUrl"],
+                profile_url=node["url"],
+                contributions=0,  # Contributions count is harder via mentionableUsers, set to 0 for now
+            )
+            for node in data.get("mentionableUsers", {}).get("nodes", [])
+        ]
 
         return RepoSummaryPublic(
             name=data["name"],
@@ -171,6 +184,7 @@ class GitHubManager:
         )
 
     def _get_repo_commits_graphql(self) -> List[RepoCommitPublic]:
+        """Fetch paginated commit history with deduplication and PR compensation."""
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "username": "",
@@ -209,9 +223,7 @@ class GitHubManager:
         }
         """
 
-        has_next_page = True
-        cursor = None
-        total_processed = 0
+        has_next_page, cursor, total_processed = True, None, 0
 
         while has_next_page:
             variables: Dict[str, Any] = {"owner": self.user, "name": self.repo_name, "cursor": cursor}
@@ -222,20 +234,17 @@ class GitHubManager:
                 break
 
             history = repo_ref["target"]["history"]
-            total_count = history["totalCount"]
-            nodes = history["nodes"]
+            total_count, nodes = history["totalCount"], history["nodes"]
 
             for node in cast(List[Dict[str, Any]], nodes):
                 processed_shas.add(node["oid"])
-
                 author_data: Dict[str, Any] = node.get("author") or {}
                 author_name: str = str(author_data.get("name") or "Unknown")
                 user_obj: Dict[str, Any] | None = author_data.get("user")
                 github_login: str = (user_obj.get("login") if user_obj else None) or "ghost"
 
                 stats = user_stats[author_name]
-                stats["username"] = author_name
-                stats["github_user"] = github_login
+                stats.update({"username": author_name, "github_user": github_login})
                 stats["commits"] += 1
                 stats["loc"] += node["additions"] + node["deletions"]
                 stats["total_files_modified"] += node["changedFiles"]
@@ -246,25 +255,22 @@ class GitHubManager:
 
             total_processed += len(nodes)
             if self.is_cli:
-                print(f"\r[ ] Fetching commits: {total_processed}/{total_count}", end="", flush=True)
+                print(f"\r[ ] Fetching commits: {total_processed}/{total_count}\033[K", end="", flush=True)
 
             page_info = history["pageInfo"]
-            has_next_page = page_info["hasNextPage"]
-            cursor = page_info["endCursor"]
+            has_next_page, cursor = page_info["hasNextPage"], page_info["endCursor"]
 
-        # Apply PR compensation with de-duplication
+        # PR Compensation
         for pr in self._temp_pr_data:
             author_obj = pr.get("author")
             if not author_obj:
                 continue
 
-            login = author_obj.get("login")
+            login, added_from_pr = author_obj.get("login"), 0
             for stats in user_stats.values():
                 if stats["github_user"] == login:
-                    pr_commits = pr.get("commits", {})
-                    added_from_pr = 0
-
-                    for c_node in pr_commits.get("nodes", []):
+                    pr_commits = pr.get("commits", {}).get("nodes", [])
+                    for c_node in pr_commits:
                         commit_data = c_node.get("commit", {})
                         sha = commit_data.get("oid")
 
@@ -285,7 +291,7 @@ class GitHubManager:
                     # remains unchanged.
                     break
 
-        # Final formatting
+        # Generate final results
         final_results: List[RepoCommitPublic] = []
         for data in user_stats.values():
             data["estimated_hours"] = self._calculate_estimated_hours(data["commit_timestamps"])
@@ -293,24 +299,6 @@ class GitHubManager:
             final_results.append(RepoCommitPublic(**data))
 
         return final_results
-
-    def _get_repo_contributors(self) -> List[GitHubContributorPublic]:
-        self._print_status("[ ] Fetching contributors", end="", flush=True)
-        response = self.session.get(f"{self.api_url}/contributors")
-        self._check_response(response)
-        contributors_data = response.json()
-        contributors = [
-            GitHubContributorPublic(
-                name=contributor.get("login", "Unknown"),
-                github_user=contributor.get("login", "Unknown"),
-                avatar=contributor.get("avatar_url", ""),
-                profile_url=contributor.get("html_url", ""),
-                contributions=contributor.get("contributions", 0),
-            )
-            for contributor in contributors_data
-        ]
-        self._print_status("\r[✓] Fetching contributors")
-        return contributors
 
     def _check_response(self, response: requests.Response) -> None:
         if response.status_code in [401, 403]:
@@ -335,10 +323,7 @@ class GitHubManager:
                 total_seconds += default_commit_time_seconds
                 continue
             diff = commit_timestamps[i] - commit_timestamps[i - 1]
-            if diff <= session_threshold_seconds:
-                total_seconds += diff
-            else:
-                total_seconds += default_commit_time_seconds
+            total_seconds += diff if diff <= session_threshold_seconds else default_commit_time_seconds
         return round(total_seconds / 3600, 2)
 
     def fetch_user(self) -> GitHubUserPublic:
@@ -354,7 +339,6 @@ class GitHubManager:
             profile_url=user.get("html_url"),
         )
 
-    # ... (fetch_user_repos y get_git_repo_url se mantienen igual) ...
     def fetch_user_repos(self) -> List[Dict[str, Any]]:
         self._print_status("[ ] Fetching repositories", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}/repos")
