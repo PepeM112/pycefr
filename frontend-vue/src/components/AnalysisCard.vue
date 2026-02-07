@@ -2,47 +2,47 @@
   <v-card variant="flat" class="pa-4 border h-100">
     <div class="d-flex align-center ga-4 mb-4">
       <v-avatar size="48">
-        <v-img :src="analysis?.repo?.owner?.avatar || defaultAvatar" alt="Avatar" />
+        <v-img :src="modelValue?.repo?.owner?.avatar || defaultAvatar" alt="Avatar" />
       </v-avatar>
       <h3 class="font-weight-bold text-truncate">
-        <router-link v-if="analysis?.status === 'completed'" :to="`/repo/${analysis?.id}`" class="analysis-link">
-          {{ analysis?.name || 'N/A' }}
+        <router-link v-if="modelValue?.status === 'completed'" :to="`/repo/${modelValue?.id}`" class="analysis-link">
+          {{ modelValue?.name || 'N/A' }}
         </router-link>
         <span v-else>
-          {{ analysis?.name || 'N/A' }}
+          {{ modelValue?.name || 'N/A' }}
         </span>
       </h3>
       <v-spacer />
-      <span class="status-badge" :class="`bg-${getAnalysisStatusColor(analysis?.status)}`">
-        {{ $t(analysis?.status) }}
+      <span class="status-badge" :class="`bg-${getAnalysisStatusColor(modelValue?.status)}`">
+        {{ $t(modelValue?.status) }}
       </span>
     </div>
 
     <p class="description mb-2">
-      {{ analysis?.repo?.description || 'No description available' }}
+      {{ modelValue?.repo?.description || 'No description available' }}
     </p>
 
     <v-divider class="mb-4" />
 
-    <div v-if="analysis?.repo" class="mb-4" style="font-size: 0.75rem">
+    <div v-if="modelValue?.repo" class="mb-4" style="font-size: 0.75rem">
       <div class="d-flex justify-space-between mb-1">
         <span class="font-weight-bold">{{ $t('creation_date') }}:</span>
-        <span>{{ formatDate(analysis?.createdAt) }}</span>
+        <span>{{ formatDate(modelValue?.createdAt) }}</span>
       </div>
       <div class="d-flex justify-space-between">
         <span class="font-weight-bold">{{ $t('last_update') }}:</span>
-        <span>{{ formatDate(analysis?.repo?.lastUpdatedAt) }}</span>
+        <span>{{ formatDate(modelValue?.repo?.lastUpdatedAt) }}</span>
       </div>
     </div>
 
     <v-card-actions class="pa-0 align-end">
       <v-spacer />
       <v-btn
-        v-if="analysis?.status === 'completed'"
+        v-if="modelValue?.status === 'completed'"
         color="primary-on-surface"
         variant="flat"
         rounded="md"
-        :to="`/repo/${analysis?.id}`"
+        :to="`/repo/${modelValue?.id}`"
       >
         {{ $t('see_more') }}
       </v-btn>
@@ -55,7 +55,7 @@ import type { AnalysisSummaryPublic } from '@/client';
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
 
 const props = defineProps<{
-  analysis: AnalysisSummaryPublic;
+  modelValue: AnalysisSummaryPublic;
 }>();
 
 function getAnalysisStatusColor(status: string): string {

@@ -1,67 +1,78 @@
 <template>
   <page-view :header="repoTitle" :back="{ name: 'home' }">
+    <template #actions>
+      <three-dots-menu :model-value="MENU_ITEMS" />
+    </template>
     <div class="charts"></div>
-    <div class="container">
-      <h2>{{ $t('properties') }}</h2>
-      <div class="d-flex">
-        <file-tree
-          :model-value="fileTreeData"
-          v-model:selected="selectedTreeNodeIds"
-          @update:selected="onUpdateSelected"
-        />
-        <v-divider class="mx-8" vertical thickness="2px" color="secondary" opacity="100" />
-        <v-card class="pa-4 w-100">
-          <div class="d-flex align-center ga-4 mb-4">
-            <v-text-field
-              v-model="search"
-              class="bg-background rounded-lg"
-              density="compact"
-              variant="outlined"
-              placeholder="Search..."
-              :append-inner-icon="'mdi-magnify'"
-              hide-details
-              max-width="240"
-            />
-            <div class="d-flex ga-2">
-              <v-btn
-                v-for="level in LEVELS"
-                class="level-bubble"
-                :class="{ selected: selectedLevels.includes(level.value as Level) }"
-                :style="{ backgroundColor: getLevelColor(level.value as Level) }"
-                size="small"
-                density="comfortable"
-                rounded="circle"
-                @click="toggleLevel(level.value as Level)"
-              >
-                {{ level.label }}
-              </v-btn>
+    <generic-loader :model-value="loaderStatus">
+      <div class="container">
+        <h2>{{ $t('properties') }}</h2>
+        <section class="d-flex">
+          <file-tree
+            :model-value="fileTreeData"
+            v-model:selected="selectedTreeNodeIds"
+            @update:selected="onUpdateSelected"
+          />
+          <v-divider class="mx-8" vertical thickness="2px" color="secondary" opacity="100" />
+          <v-card class="pa-4 w-100">
+            <div class="d-flex align-center ga-4 mb-4">
+              <v-text-field
+                v-model="search"
+                class="bg-background rounded-lg"
+                density="compact"
+                variant="outlined"
+                placeholder="Search..."
+                :append-inner-icon="'mdi-magnify'"
+                hide-details
+                max-width="240"
+                min-width="240"
+              />
+              <div class="d-flex ga-2">
+                <v-btn
+                  v-for="level in LEVELS"
+                  class="level-bubble"
+                  :class="{ selected: selectedLevels.includes(level.value as Level) }"
+                  :style="{ backgroundColor: getLevelColor(level.value as Level) }"
+                  size="small"
+                  density="comfortable"
+                  rounded="circle"
+                  @click="toggleLevel(level.value as Level)"
+                >
+                  {{ level.label }}
+                </v-btn>
+              </div>
             </div>
-          </div>
-          <properties-table v-model="tableData" :levels="selectedLevels" :search="search" />
-        </v-card>
+            <properties-table v-model="tableData" :levels="selectedLevels" :search="search" />
+          </v-card>
+        </section>
       </div>
-    </div>
+    </generic-loader>
   </page-view>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
 import PropertiesTable from '@/components/repo/PropertiesTable.vue';
 import Enums from '@/utils/enums';
 import { getLevelColor, type TableDataItem } from '@/components/repo/utils';
-import { type AnalysisPublic, type AnalysisClassPublic, type AnalysisFilePublic, Level } from '@/client';
+import { type AnalysisPublic, type AnalysisClassPublic, type AnalysisFilePublic, ClassId, Level } from '@/client';
 import { getAnalysisDetail } from '@/client';
 import { useRoute } from 'vue-router';
 import { useClassLabel } from '@/composables/useClassLabel';
 import PageView from '@/components/PageView.vue';
+import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import GenericLoader from '@/components/GenericLoader.vue';
+import { LoadingStatus } from '@/types/loading';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const classLabel = useClassLabel();
 
 const LEVELS = Enums.buildList(Level);
 
 const route = useRoute();
 const analysisId = Number(route.params.id);
-const isLoading = ref<boolean>(false);
+const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const repoTitle = ref<string>('');
 const search = ref<string>('');
 const analysisData = ref<AnalysisPublic | undefined>(undefined);
@@ -70,6 +81,16 @@ const fileTreeData = ref<TreeNode[]>([]);
 const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
 
 const ID_PATH_MAP: Record<number, string> = {};
+
+const MENU_ITEMS: MenuProps[] = [
+  {
+    label: 'refresh_data',
+    icon: 'mdi-refresh',
+    onClick: async () => {
+      await loadData();
+    },
+  },
+];
 
 const tableData = computed<TableDataItem[]>(() => {
   const elements: AnalysisFilePublic[] = analysisData.value?.fileClasses ?? [];
@@ -91,7 +112,13 @@ const tableData = computed<TableDataItem[]>(() => {
       }
       return acc;
     }, [])
-    .filter(item => selectedLevels.value.includes(item.level));
+    .filter(item => {
+      if (!selectedLevels.value?.includes(item.level)) return false;
+
+      if (!search.value) return true;
+      const className = t(Enums.getLabel(ClassId, item.class)).toString().toLowerCase();
+      return className.includes(search.value.toLowerCase());
+    });
 });
 
 function isFileSelected(filePath: string): boolean {
@@ -165,15 +192,16 @@ function onUpdateSelected(value: number[] | 'all') {
 }
 
 async function loadData() {
-  isLoading.value = true;
+  loaderStatus.value = LoadingStatus.LOADING;
   const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId ?? 0 } });
   if (error) {
+    loaderStatus.value = LoadingStatus.ERROR;
     console.error('Error fetching repo data:', error);
     return;
   }
   analysisData.value = data;
   repoTitle.value = analysisData.value?.repo?.name || '';
-  isLoading.value = false;
+  loaderStatus.value = LoadingStatus.SUCCESS;
 }
 
 function clearIDPathMap() {

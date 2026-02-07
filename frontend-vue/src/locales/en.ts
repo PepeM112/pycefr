@@ -1,4 +1,5 @@
 export default {
+  analyses: 'Analyses',
   analysis_rules: {
     list_simple: 'List: Simple',
     list_nested: 'List: Nested',
@@ -95,16 +96,29 @@ export default {
   clear: 'Clear',
   commits: 'Commits',
   completed: 'Completed',
+  created_after: 'Created after',
+  created_before: 'Created before',
   creation_date: 'Creation date',
   disable_filtering_by_files: 'Disable filtering by files',
   enable_filtering_by_files: 'Enable filtering by files',
   english: 'English',
+  error: {
+    fetching: {
+      analyses: 'Error fetching analyses.',
+      summary: 'Error fetching summary.',
+    }
+  },
   failed: 'Failed',
+  filter: 'Filter',
   in_progress: 'In progress',
   instances: 'Instances',
   last_update: 'Last update',
   level: 'Level',
+  name: 'Name',
+  new_analysis: 'New Analysis',
+  owner: 'Owner',
   properties: 'Properties',
+  refresh_data: 'Refresh Data',
   see_more: 'See more',
   select_all: 'Select all',
   select_language: 'Select language',

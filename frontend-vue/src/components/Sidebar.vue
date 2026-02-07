@@ -29,6 +29,7 @@
     <v-divider v-if="showMenu" class="mb-2" style="opacity: 0.2"></v-divider>
     <v-list nav>
       <v-list-item to="/" prepend-icon="mdi-home" title="Home" class="text-white" />
+      <v-list-item to="/analyses" prepend-icon="mdi-chart-bar" title="Analyses" class="text-white" />
     </v-list>
 
     <template #append>

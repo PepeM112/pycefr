@@ -1,12 +1,13 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { RouteNames } from '@/router/route-names';
 import HomeView from '@/views/HomeView.vue';
-import RepoView from '@/views/RepoView.vue';
+import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'home', component: HomeView },
-    { path: '/repo/:id', name: 'repo-detail', component: RepoView },
+    { path: '/', name: RouteNames.HOME, component: HomeView },
+    { path: '/repo/:id', name: RouteNames.REPO_DETAIL, component: () => import('@/views/RepoView.vue') },
+    { path: '/analyses', name: RouteNames.ANALYSES, component: () => import('@/views/AnalysesView.vue') },
   ],
 });
 
