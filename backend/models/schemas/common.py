@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import Generic, List, TypeVar
+from typing import Dict, Generic, List, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, GetJsonSchemaHandler
 from pydantic.alias_generators import to_camel
+from pydantic_core import CoreSchema
 
 T = TypeVar("T")
 
@@ -11,14 +12,38 @@ class BaseSchema(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
 
 
-class Level(str, Enum):
-    UNKNOWN = "unknown"
-    A1 = "A1"
-    A2 = "A2"
-    B1 = "B1"
-    B2 = "B2"
-    C1 = "C1"
-    C2 = "C2"
+class NamedEnum(Enum):
+    """Base Enum que exporta nombres de variables a OpenAPI para Hey API."""
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> Dict[str, object]:
+        json_schema = handler(core_schema)
+
+        json_schema["x-enum-varnames"] = [e.name for e in cls]
+
+        return json_schema
+
+
+class NamedStrEnum(str, NamedEnum):
+    """Base para Enums de tipo String con nombres exportables."""
+
+    pass
+
+
+class NamedIntEnum(int, NamedEnum):
+    """Base para Enums de tipo Integer con nombres exportables."""
+
+    pass
+
+
+class Level(NamedIntEnum):
+    UNKNOWN = 0
+    A1 = 1
+    A2 = 2
+    B1 = 3
+    B2 = 4
+    C1 = 5
+    C2 = 6
 
 
 class Origin(str, Enum):
@@ -37,3 +62,14 @@ class Pagination(BaseSchema):
 class PaginatedResponse(BaseSchema, Generic[T]):
     pagination: Pagination
     elements: List[T]
+
+
+class SortDirection(NamedIntEnum):
+    UNKNOWN = 0
+    ASC = 1
+    DESC = 2
+
+
+class Sorting(BaseSchema, Generic[T]):
+    column: T
+    direction: SortDirection

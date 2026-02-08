@@ -5,9 +5,8 @@
     </template>
     <div class="charts"></div>
     <generic-loader :model-value="loaderStatus">
-      <div class="container">
-        <h2>{{ $t('properties') }}</h2>
-        <section class="d-flex">
+      <g-container title="properties">
+        <div class="d-flex">
           <file-tree
             :model-value="fileTreeData"
             v-model:selected="selectedTreeNodeIds"
@@ -44,8 +43,8 @@
             </div>
             <properties-table v-model="tableData" :levels="selectedLevels" :search="search" />
           </v-card>
-        </section>
-      </div>
+        </div>
+      </g-container>
     </generic-loader>
   </page-view>
 </template>
@@ -64,6 +63,7 @@ import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
 import { LoadingStatus } from '@/types/loading';
 import { useI18n } from 'vue-i18n';
+import GContainer from '@/components/GContainer.vue';
 
 const { t } = useI18n();
 const classLabel = useClassLabel();

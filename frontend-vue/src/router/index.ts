@@ -6,8 +6,8 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: RouteNames.HOME, component: HomeView },
-    { path: '/repo/:id', name: RouteNames.REPO_DETAIL, component: () => import('@/views/RepoView.vue') },
-    { path: '/analyses', name: RouteNames.ANALYSES, component: () => import('@/views/AnalysesView.vue') },
+    { path: '/repo/:id', name: RouteNames.ANALYSIS_DETAIL, component: () => import('@/views/AnalysisDetailsView.vue') },
+    { path: '/analyses', name: RouteNames.ANALYSIS_LIST, component: () => import('@/views/AnalysesView.vue') },
   ],
 });
 

@@ -12,7 +12,7 @@ import { onMounted, ref } from 'vue';
 import { listAnalysis } from '@/client';
 import type { AnalysisSummaryPublic } from '@/client';
 import PageView from '@/components/PageView.vue';
-import AnalysisCard from '@/components/AnalysisCard.vue';
+import AnalysisCard from '@/components/analysis/AnalysisCard.vue';
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
 

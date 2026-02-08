@@ -1,4 +1,5 @@
 export default {
+  actions: 'Actions',
   analyses: 'Analyses',
   analysis_rules: {
     list_simple: 'List: Simple',
@@ -92,6 +93,8 @@ export default {
     exception_assert: 'Exc: Assert',
     with_simple: 'With: Context Manager',
   },
+  apply: 'Apply',
+  cancel: 'Cancel',
   class: 'Class',
   clear: 'Clear',
   commits: 'Commits',
@@ -103,25 +106,41 @@ export default {
   enable_filtering_by_files: 'Enable filtering by files',
   english: 'English',
   error: {
+    creating: {
+      analysis: 'Error creating analysis.',
+    },
     fetching: {
       analyses: 'Error fetching analyses.',
       summary: 'Error fetching summary.',
-    }
+    },
   },
   failed: 'Failed',
+  field_required: 'This field is required',
   filter: 'Filter',
+  id: 'ID',
   in_progress: 'In progress',
+  invalid_email: 'Invalid email format',
+  invalid_url_format: 'Invalid URL format',
   instances: 'Instances',
   last_update: 'Last update',
   level: 'Level',
+  must_be_number: 'Must be a number',
   name: 'Name',
   new_analysis: 'New Analysis',
+  of_total: 'of {total}',
   owner: 'Owner',
   properties: 'Properties',
   refresh_data: 'Refresh Data',
   see_more: 'See more',
   select_all: 'Select all',
   select_language: 'Select language',
+  show: 'Show',
   spanish: 'Spanish',
+  status: 'Status',
+  success: {
+    creating: {
+      analysis: 'Analysis created successfully.',
+    },
+  },
   summary: 'Summary',
 };

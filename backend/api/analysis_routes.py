@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 
@@ -7,10 +8,11 @@ from backend.db import db_utils
 from backend.models.schemas.analysis import (
     AnalysisCreate,
     AnalysisPublic,
+    AnalysisSortColumn,
     AnalysisStatus,
     AnalysisSummaryPublic,
 )
-from backend.models.schemas.common import PaginatedResponse, Pagination
+from backend.models.schemas.common import PaginatedResponse, Pagination, SortDirection, Sorting
 from backend.services.analyzer.analyzer import Analyzer
 from backend.services.analyzer.github_manager import GitHubManager
 
@@ -23,9 +25,13 @@ router = APIRouter(prefix="/analyses", tags=["Analysis"])
 def list_analysis(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(10, ge=1, description="Number of items per page"),
+    sort_column: Annotated[AnalysisSortColumn, Query(description="Column to sort by")] = AnalysisSortColumn.ID,
+    sort_direction: Annotated[SortDirection, Query(description="Sort direction (ASC or DESC)")] = SortDirection.DESC,
 ) -> PaginatedResponse[AnalysisSummaryPublic]:
     try:
-        data, total = db_utils.get_analyses(page=page, per_page=per_page)
+        data, total = db_utils.get_analyses(
+            page=page, per_page=per_page, sorting=Sorting(column=sort_column, direction=sort_direction)
+        )
 
         return PaginatedResponse[AnalysisSummaryPublic](
             pagination=Pagination(page=page, per_page=per_page, total=total),

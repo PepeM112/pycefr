@@ -17,19 +17,6 @@
   opacity: 0;
 }
 
-.container {
-  position: relative;
-  background-color: rgb(var(--v-theme-surface));
-  color: rgb(var(--v-theme-on-surface));
-  border-radius: var(--border-radius);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  padding: 1.5rem;
-
-  h2 {
-    margin: 0 0 2rem;
-  }
-}
-
 .text-none {
   text-transform: none !important;
 }

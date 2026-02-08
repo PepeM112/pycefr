@@ -42,7 +42,7 @@
         color="primary-on-surface"
         variant="flat"
         rounded="md"
-        :to="`/repo/${modelValue?.id}`"
+        :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: modelValue.id } }"
       >
         {{ $t('see_more') }}
       </v-btn>
@@ -50,9 +50,10 @@
   </v-card>
 </template>
 <script setup lang="ts">
-import { formatDate } from '@/utils/utils';
-import type { AnalysisSummaryPublic } from '@/client';
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
+import type { AnalysisSummaryPublic } from '@/client';
+import { RouteNames } from '@/router/route-names';
+import { formatDate } from '@/utils/utils';
 
 const props = defineProps<{
   modelValue: AnalysisSummaryPublic;

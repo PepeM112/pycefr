@@ -1,7 +1,7 @@
 <template>
   <v-menu>
     <template #activator="{ props: menuProps }">
-      <v-btn v-bind="menuProps" icon="mdi-dots-vertical" color="transparent"/>
+      <v-btn v-bind="menuProps" icon="mdi-dots-vertical" density="comfortable" color="transparent" />
     </template>
     <v-list rounded="lg">
       <v-list-item

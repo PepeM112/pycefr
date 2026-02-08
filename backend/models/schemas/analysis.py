@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List
 
 from backend.models.schemas.class_model import ClassId
-from backend.models.schemas.common import BaseSchema, Origin
+from backend.models.schemas.common import BaseSchema, NamedIntEnum, Origin
 from backend.models.schemas.repo import RepoPublic, RepoSummaryPublic
 
 
@@ -11,6 +11,7 @@ class AnalysisStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    DELETED = "deleted"
 
 
 class AnalysisClassPublic(BaseSchema):
@@ -46,3 +47,11 @@ class AnalysisSummaryPublic(BaseSchema):
 
 class AnalysisCreate(BaseSchema):
     repo_url: str
+
+
+class AnalysisSortColumn(NamedIntEnum):
+    UNKNOWN = 0
+    ID = 1
+    NAME = 2
+    STATUS = 3
+    CREATED_AT = 4

@@ -1,5 +1,5 @@
 export enum RouteNames {
   HOME = 'home',
-  REPO_DETAIL = 'repo-detail',
-  ANALYSES = 'analyses',
+  ANALYSIS_DETAIL = 'analysis-detail',
+  ANALYSIS_LIST = 'analysis-list',
 }

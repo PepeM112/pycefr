@@ -8,11 +8,12 @@ from backend.models.schemas.analysis import (
     AnalysisClassPublic,
     AnalysisFilePublic,
     AnalysisPublic,
+    AnalysisSortColumn,
     AnalysisStatus,
     AnalysisSummaryPublic,
 )
 from backend.models.schemas.class_model import ClassId
-from backend.models.schemas.common import Origin
+from backend.models.schemas.common import Origin, SortDirection, Sorting
 from backend.models.schemas.repo import (
     GitHubContributorPublic,
     GitHubUserPublic,
@@ -38,20 +39,43 @@ def get_db_connection() -> sqlite3.Connection:
 # --- READ OPERATIONS ---
 
 
-def get_analyses(page: int, per_page: int) -> Tuple[List[AnalysisSummaryPublic], int]:
+def get_analyses(
+    page: int, per_page: int, sorting: Sorting[AnalysisSortColumn] | None = None
+) -> Tuple[List[AnalysisSummaryPublic], int]:
     offset = (page - 1) * per_page
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+
+        column_map = {
+            AnalysisSortColumn.ID: "id",
+            AnalysisSortColumn.NAME: "name",
+            AnalysisSortColumn.STATUS: "status",
+            AnalysisSortColumn.CREATED_AT: "created_at",
+        }
+
+        sort_column = column_map[AnalysisSortColumn.ID]
+        sort_dir = SortDirection.DESC.name
+
+        if sorting and sorting.column:
+            if sorting.column in column_map:
+                sort_column = column_map[sorting.column]
+                if sorting.direction in [SortDirection.ASC, SortDirection.DESC]:
+                    sort_dir = sorting.direction.name
+                else:
+                    sort_dir = "DESC"
+
         rows = cursor.execute(
-            """
+            f"""
             SELECT * FROM analyses
-            ORDER BY created_at DESC LIMIT ? OFFSET ?
+            WHERE status != 'deleted'
+            ORDER BY {sort_column} {sort_dir} LIMIT ? OFFSET ?
             """,
             (per_page, offset),
         ).fetchall()
 
-        total = cursor.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
+        total = cursor.execute("SELECT COUNT(*) FROM analyses WHERE status != 'deleted'").fetchone()[0]
+
         analyses: List[AnalysisSummaryPublic] = []
 
         for row in rows:
@@ -320,7 +344,6 @@ def delete_analysis(analysis_id: int) -> bool:
 
 
 def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
-
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
