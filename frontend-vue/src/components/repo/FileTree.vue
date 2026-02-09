@@ -65,6 +65,7 @@
       color="primary-on-surface"
       density="compact"
       :items="localModelValue"
+      :search="searchOptions.searchText"
       item-value="id"
       :selectable="searchOptions.allowFilterByFiles"
       :activatable="!searchOptions.allowFilterByFiles"

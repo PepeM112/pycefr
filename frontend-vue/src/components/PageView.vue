@@ -5,6 +5,8 @@
         <div class="d-flex align-center">
           <v-btn v-if="props.back" icon="mdi-arrow-left" variant="text" density="comfortable" @click="navigateBack()" />
           <h1 v-if="props.header">{{ props.header }}</h1>
+          <v-spacer />
+          <slot name="actions" />
         </div>
       </header>
     </slot>

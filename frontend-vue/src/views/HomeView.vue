@@ -2,7 +2,7 @@
   <page-view :header="$t('summary')">
     <v-row gutter="16">
       <v-col v-for="(analysis, index) in analysesData" :key="index" cols="12" sm="6" md="4">
-        <repo-summary :analysis="analysis" />
+        <analysis-card :modelValue="analysis" />
       </v-col>
     </v-row>
   </page-view>
@@ -10,22 +10,26 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { listAnalysis } from '@/client';
-import type { AnalysisSummaryPublic, Pagination } from '@/client';
+import type { AnalysisSummaryPublic } from '@/client';
 import PageView from '@/components/PageView.vue';
-import RepoSummary from '@/components/RepoSummary.vue';
+import AnalysisCard from '@/components/analysis/AnalysisCard.vue';
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
-const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 
+const PER_PAGE = 9;
 async function loadData() {
-  const { data, error } = await listAnalysis();
+  const { data, error } = await listAnalysis({
+    query: {
+      page: 1,
+      per_page: PER_PAGE,
+    },
+  });
 
   if (error) {
-    console.error('Error fetching repos data:', error);
+    console.error('error.fetching.analyses:', error);
     return;
   }
   analysesData.value = data.elements;
-  pagination.value = data.pagination;
 }
 
 onMounted(async () => {

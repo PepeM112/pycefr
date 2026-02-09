@@ -6,12 +6,16 @@ DROP TABLE IF EXISTS analyses;
 DROP TABLE IF EXISTS class_model;
 CREATE TABLE class_model (
     id INTEGER PRIMARY KEY,
-    level TEXT NOT NULL CHECK (level IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2'))
+    level INTEGER NOT NULL CHECK (
+        level BETWEEN 0 AND 6
+    )
 );
 CREATE TABLE analyses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed', 'failed')),
+    status TEXT NOT NULL CHECK (
+        status IN ('in_progress', 'completed', 'failed', 'deleted')
+    ),
     origin TEXT NOT NULL CHECK (origin IN ('USER', 'GITHUB', 'LOCAL', 'UNKNOWN')),
     repo_url TEXT,
     repo_name TEXT,

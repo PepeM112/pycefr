@@ -2,10 +2,10 @@ from enum import IntEnum
 
 from pydantic import BaseModel
 
-from backend.models.schemas.common import BaseSchema, Level
+from backend.models.schemas.common import BaseSchema, Level, NamedIntEnum
 
 
-class ClassId(IntEnum):
+class ClassId(NamedIntEnum):
     UNKNOWN = 0
     # --- List ---
     LIST_SIMPLE = 1

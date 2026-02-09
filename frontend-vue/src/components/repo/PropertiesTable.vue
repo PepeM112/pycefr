@@ -9,7 +9,7 @@
           :class="{ sortable: header.sort, 'text-center': header.value !== 'class' }"
           :style="{ whiteSpace: 'nowrap', width: header.width || 'auto' }"
         >
-          <span>{{ $t(header.text) }}</span>
+          <span class="font-weight-bold">{{ $t(header.text) }}</span>
           <v-btn v-if="header.sort" class="ml-2" density="compact" icon @click="sortColumn(header.value)">
             <v-icon size="20">{{ getSortIcon(header.value) }}</v-icon>
           </v-btn>
@@ -18,24 +18,24 @@
     </thead>
     <tbody>
       <tr v-for="(item, index) in displayedTableData" :key="index">
-        <td>{{ $t(Enums.getLabel(ClassId, item.class)) }}</td>
+        <td>{{ $t(`analysis_rules.${Enums.getLabel(ClassId, item.class).toLowerCase()}`) }}</td>
         <td>
           <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
-            {{ item.level }}
+            {{ $t(Enums.getLabel(Level, item.level)) }}
           </span>
         </td>
         <td class="text-center">{{ item.instances }}</td>
       </tr>
     </tbody>
   </v-table>
-  <pagination class="mt-4" v-model="pagination" />
+  <g-pagination class="mt-4" v-model="pagination" />
 </template>
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { type Header, getLevelColor, type Sorting, SortDirection, type TableDataItem } from '@/components/repo/utils';
-import Pagination, { type PaginationItem } from '@/components/repo/Pagination.vue';
-import { ClassId, type Level } from '@/client';
+import { ClassId, Level, type Pagination } from '@/client';
+import GPagination from '@/components/repo/GPagination.vue';
+import { getLevelColor, SortDirection, type Header, type Sorting, type TableDataItem } from '@/components/repo/utils';
 import Enums from '@/utils/enums';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
@@ -51,7 +51,7 @@ const emit = defineEmits<{
 }>();
 
 const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOWN });
-const pagination = ref<PaginationItem>({ page: 1, itemsPerPage: 10, total: 0 });
+const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 const localModelValue = defineModel<TableDataItem[]>('modelValue');
 
 const displayedTableData = computed<TableDataItem[]>(() => {
@@ -64,8 +64,6 @@ const displayedTableData = computed<TableDataItem[]>(() => {
         if (sortingColumn.value.direction === SortDirection.UNKNOWN || !sortingColumn.value.column) return 0;
 
         let comparison = 0;
-
-        console.log('Sorting by:', sortingColumn.value);
 
         if (sortingColumn.value.column === 'class') {
           const labelA = t(Enums.getLabel(ClassId, a.class));
@@ -84,10 +82,7 @@ const displayedTableData = computed<TableDataItem[]>(() => {
         return sortingColumn.value.direction === SortDirection.ASC ? comparison : -comparison;
       })
       // Pagination
-      .slice(
-        (pagination.value.page - 1) * pagination.value.itemsPerPage,
-        pagination.value.page * pagination.value.itemsPerPage
-      )
+      .slice((pagination.value.page - 1) * pagination.value.perPage, pagination.value.page * pagination.value.perPage)
   );
 });
 
@@ -110,7 +105,6 @@ function getSortIcon(column: string): string {
 }
 
 function sortColumn(column: string) {
-  console.log('Sorting by column:', column);
   if (sortingColumn.value.column === column) {
     sortingColumn.value.direction = (sortingColumn.value.direction + 1) % 3;
   } else {
