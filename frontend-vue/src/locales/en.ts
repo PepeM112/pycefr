@@ -99,9 +99,11 @@ export default {
   clear: 'Clear',
   commits: 'Commits',
   completed: 'Completed',
+  confirm_delete_analysis: 'Are you sure you want to delete this analysis?',
   created_after: 'Created after',
   created_before: 'Created before',
   creation_date: 'Creation date',
+  delete_analysis: 'Delete Analysis',
   disable_filtering_by_files: 'Disable filtering by files',
   enable_filtering_by_files: 'Enable filtering by files',
   english: 'English',
@@ -109,8 +111,12 @@ export default {
     creating: {
       analysis: 'Error creating analysis.',
     },
+    deleting: {
+      analysis: 'Error deleting analysis.',
+    },
     fetching: {
       analyses: 'Error fetching analyses.',
+      analysis_data: 'Error fetching analysis data.',
       summary: 'Error fetching summary.',
     },
   },
@@ -142,6 +148,9 @@ export default {
   success: {
     creating: {
       analysis: 'Analysis created successfully.',
+    },
+    deleting: {
+      analysis: 'Analysis deleted successfully.',
     },
   },
   summary: 'Summary',

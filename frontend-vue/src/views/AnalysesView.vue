@@ -21,19 +21,6 @@
         </v-card>
       </v-menu>
     </div>
-    <g-dialog-card
-      v-model="showAnalysisForm"
-      title="new_analysis"
-      width="400"
-      :disable-confirm="!isFormValid"
-      @confirm-pre="saveForm"
-    >
-      <v-form v-model="isFormValid">
-        <g-input label="Repository url" required>
-          <v-text-field v-model="newAnalysisName" :rules="[rules.required, rules.url]" />
-        </g-input>
-      </v-form>
-    </g-dialog-card>
     <g-container class="mb-4">
       <generic-loader :model-value="loadingStatus">
         <g-table :model-value="analysesData" :headers="headers" :pagination="pagination" v-model:sort="sorting">
@@ -54,15 +41,43 @@
               icon="mdi-eye-outline"
               :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
             />
+            <v-btn
+              density="comfortable"
+              icon="mdi-trash-can-outline"
+              color="error"
+              variant="text"
+              @click="analysisBeingDeleted = item.id"
+            />
           </template>
         </g-table>
       </generic-loader>
+      <g-dialog-card
+        v-model="showAnalysisForm"
+        title="new_analysis"
+        width="400"
+        :disable-confirm="!isFormValid"
+        @confirm-pre="saveForm"
+      >
+        <v-form v-model="isFormValid">
+          <g-input label="Repository url" required>
+            <v-text-field v-model="newAnalysisName" :rules="[rules.required, rules.url]" />
+          </g-input>
+        </v-form>
+      </g-dialog-card>
+      <g-dialog-card
+        :model-value="!!analysisBeingDeleted"
+        title="delete_analysis"
+        text="confirm_delete_analysis"
+        width="400"
+        @confirm-pre="() => removeAnalysis(analysisBeingDeleted)"
+        @close-pre="() => (analysisBeingDeleted = undefined)"
+      />
     </g-container>
   </page-view>
 </template>
 <script setup lang="ts">
 import { AnalysisSortColumn, type AnalysisSummaryPublic, type Pagination } from '@/client';
-import { createAnalysis, listAnalysis } from '@/client';
+import { createAnalysis, deleteAnalysis, listAnalysis } from '@/client';
 import { type FilterItem, type FilterValue, FilterType } from '@/components/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
@@ -91,6 +106,7 @@ const analysesData = ref<AnalysisSummaryPublic[]>([]);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 const filter = ref<FilterValue>({});
 const showAnalysisForm = ref<boolean>(false);
+const analysisBeingDeleted = ref<number | undefined>(undefined);
 const newAnalysisName = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
@@ -132,7 +148,7 @@ async function loadData() {
   if (error) {
     console.error('error.fetching.analyses:', error);
     snackbarStore.add({
-      text: 'error.fetching.summary',
+      text: 'error.fetching.analyses',
       color: 'error',
       icon: 'mdi-alert-circle-outline',
       closable: true,
@@ -144,6 +160,36 @@ async function loadData() {
   analysesData.value = data.elements;
   loadingStatus.value = analysesData.value.length === 0 ? LoadingStatus.EMPTY : LoadingStatus.IDLE;
   pagination.value = data.pagination;
+}
+
+async function removeAnalysis(id: number = 0) {
+  if (!id) return;
+
+  const { error } = await deleteAnalysis({
+    path: { analysis_id: id },
+  });
+
+  if (error) {
+    console.error('error.deleting.analysis:', error);
+    snackbarStore.add({
+      text: 'error.deleting.analysis',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
+    return;
+  }
+
+  snackbarStore.add({
+    text: 'success.deleting.analysis',
+    color: 'success',
+    icon: 'mdi-check-circle-outline',
+    closable: true,
+  });
+
+  analysisBeingDeleted.value = undefined;
+  analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
+  pagination.value.total -= 1;
 }
 
 async function saveForm() {
@@ -184,9 +230,12 @@ function getAnalysisStatusColor(status: string): string {
   }
 }
 
-watch(() => route.query, () => {
-  loadData();
-});
+watch(
+  () => route.query,
+  () => {
+    loadData();
+  }
+);
 
 onMounted(async () => {
   await loadData();

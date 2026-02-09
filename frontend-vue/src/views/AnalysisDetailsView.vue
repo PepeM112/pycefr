@@ -1,5 +1,5 @@
 <template>
-  <page-view :header="repoTitle" :back="{ name: 'home' }">
+  <page-view :header="analysisData?.repo?.name || $t('analysis')" :back="{ name: RouteNames.ANALYSIS_LIST }">
     <template #actions>
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
@@ -83,6 +83,7 @@ import GContainer from '@/components/GContainer.vue';
 import GTable from '@/components/GTable.vue';
 import { type TableHeader } from '@/types/table';
 import { useSortFilter } from '@/composables/useSortFilter';
+import { RouteNames } from '@/router/route-names';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -93,7 +94,7 @@ const LEVELS = Enums.buildList(Level);
 
 const analysisId = Number(route.params.id);
 const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
-const repoTitle = ref<string>('');
+const analysisTitle = ref<string>('');
 const search = ref<string>('');
 const analysisData = ref<AnalysisPublic | undefined>(undefined);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
@@ -246,11 +247,11 @@ async function loadData() {
   const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId ?? 0 } });
   if (error) {
     loaderStatus.value = LoadingStatus.ERROR;
-    console.error('Error fetching repo data:', error);
+    console.error('error.fetching.analysis_data:', error);
     return;
   }
   analysisData.value = data;
-  repoTitle.value = analysisData.value?.repo?.name || '';
+  analysisTitle.value = analysisData.value?.repo?.name || '';
   loaderStatus.value = LoadingStatus.IDLE;
 }
 

@@ -21,8 +21,12 @@
         </p>
       </v-card-title>
       <v-divider v-if="title" />
-      <v-card-text>
-        <slot />
+      <v-card-text class="px-4">
+        <slot>
+          <template v-if="text">
+            <p>{{ $t(text) }}</p>
+          </template>
+        </slot>
         <template v-if="confirmationKey">
           <v-divider class="my-2" />
           <p class="mb-2">
@@ -70,6 +74,7 @@ const props = withDefaults(
     height?: string;
     title?: string;
     subtitle?: string;
+    text?: string;
     confirmLabel?: string;
     cancelLabel?: string;
     confirmationKey?: string;
@@ -83,6 +88,7 @@ const props = withDefaults(
     height: 'auto',
     title: undefined,
     subtitle: undefined,
+    text: undefined,
     confirmLabel: 'apply',
     cancelLabel: 'cancel',
     confirmationKey: undefined,
