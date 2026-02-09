@@ -44,7 +44,6 @@ const localModel = computed<Pagination>({
 });
 
 const totalPages = computed<number>(() => {
-  console.log({ total: localModel.value.total, perPage: localModel.value.perPage });
   return Math.ceil(localModel.value.total / localModel.value.perPage);
 });
 

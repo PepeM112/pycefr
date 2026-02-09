@@ -2,6 +2,6 @@ export enum LoadingStatus {
   UNKNOWN,
   IDLE,
   LOADING,
-  SUCCESS,
+  EMPTY,
   ERROR,
 }

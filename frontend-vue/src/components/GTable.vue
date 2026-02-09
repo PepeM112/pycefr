@@ -2,23 +2,39 @@
   <v-table density="compact">
     <thead>
       <tr>
-        <th v-for="header in headers" :key="header.key" class="font-weight-bold" :style="{ width: header.width }">
+        <th
+          v-for="header in headers"
+          :key="header.key"
+          :class="`font-weight-bold text-no-wrap text-${header.align || 'start'}`"
+          :style="{ width: header.width }"
+        >
           <span class="font-weight-bold">{{ $t(header.label) }}</span>
-          <v-btn v-if="header.sortColumn" class="ml-2" density="compact" icon @click="sortColumn(header.key)">
-            <v-icon size="20">{{ getSortIcon(header.key) }}</v-icon>
+          <v-btn v-if="header.sortColumn" class="ml-2" density="compact" icon @click="handleSort(header.sortColumn)">
+            <v-icon size="20">{{ getSortIcon(header.sortColumn) }}</v-icon>
           </v-btn>
         </th>
-        <th v-if="$slots['actions']" class="font-weight-bold" style="width: 1px">{{ $t('actions') }}</th>
+        <th v-if="$slots['actions']" class="font-weight-bold" style="width: 1px">
+          {{ $t('actions') }}
+        </th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="(item, index) in localModel" :key="index">
         <td v-for="header in headers" :key="header.key">
-          <slot v-if="$slots[`item-${header.key}`]" :name="`item-${header.key}`" :item="item" />
-          <template v-else>{{ item[header.key] ?? '' }}</template>
+          <div
+            class="d-flex align-center"
+            :class="{
+              'justify-start': header.align === 'start',
+              'justify-center': header.align === 'center',
+              'justify-end': header.align === 'end',
+            }"
+          >
+            <slot v-if="$slots[`item-${header.key}`]" :name="`item-${header.key}`" :item="item" />
+            <template v-else>{{ item[header.key] ?? '' }}</template>
+          </div>
         </td>
         <td v-if="$slots['actions']">
-          <div class="d-flex justify-end">
+          <div class="d-flex justify-end align-center">
             <slot name="actions" :item="item" />
           </div>
         </td>
@@ -27,30 +43,29 @@
   </v-table>
   <g-pagination v-if="pagination" v-model="pagination" class="mt-4" />
 </template>
-<script setup lang="ts" generic="T extends Record<string, unknown>">
-import { ref, computed } from 'vue';
+
+<script setup lang="ts" generic="T extends Record<string, any>">
+import { computed } from 'vue';
 import { type Pagination, SortDirection } from '@/client';
 import GPagination from '@/components/repo/GPagination.vue';
-import { type Sorting, type SortFilter } from '@/composables/useSortFilter';
-
-type TableHeader = {
-  readonly label: string;
-  readonly key: string;
-  readonly width?: string;
-  readonly sortColumn?: number;
-};
+import { type Sorting } from '@/composables/useSortFilter';
+import { type TableHeader } from '@/types/table';
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: T[]): void;
+  (e: 'update:sort', value: Sorting): void;
 }>();
 
-const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOWN });
 const pagination = defineModel<Pagination>('pagination');
+const sort = defineModel<Sorting>('sort', {
+  default: () => ({ column: '', direction: SortDirection.UNKNOWN }),
+});
+
 const props = withDefaults(
   defineProps<{
     modelValue: T[];
     headers: TableHeader[];
-    sortFilter?: SortFilter;
+    pagination?: Pagination;
   }>(),
   {
     modelValue: () => [],
@@ -71,23 +86,15 @@ const localModel = computed<T[]>({
   },
 });
 
-function getSortIcon(column: string): string {
-  if (sortingColumn.value.column !== column) return 'mdi-swap-vertical';
-  switch (sortingColumn.value.direction) {
-    case SortDirection.ASC:
-      return 'mdi-arrow-up-thin';
-    case SortDirection.DESC:
-      return 'mdi-arrow-down-thin';
-    default:
-      return 'mdi-swap-vertical';
-  }
+function handleSort(column: string | number) {
+  sort.value = { column: String(column), direction: sort.value.direction };
 }
 
-function sortColumn(column: string) {
-  if (sortingColumn.value.column === column) {
-    sortingColumn.value.direction = (sortingColumn.value.direction + 1) % 3;
-  } else {
-    sortingColumn.value = { column: column, direction: SortDirection.ASC };
+function getSortIcon(column: number | string): string {
+  const colStr = String(column);
+  if (sort.value.column !== colStr || sort.value.direction === SortDirection.UNKNOWN) {
+    return 'mdi-swap-vertical';
   }
+  return sort.value.direction === SortDirection.ASC ? 'mdi-arrow-up-thin' : 'mdi-arrow-down-thin';
 }
 </script>

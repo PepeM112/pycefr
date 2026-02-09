@@ -35,28 +35,33 @@
       </v-form>
     </g-dialog-card>
     <g-container class="mb-4">
-      <g-table :model-value="analysesData" :headers="HEADERS" :pagination="pagination" :sort-filter="sortFilter">
-        <template #item-status="{ item }">
-          <span class="status-badge" :class="`bg-${getAnalysisStatusColor(item.status)}`">
-            {{ $t(item.status) }}
-          </span>
-        </template>
-        <template #item-created_at="{ item }">
-          <g-date :date="item.createdAt" />
-        </template>
-        <template #actions="{ item }">
-          <v-btn
-            density="comfortable"
-            icon="mdi-eye-outline"
-            :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
-          />
-        </template>
-      </g-table>
+      <generic-loader :model-value="loadingStatus">
+        <g-table :model-value="analysesData" :headers="headers" :pagination="pagination" v-model:sort="sorting">
+          <template #item-status="{ item }">
+            <span class="status-badge" :class="`bg-${getAnalysisStatusColor(item.status)}`">
+              {{ $t(item.status) }}
+            </span>
+          </template>
+          <template #item-created_at="{ item }">
+            <g-date :date="item.createdAt" />
+          </template>
+          <template #item-error_message="{ item }">
+            {{ item.errorMessage }}
+          </template>
+          <template #actions="{ item }">
+            <v-btn
+              density="comfortable"
+              icon="mdi-eye-outline"
+              :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+            />
+          </template>
+        </g-table>
+      </generic-loader>
     </g-container>
   </page-view>
 </template>
 <script setup lang="ts">
-import type { AnalysisSummaryPublic, Pagination } from '@/client';
+import { AnalysisSortColumn, type AnalysisSummaryPublic, type Pagination } from '@/client';
 import { createAnalysis, listAnalysis } from '@/client';
 import { type FilterItem, type FilterValue, FilterType } from '@/components/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
@@ -69,12 +74,17 @@ import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useRules } from '@/composables/useRules';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import GTable from '@/components/GTable.vue';
 import { useSortFilter } from '@/composables/useSortFilter';
+import { type TableHeader } from '@/types/table';
+import { useRoute } from 'vue-router';
+import GenericLoader from '@/components/GenericLoader.vue';
+import { LoadingStatus } from '@/types/loading';
 
+const route = useRoute();
 const rules = useRules();
-const sortFilter = useSortFilter();
+const sorting = useSortFilter();
 const snackbarStore = useSnackbarStore();
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
@@ -83,6 +93,7 @@ const filter = ref<FilterValue>({});
 const showAnalysisForm = ref<boolean>(false);
 const newAnalysisName = ref<string>('');
 const isFormValid = ref(false);
+const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 
 const FILTER_LIST: FilterItem[] = [
   { label: 'name', type: FilterType.MULTIPLE_TEXT, key: 'name' },
@@ -99,18 +110,22 @@ const MENU_ITEMS: MenuProps[] = [
   },
 ];
 
-const HEADERS = [
-  { label: 'id', key: 'id', width: '1px' },
-  { label: 'name', key: 'name' },
-  { label: 'status', key: 'status' },
-  { label: 'creation_date', key: 'created_at' },
+const headers: TableHeader[] = [
+  { label: 'id', key: 'id', width: '1px', sortColumn: AnalysisSortColumn.ID },
+  { label: 'name', key: 'name', sortColumn: AnalysisSortColumn.NAME },
+  { label: 'creation_date', key: 'created_at', sortColumn: AnalysisSortColumn.CREATED_AT },
+  { label: 'status', key: 'status', sortColumn: AnalysisSortColumn.STATUS },
+  { label: 'error_message', key: 'error_message' },
 ];
 
 async function loadData() {
+  loadingStatus.value = LoadingStatus.LOADING;
   const { data, error } = await listAnalysis({
     query: {
       page: pagination.value.page,
       per_page: pagination.value.perPage,
+      sort_column: Number(sorting.value.column) as AnalysisSortColumn,
+      sort_direction: sorting.value.direction,
     },
   });
 
@@ -122,10 +137,12 @@ async function loadData() {
       icon: 'mdi-alert-circle-outline',
       closable: true,
     });
+    loadingStatus.value = LoadingStatus.ERROR;
     return;
   }
 
   analysesData.value = data.elements;
+  loadingStatus.value = analysesData.value.length === 0 ? LoadingStatus.EMPTY : LoadingStatus.IDLE;
   pagination.value = data.pagination;
 }
 
@@ -166,6 +183,10 @@ function getAnalysisStatusColor(status: string): string {
       return 'grey';
   }
 }
+
+watch(() => route.query, () => {
+  loadData();
+});
 
 onMounted(async () => {
   await loadData();

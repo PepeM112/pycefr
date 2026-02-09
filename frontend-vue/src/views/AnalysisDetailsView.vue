@@ -29,7 +29,8 @@
               <div class="d-flex ga-2">
                 <v-btn
                   v-for="level in LEVELS"
-                  class="level-bubble"
+                  :key="`level-${level.value}`"
+                  class="level-bubble-btn"
                   :class="{ selected: selectedLevels.includes(level.value as Level) }"
                   :style="{ backgroundColor: getLevelColor(level.value as Level) }"
                   size="small"
@@ -41,7 +42,16 @@
                 </v-btn>
               </div>
             </div>
-            <properties-table v-model="tableData" :levels="selectedLevels" :search="search" />
+            <g-table :model-value="tableData" :headers="headers" :pagination="pagination" v-model:sort="sort">
+              <template #item-class="{ item }">
+                {{ $t(`analysis_rules.${Enums.getLabel(ClassId, item.class).toLowerCase()}`) }}
+              </template>
+              <template #item-level="{ item }">
+                <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
+                  {{ $t(Enums.getLabel(Level, item.level)) }}
+                </span>
+              </template>
+            </g-table>
           </v-card>
         </div>
       </g-container>
@@ -51,11 +61,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
-import PropertiesTable from '@/components/repo/PropertiesTable.vue';
 import Enums from '@/utils/enums';
 import { getLevelColor, type TableDataItem } from '@/components/repo/utils';
-import { type AnalysisPublic, type AnalysisClassPublic, type AnalysisFilePublic, ClassId, Level } from '@/client';
-import { getAnalysisDetail } from '@/client';
+import {
+  type AnalysisPublic,
+  type AnalysisClassPublic,
+  type AnalysisFilePublic,
+  ClassId,
+  Level,
+  SortDirection,
+} from '@/client';
+import { getAnalysisDetail, type Pagination } from '@/client';
 import { useRoute } from 'vue-router';
 import { useClassLabel } from '@/composables/useClassLabel';
 import PageView from '@/components/PageView.vue';
@@ -64,18 +80,23 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import { LoadingStatus } from '@/types/loading';
 import { useI18n } from 'vue-i18n';
 import GContainer from '@/components/GContainer.vue';
+import GTable from '@/components/GTable.vue';
+import { type TableHeader } from '@/types/table';
+import { useSortFilter } from '@/composables/useSortFilter';
 
 const { t } = useI18n();
+const route = useRoute();
+const sort = useSortFilter();
 const classLabel = useClassLabel();
 
 const LEVELS = Enums.buildList(Level);
 
-const route = useRoute();
 const analysisId = Number(route.params.id);
 const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const repoTitle = ref<string>('');
 const search = ref<string>('');
 const analysisData = ref<AnalysisPublic | undefined>(undefined);
+const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
 const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
@@ -96,7 +117,7 @@ const tableData = computed<TableDataItem[]>(() => {
   const elements: AnalysisFilePublic[] = analysisData.value?.fileClasses ?? [];
   if (!elements || elements.length === 0) return [];
 
-  return elements
+  const processedElements = elements
     .filter(it => isFileSelected(it.filename))
     .flatMap(it => it.classes ?? [])
     .reduce((acc: TableDataItem[], item: AnalysisClassPublic) => {
@@ -118,8 +139,37 @@ const tableData = computed<TableDataItem[]>(() => {
       if (!search.value) return true;
       const className = t(Enums.getLabel(ClassId, item.class)).toString().toLowerCase();
       return className.includes(search.value.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (sort.value.direction === SortDirection.UNKNOWN || !sort.value.column) return 0;
+
+      let comparison = 0;
+
+      if (sort.value.column === 'class') {
+        const labelA = t(Enums.getLabel(ClassId, a.class));
+        const labelB = t(Enums.getLabel(ClassId, b.class));
+
+        comparison = labelA.localeCompare(labelB);
+      } else {
+        const column = sort.value.column as keyof TableDataItem;
+        const valA = a[column] ?? 0;
+        const valB = b[column] ?? 0;
+
+        if (valA < valB) comparison = -1;
+        else if (valA > valB) comparison = 1;
+      }
+
+      return sort.value.direction === SortDirection.ASC ? comparison : -comparison;
     });
+  pagination.value.total = processedElements.length;
+  return processedElements;
 });
+
+const headers: TableHeader[] = [
+  { label: 'class', key: 'class', sortColumn: 'class' },
+  { label: 'level', key: 'level', sortColumn: 'level', width: '1px', align: 'center' },
+  { label: 'instances', key: 'instances', sortColumn: 'instances', width: '1px', align: 'center' },
+];
 
 function isFileSelected(filePath: string): boolean {
   const elements = analysisData.value?.fileClasses;
@@ -201,7 +251,7 @@ async function loadData() {
   }
   analysisData.value = data;
   repoTitle.value = analysisData.value?.repo?.name || '';
-  loaderStatus.value = LoadingStatus.SUCCESS;
+  loaderStatus.value = LoadingStatus.IDLE;
 }
 
 function clearIDPathMap() {
@@ -215,7 +265,7 @@ onMounted(async () => {
 });
 </script>
 <style lang="scss" scoped>
-.level-bubble {
+.level-bubble-btn {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -240,5 +290,17 @@ onMounted(async () => {
       color: white;
     }
   }
+}
+
+td .level-bubble {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 0.75rem;
+  width: 2.25em;
+  height: 2.25em;
+  min-width: unset;
+  border-radius: 50%;
 }
 </style>

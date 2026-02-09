@@ -1,5 +1,5 @@
 import { SortDirection } from '@/client';
-import { ref, type Ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 export type Sorting = {
@@ -7,45 +7,43 @@ export type Sorting = {
   direction: SortDirection;
 };
 
-export type SortFilter = {
-  sortingColumn: Ref<Sorting>;
-  toggleSort: (column: string) => void;
-};
-
-export const useSortFilter = () => {
+export const useSortFilter = (onQueryChange?: () => void) => {
   const route = useRoute();
   const router = useRouter();
 
-  const sortingColumn = ref<Sorting>({ column: '', direction: SortDirection.UNKNOWN });
+  const sortFilter = computed<Sorting>({
+    get: () => ({
+      column: (route.query.s_c as string) || '',
+      direction: route.query.s_d ? (Number(route.query.s_d) as SortDirection) : SortDirection.UNKNOWN,
+    }),
+    set: (newVal: Sorting) => {
+      const isSameColumn = sortFilter.value.column === String(newVal.column);
+      let nextDir: SortDirection;
 
-  const toggleSort = (column: string) => {
-    if (sortingColumn.value.column === column) {
-      sortingColumn.value.direction =
-        sortingColumn.value.direction === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-    } else {
-      sortingColumn.value.column = column;
-      sortingColumn.value.direction = SortDirection.ASC;
-    }
-    updateQueryParams();
-  };
+      if (!isSameColumn) {
+        nextDir = SortDirection.ASC;
+      } else {
+        nextDir = (sortFilter.value.direction + 1) % 3;
+      }
 
-  const updateQueryParams = () => {
-    const query: Record<string, any> = {
-      ...route.query,
-      sort_column: sortingColumn.value.column,
-      sort_direction: sortingColumn.value.direction,
-    };
+      const query = { ...route.query };
 
-    if (sortingColumn.value.direction === SortDirection.UNKNOWN) {
-      delete query.sort_column;
-      delete query.sort_direction;
-    }
+      if (nextDir === SortDirection.UNKNOWN) {
+        delete query.s_c;
+        delete query.s_d;
+      } else {
+        query.s_c = String(newVal.column);
+        query.s_d = String(nextDir);
+      }
 
-    router.push({ query });
-  };
+      query.page = '1'; // Reset page to 1 when sorting
 
-  return {
-    sortingColumn,
-    toggleSort,
-  };
+      router.push({ query });
+      if (onQueryChange) {
+        onQueryChange();
+      }
+    },
+  });
+
+  return sortFilter;
 };

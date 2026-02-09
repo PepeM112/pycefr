@@ -18,10 +18,10 @@
     </thead>
     <tbody>
       <tr v-for="(item, index) in displayedTableData" :key="index">
-        <td>{{ $t(Enums.getLabel(ClassId, item.class)) }}</td>
+        <td>{{ $t(`analysis_rules.${Enums.getLabel(ClassId, item.class).toLowerCase()}`) }}</td>
         <td>
           <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
-            {{ item.level }}
+            {{ $t(Enums.getLabel(Level, item.level)) }}
           </span>
         </td>
         <td class="text-center">{{ item.instances }}</td>
@@ -31,12 +31,11 @@
   <g-pagination class="mt-4" v-model="pagination" />
 </template>
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import type { Pagination } from '@/client';
-import { type Header, getLevelColor, type Sorting, SortDirection, type TableDataItem } from '@/components/repo/utils';
+import { ClassId, Level, type Pagination } from '@/client';
 import GPagination from '@/components/repo/GPagination.vue';
-import { ClassId, type Level } from '@/client';
+import { getLevelColor, SortDirection, type Header, type Sorting, type TableDataItem } from '@/components/repo/utils';
 import Enums from '@/utils/enums';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
@@ -66,8 +65,6 @@ const displayedTableData = computed<TableDataItem[]>(() => {
 
         let comparison = 0;
 
-        console.log('Sorting by:', sortingColumn.value);
-
         if (sortingColumn.value.column === 'class') {
           const labelA = t(Enums.getLabel(ClassId, a.class));
           const labelB = t(Enums.getLabel(ClassId, b.class));
@@ -85,10 +82,7 @@ const displayedTableData = computed<TableDataItem[]>(() => {
         return sortingColumn.value.direction === SortDirection.ASC ? comparison : -comparison;
       })
       // Pagination
-      .slice(
-        (pagination.value.page - 1) * pagination.value.perPage,
-        pagination.value.page * pagination.value.perPage
-      )
+      .slice((pagination.value.page - 1) * pagination.value.perPage, pagination.value.page * pagination.value.perPage)
   );
 });
 

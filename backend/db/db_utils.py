@@ -336,7 +336,7 @@ def delete_analysis(analysis_id: int) -> bool:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,))
+        cursor.execute("UPDATE analyses SET status = 'deleted' WHERE id = ?", (analysis_id,))
         conn.commit()
         return cursor.rowcount > 0
     finally:

@@ -29,13 +29,9 @@ export default class Enums {
     return t ? t('unknown') : 'unknown';
   }
 
-  public static getValuesWithoutZero(enumType: any): (number | string)[] {
-    return Object.keys(enumType).filter(key => {
-      const value = enumType[key];
-      // Exclude keys and values '0' and 'UNKNOWN'
-      return (
-        key !== '0' && key !== '_0' && key !== 'UNKNOWN' && value !== 0 && String(value).toUpperCase() !== 'UNKNOWN'
-      );
+  public static getValuesWithoutZero(enumType: Record<string, string | number>): (number | string)[] {
+    return Object.values(enumType).filter(value => {
+      return typeof value === 'number' && value !== 0;
     });
   }
 
