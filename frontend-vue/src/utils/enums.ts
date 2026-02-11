@@ -30,9 +30,10 @@ export default class Enums {
   }
 
   public static getValuesWithoutZero(enumType: Record<string, string | number>): (number | string)[] {
-    return Object.values(enumType).filter(value => {
-      return typeof value === 'number' && value !== 0;
-    });
+    return Object.keys(enumType)
+      .filter(key => isNaN(Number(key)))
+      .map(key => enumType[key])
+      .filter(value => value !== 0);
   }
 
   public static buildList<T extends Record<string, any>>(

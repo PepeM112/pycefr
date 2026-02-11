@@ -44,7 +44,7 @@
             </div>
             <g-table :model-value="tableData" :headers="headers" :pagination="pagination" v-model:sort="sort">
               <template #item-class="{ item }">
-                {{ $t(`analysis_rules.${Enums.getLabel(ClassId, item.class).toLowerCase()}`) }}
+                {{ $t(`${Enums.getLabel(ClassId, item.class).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
                 <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
