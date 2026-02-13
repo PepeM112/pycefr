@@ -17,7 +17,7 @@
           </v-btn>
         </template>
         <v-card class="bg-primary" width="400">
-          <filter-table v-model:filter="filter" :filterList="FILTER_LIST" />
+          <filter-table v-model:filter="filter" :filterList="filterList" />
         </v-card>
       </v-menu>
     </div>
@@ -76,9 +76,9 @@
   </page-view>
 </template>
 <script setup lang="ts">
-import { AnalysisSortColumn, type AnalysisSummaryPublic, type Pagination } from '@/client';
+import { AnalysisSortColumn, AnalysisStatus, type AnalysisSummaryPublic, type Pagination } from '@/client';
 import { createAnalysis, deleteAnalysis, listAnalysis } from '@/client';
-import { type FilterItem, type FilterValue, FilterType } from '@/components/filter';
+import { type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
@@ -96,6 +96,7 @@ import { type TableHeader } from '@/types/table';
 import { useRoute } from 'vue-router';
 import GenericLoader from '@/components/GenericLoader.vue';
 import { LoadingStatus } from '@/types/loading';
+import Enums from '@/utils/enums';
 
 const route = useRoute();
 const rules = useRules();
@@ -111,11 +112,23 @@ const newAnalysisName = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 
-const FILTER_LIST: FilterItem[] = [
-  { label: 'name', type: FilterType.MULTIPLE_TEXT, key: 'name' },
-  { label: 'owner', type: FilterType.MULTIPLE_NUMBER, key: 'owner' },
-  { label: 'created_before', type: FilterType.DATE, key: 'created_before' },
-  { label: 'created_after', type: FilterType.DATE, key: 'created_after' },
+const statusList = Enums.buildList(AnalysisStatus);
+
+const filterList: FilterItem[] = [
+  { label: 'name', type: FilterType.MULTIPLE, key: 'name' },
+  { label: 'owner', type: FilterType.MULTIPLE, key: 'owner' },
+  {
+    label: 'status',
+    type: FilterType.MULTIPLE_SELECT,
+    key: 'status',
+    options: {
+      items: statusList,
+      returnObject: true,
+      itemTitle: 'label',
+      itemValue: 'value',
+    },
+  },
+  { label: 'dates', type: FilterType.DATE, key: 'dates' },
 ];
 
 const MENU_ITEMS: MenuProps[] = [
@@ -134,6 +147,16 @@ const headers: TableHeader[] = [
   { label: 'error_message', key: 'error_message' },
 ];
 
+watch(
+  () => filter.value,
+  () => {
+    /* TODO: Uncomment this 
+    loadData(); 
+    */
+  },
+  { deep: true }
+);
+
 async function loadData() {
   loadingStatus.value = LoadingStatus.LOADING;
   const { data, error } = await listAnalysis({
@@ -142,6 +165,12 @@ async function loadData() {
       per_page: pagination.value.perPage,
       sort_column: Number(sorting.value.column) as AnalysisSortColumn,
       sort_direction: sorting.value.direction,
+      // Filters
+      name: filter.value.name as string[],
+      owner: filter.value.owner as number[],
+      status: filter.value.status as AnalysisStatus[],
+      created_before: filter.value.created_before as string,
+      created_after: filter.value.created_after as string,
     },
   });
 

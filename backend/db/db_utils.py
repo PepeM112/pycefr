@@ -2,11 +2,12 @@ import logging
 import os
 import sqlite3
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from backend.models.schemas.analysis import (
     AnalysisClassPublic,
     AnalysisFilePublic,
+    AnalysisFilters,
     AnalysisPublic,
     AnalysisSortColumn,
     AnalysisStatus,
@@ -40,7 +41,7 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 def get_analyses(
-    page: int, per_page: int, sorting: Sorting[AnalysisSortColumn] | None = None
+    page: int, per_page: int, sorting: Sorting[AnalysisSortColumn] | None = None, filters: AnalysisFilters | None = None
 ) -> Tuple[List[AnalysisSummaryPublic], int]:
     offset = (page - 1) * per_page
     conn = get_db_connection()
@@ -65,16 +66,48 @@ def get_analyses(
                 else:
                     sort_dir = "DESC"
 
-        rows = cursor.execute(
-            f"""
-            SELECT * FROM analyses
-            WHERE status != 'deleted'
-            ORDER BY {sort_column} {sort_dir} LIMIT ? OFFSET ?
-            """,
-            (per_page, offset),
-        ).fetchall()
+        where_clauses = ["status != 'deleted'"]
+        params: List[Any] = []
 
-        total = cursor.execute("SELECT COUNT(*) FROM analyses WHERE status != 'deleted'").fetchone()[0]
+        if filters:
+            if filters.name:
+                name_conditions = " OR ".join(["name LIKE ?" for _ in filters.name])
+                where_clauses.append(f"({name_conditions})")
+                params.extend([f"%{n}%" for n in filters.name])
+
+            if filters.owner:
+                placeholders = ",".join("?" * len(filters.owner))
+                where_clauses.append(f"owner IN ({placeholders})")
+                params.extend(filters.owner)
+
+            if filters.status:
+                placeholders = ",".join("?" * len(filters.status))
+                where_clauses.append(f"status IN ({placeholders})")
+                params.extend(filters.status)
+
+            if filters.created_after:
+                where_clauses.append("created_at >= ?")
+                params.append(filters.created_after)
+
+            if filters.created_before:
+                where_clauses.append("created_at <= ?")
+                params.append(filters.created_before)
+
+        where_sql = " AND ".join(where_clauses)
+
+        query = f"""
+            SELECT * FROM analyses
+            WHERE {where_sql}
+            ORDER BY {sort_column} {sort_dir}
+            LIMIT ? OFFSET ?
+        """
+
+        query_params = params + [per_page, offset]
+
+        rows = cursor.execute(query, query_params).fetchall()
+
+        count_query = f"SELECT COUNT(*) FROM analyses WHERE {where_sql}"
+        total = cursor.execute(count_query, params).fetchone()[0]
 
         analyses: List[AnalysisSummaryPublic] = []
 

@@ -3,11 +3,10 @@
     <tbody>
       <tr v-for="filterItem in props.filterList" :key="filterItem.key">
         <th class="text-left" scope="row" style="width: 1px">{{ $t(filterItem.label) }}</th>
-        <td class="bg-background" style="width: 100%">
+        <td class="bg-background px-0" style="width: 100%">
           <filter-field
             v-model="filter[filterItem.key]"
             :type="filterItem.type"
-            :label="$t(filterItem.label)"
             :options="filterItem.options"
           />
         </td>
@@ -16,7 +15,7 @@
   </v-table>
 </template>
 <script setup lang="ts">
-import type { FilterItem, FilterValue } from '@/components/filter';
+import type { FilterItem, FilterValue } from '@/types/filter';
 import FilterField from './FilterField.vue';
 
 const filter = defineModel<FilterValue>('filter', { required: true });

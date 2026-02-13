@@ -55,3 +55,11 @@ class AnalysisSortColumn(NamedIntEnum):
     NAME = 2
     STATUS = 3
     CREATED_AT = 4
+
+
+class AnalysisFilters(BaseSchema):
+    name: List[str] | None = None
+    owner: List[int] | None = None
+    status: List[AnalysisStatus] | None = None
+    created_after: str | None = None
+    created_before: str | None = None

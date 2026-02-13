@@ -5,8 +5,8 @@ import router from '@/router';
 import { useLangStore } from '@/stores/langStore';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
-import { client } from './client/client.gen';
 import './assets/styles/globals.scss';
+import { client } from './client/client.gen';
 
 client.setConfig({
   baseUrl: 'http://localhost:8000',
