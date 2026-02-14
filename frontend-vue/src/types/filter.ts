@@ -1,4 +1,5 @@
 import type { Primitive } from 'vuetify/lib/util';
+import type { LocationQuery } from 'vue-router';
 
 export enum FilterType {
   SINGLE, // Single value, written by user
@@ -23,6 +24,8 @@ export type FilterItem = {
     type: K;
     query?: string;
     options?: FilterOptions;
+    serializer?: (value: any) => Record<string, any>;
+    deserializer?: (query: LocationQuery) => any;
   };
 }[FilterType];
 
@@ -32,15 +35,15 @@ export type FilterEntity = {
 };
 
 export type FilterOptions = {
-  items: Primitive[] | FilterEntity[];
-  number?: boolean;
-  returnObject?: boolean;
+  items?: Primitive[] | FilterEntity[];
+  number?: boolean; // Limit filter values to numbers only. Meant to be used with Primitives
+  returnObject?: boolean; // If true, model uses the full object, URL uses the value
   itemTitle?: string;
   itemValue?: string;
   sortItems?: (a: Primitive | FilterEntity, b: Primitive | FilterEntity) => number;
 };
 
-export type FilterValue = Record<string, string | number | string[] | number[] | undefined>;
+export type FilterValue = Record<string, Primitive | Primitive[] | FilterEntity | FilterEntity[] | DateFilterValue>;
 
 export type DateFilterValue = {
   from?: Date;

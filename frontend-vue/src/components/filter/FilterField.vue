@@ -15,6 +15,7 @@
     v-else-if="type === FilterType.MULTIPLE"
     class="bg-transparent w-100 px-4"
     v-model="arrayModel"
+    :type="props.options?.number ? 'number' : 'text'"
     multiple
     chips
     closable-chips
@@ -34,14 +35,13 @@
     v-else-if="isSelectType"
     class="bg-transparent w-100 px-4"
     v-model="selectModel"
-    :type="props.options?.number ? 'number' : 'text'"
     :items="sortedItems"
     :multiple="isMultiple"
     :chips="isMultiple"
     :closable-chips="isMultiple"
     :return-object="props.options?.returnObject"
     :item-title="(item: any) => $t(item[props.options?.itemTitle ?? 'title'])"
-    :item-value="props.options?.itemValue"
+    :item-value="props.options?.itemValue ?? 'value'"
     :custom-filter="trimmedStringFilter"
     clearable
     hide-details
@@ -57,11 +57,12 @@
 
 <script setup lang="ts">
 import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
-import type { DateFilterValue, FilterEntity, FilterOptions, FilterMapping } from '@/types/filter';
+import type { DateFilterValue, FilterEntity, FilterMapping, FilterOptions } from '@/types/filter';
 import { FilterType } from '@/types/filter';
+import { isDateFilterValue, isFilterEntity, isPrimitiveValue } from '@/utils/filter';
 import { computed } from 'vue';
-import type { Primitive } from 'vuetify/lib/util';
 import { useI18n } from 'vue-i18n';
+import type { Primitive } from 'vuetify/lib/util';
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -139,21 +140,6 @@ const sortedItems = computed(() => {
 
 function trimmedStringFilter(value: string, query: string, _item?: any) {
   return value.toLowerCase().includes(query.trim().toLowerCase());
-}
-
-function isDateFilterValue(val: any): val is DateFilterValue {
-  return !!val && typeof val === 'object' && 'from' in val && 'to' in val;
-}
-
-function isPrimitiveValue(val: any): val is Primitive {
-  if (val === null) return true;
-
-  const type = typeof val;
-  return ['string', 'number', 'boolean', 'bigint', 'symbol'].includes(type);
-}
-
-function isFilterEntity(val: any): val is FilterEntity {
-  return !!val && typeof val === 'object' && typeof val.label === 'string' && isPrimitiveValue(val.value);
 }
 </script>
 

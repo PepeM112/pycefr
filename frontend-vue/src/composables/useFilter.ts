@@ -1,4 +1,4 @@
-import { watch, onMounted, type Ref, type ComputedRef } from 'vue';
+import { watch, type Ref, type ComputedRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuery } from './useQuery';
 import { useFetchOnQuery } from './useFetchOnQuery';
@@ -69,13 +69,8 @@ export function useFilters(
     filters.value = newFilters;
   };
 
-  watch(
-    filters,
-    () => {
-      syncToUrl();
-    },
-    { deep: true }
-  );
+  // Keep hydrate before useFetchOnQuery to ensure filters are in sync with URL on initial load
+  hydrateFromUrl();
 
   useFetchOnQuery(currentQuery, route.path, fetcher, {
     immediate: options.immediate ?? true,
@@ -83,9 +78,13 @@ export function useFilters(
     ignoreParams: options.ignoreParams,
   });
 
-  onMounted(() => {
-    hydrateFromUrl();
-  });
+  watch(
+    filters,
+    () => {
+      syncToUrl();
+    },
+    { deep: true }
+  );
 
   return {
     currentQuery,

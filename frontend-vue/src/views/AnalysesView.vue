@@ -200,7 +200,7 @@ async function loadData() {
       sort_direction: sorting.value.direction,
       // Filters
       name: filter.value.name as string[],
-      owner: filter.value.owner as number[],
+      owner: filter.value.owner as string[],
       status: filter.value.status as AnalysisStatus[],
       date_from: (filter.value.dates as DateFilterValue)?.from,
       date_to: (filter.value.dates as DateFilterValue)?.to,

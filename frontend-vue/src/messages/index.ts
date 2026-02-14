@@ -1,6 +1,7 @@
 import { AnalysisStatus, ClassId } from '@/client';
+import { BooleanValue } from '@/types/common';
 
-type Enum = typeof AnalysisStatus | typeof ClassId;
+type Enum = typeof AnalysisStatus | typeof BooleanValue | typeof ClassId;
 
 interface EnumsLabelsItem<T extends Record<string | number, string | number> = any> {
   enum: T;
@@ -21,6 +22,13 @@ const enumsLabels: EnumsLabelsItem<Enum>[] = [
       [AnalysisStatus.COMPLETED]: 'completed',
       [AnalysisStatus.FAILED]: 'failed',
       [AnalysisStatus.DELETED]: 'deleted',
+    },
+  }),
+  createEnumsLabelsItem({
+    enum: BooleanValue,
+    labels: {
+      [BooleanValue.TRUE]: 'true',
+      [BooleanValue.FALSE]: 'false',
     },
   }),
   createEnumsLabelsItem({
