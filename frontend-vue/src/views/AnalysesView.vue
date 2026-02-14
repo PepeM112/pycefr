@@ -95,16 +95,15 @@ import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useRules } from '@/composables/useRules';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import GTable from '@/components/GTable.vue';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { type TableHeader } from '@/types/table';
-import { useRoute } from 'vue-router';
 import GenericLoader from '@/components/GenericLoader.vue';
 import { LoadingStatus } from '@/types/loading';
 import Enums from '@/utils/enums';
+import { useFilters } from '@/composables/useFilter';
 
-const route = useRoute();
 const rules = useRules();
 const sorting = useSortFilter();
 const snackbarStore = useSnackbarStore();
@@ -122,11 +121,17 @@ const ownersList = ref<FilterEntity[]>([]);
 const statusList = Enums.buildList(AnalysisStatus);
 
 const filterList = computed<FilterItem[]>(() => [
-  { label: 'name', type: FilterType.MULTIPLE, key: 'name' },
+  {
+    label: 'name',
+    type: FilterType.MULTIPLE,
+    key: 'name',
+    query: 'n',
+  },
   {
     label: 'owner',
     type: FilterType.MULTIPLE_SELECT,
     key: 'owner',
+    query: 'o',
     options: {
       items: ownersList.value,
       itemTitle: 'label',
@@ -137,14 +142,22 @@ const filterList = computed<FilterItem[]>(() => [
     label: 'status',
     type: FilterType.MULTIPLE_SELECT,
     key: 'status',
+    query: 's',
     options: {
       items: statusList,
       itemTitle: 'label',
       itemValue: 'value',
     },
   },
-  { label: 'dates', type: FilterType.DATE, key: 'dates' },
+  {
+    label: 'dates',
+    type: FilterType.DATE,
+    key: 'dates',
+    query: 'd',
+  },
 ]);
+
+useFilters(filter, filterList, loadData, { debounceWait: 500 });
 
 const MENU_ITEMS: MenuProps[] = [
   {
@@ -279,25 +292,8 @@ function getAnalysisStatusColor(status: string): string {
   }
 }
 
-watch(
-  () => filter.value,
-  () => {
-    loadData(); 
-   
-  },
-  { deep: true }
-);
-
-watch(
-  () => route.query,
-  () => {
-    loadData();
-  }
-);
-
 onMounted(async () => {
   await getOwnersList();
-  await loadData();
 });
 </script>
 <style lang="scss" scoped>
