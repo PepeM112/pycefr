@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+from datetime import datetime
 from typing import Annotated, List
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
@@ -31,15 +32,15 @@ def list_analysis(
     sort_direction: Annotated[SortDirection, Query(description="Sort direction (ASC or DESC)")] = SortDirection.DESC,
     # Filters
     name: Annotated[List[str] | None, Query(description="Filter by name (partial match, multiple values)")] = None,
-    owner: Annotated[List[int] | None, Query(description="Filter by owner ID (multiple values)")] = None,
+    owner: Annotated[List[str] | None, Query(description="Filter by owner ID (multiple values)")] = None,
     analysis_status: Annotated[
         List[AnalysisStatus] | None, Query(alias="status", description="Filter by status (multiple values)")
     ] = None,
-    created_after: Annotated[
-        str | None, Query(description="Filter analyses created after this date (ISO format)")
+    date_from: Annotated[
+        datetime | None, Query(description="Filter analyses created after this date (ISO format)")
     ] = None,
-    created_before: Annotated[
-        str | None, Query(description="Filter analyses created before this date (ISO format)")
+    date_to: Annotated[
+        datetime | None, Query(description="Filter analyses created before this date (ISO format)")
     ] = None,
 ) -> PaginatedResponse[AnalysisSummaryPublic]:
     try:
@@ -47,8 +48,8 @@ def list_analysis(
             name=name,
             owner=owner,
             status=analysis_status,
-            created_after=created_after,
-            created_before=created_before,
+            date_from=date_from,
+            date_to=date_to,
         )
 
         data, total = db_utils.get_analyses(

@@ -120,6 +120,7 @@ export default {
     fetching: {
       analyses: 'Error al obtener los análisis.',
       analysis_data: 'Error al obtener los datos del análisis.',
+      owners: 'Error al obtener los propietarios.',
       summary: 'Error al obtener el resumen.',
     },
   },

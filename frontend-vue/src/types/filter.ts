@@ -1,11 +1,30 @@
 import type { Primitive } from 'vuetify/lib/util';
 
-export type FilterItem = {
-  label: string;
-  key: string;
-  type: FilterType;
-  options?: FilterOptions;
+export enum FilterType {
+  SINGLE, // Single value, written by user
+  MULTIPLE, // Multiple values, written by user
+  SELECT, // Single value, selected from options
+  MULTIPLE_SELECT, // Multiple values, selected from options
+  DATE, // Date range, with "from" and "to" values
+}
+
+export type FilterMapping = {
+  [FilterType.SINGLE]: Primitive;
+  [FilterType.MULTIPLE]: Primitive[];
+  [FilterType.SELECT]: Primitive | FilterEntity;
+  [FilterType.MULTIPLE_SELECT]: Primitive[] | FilterEntity[];
+  [FilterType.DATE]: DateFilterValue;
 };
+
+export type FilterItem = {
+  [K in FilterType]: {
+    label: string;
+    key: string;
+    type: K;
+    query?: string;
+    options?: FilterOptions;
+  };
+}[FilterType];
 
 export type FilterEntity = {
   label: string;
@@ -27,11 +46,3 @@ export type DateFilterValue = {
   from?: Date;
   to?: Date;
 };
-
-export enum FilterType {
-  SINGLE,
-  MULTIPLE,
-  SELECT,
-  MULTIPLE_SELECT,
-  DATE,
-}

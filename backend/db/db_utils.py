@@ -14,7 +14,7 @@ from backend.models.schemas.analysis import (
     AnalysisSummaryPublic,
 )
 from backend.models.schemas.class_model import ClassId
-from backend.models.schemas.common import Origin, SortDirection, Sorting
+from backend.models.schemas.common import EntityLabelString, Origin, SortDirection, Sorting
 from backend.models.schemas.repo import (
     GitHubContributorPublic,
     GitHubUserPublic,
@@ -76,8 +76,8 @@ def get_analyses(
                 params.extend([f"%{n}%" for n in filters.name])
 
             if filters.owner:
-                placeholders = ",".join("?" * len(filters.owner))
-                where_clauses.append(f"owner IN ({placeholders})")
+                placeholders = ",".join(["?" for _ in filters.owner])
+                where_clauses.append(f"repo_owner_login IN ({placeholders})")
                 params.extend(filters.owner)
 
             if filters.status:
@@ -85,13 +85,13 @@ def get_analyses(
                 where_clauses.append(f"status IN ({placeholders})")
                 params.extend(filters.status)
 
-            if filters.created_after:
+            if filters.date_from:
                 where_clauses.append("created_at >= ?")
-                params.append(filters.created_after)
+                params.append(filters.date_from.isoformat())
 
-            if filters.created_before:
+            if filters.date_to:
                 where_clauses.append("created_at <= ?")
-                params.append(filters.created_before)
+                params.append(filters.date_to.isoformat())
 
         where_sql = " AND ".join(where_clauses)
 
@@ -388,6 +388,28 @@ def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
         logger.info(f"Analysis {analysis_id} marked as FAILED. Reason: {error_message}")
     except sqlite3.Error as e:
         logger.error(f"Database error while marking analysis {analysis_id} as failed: {e}")
+    finally:
+        conn.close()
+
+
+def get_unique_owners() -> List[EntityLabelString]:
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        rows = cursor.execute(
+            """
+            SELECT DISTINCT
+            repo_owner_login AS id,
+            COALESCE(repo_owner_name, repo_owner_login) AS label -- use login as fallback, since name is optional
+            FROM analyses
+            WHERE repo_owner_login IS NOT NULL
+            ORDER BY repo_owner_name;
+            """
+        ).fetchall()
+        return [EntityLabelString(id=row["id"], label=row["label"]) for row in rows]
+    except sqlite3.Error as e:
+        logger.error(f"Database error while fetching unique owners: {e}")
+        return []
     finally:
         conn.close()
 

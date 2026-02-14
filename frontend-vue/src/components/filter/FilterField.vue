@@ -57,59 +57,59 @@
 
 <script setup lang="ts">
 import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
-import type { DateFilterValue, FilterEntity, FilterOptions } from '@/types/filter';
+import type { DateFilterValue, FilterEntity, FilterOptions, FilterMapping } from '@/types/filter';
 import { FilterType } from '@/types/filter';
 import { computed } from 'vue';
 import type { Primitive } from 'vuetify/lib/util';
 import { useI18n } from 'vue-i18n';
-
-type modelTypes = Primitive | FilterEntity | Primitive[] | FilterEntity[] | undefined;
 
 const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
 
 const props = defineProps<{
-  modelValue: modelTypes | DateFilterValue;
+  modelValue: FilterMapping[FilterType] | undefined;
   type: FilterType;
   options?: FilterOptions;
 }>();
 
-const localModel = computed<modelTypes | DateFilterValue>({
+const localModel = computed({
   get: () => props.modelValue,
   set: val => emit('update:modelValue', val),
 });
 
-function remove(itemToRemove: any) {
-  if (Array.isArray(localModel.value)) {
-    // Si el modelo usa item-value (ej. IDs), comparamos el ID
-    const valueKey = props.options?.itemValue || 'id';
-    localModel.value = localModel.value.filter(i => {
-      const val = typeof i === 'object' ? i[valueKey] : i;
-      const target = typeof itemToRemove === 'object' ? itemToRemove[valueKey] : itemToRemove;
-      return val !== target;
-    });
-  }
-}
+const simpleModel = computed<Primitive | undefined>({
+  get: () => (isPrimitiveValue(props.modelValue) ? props.modelValue : undefined),
+  set: (val: Primitive | undefined) => (localModel.value = val),
+});
 
-const simpleModel = computed({
-  get: () => (Array.isArray(props.modelValue) ? undefined : props.modelValue),
+const arrayModel = computed<Primitive[] | undefined>({
+  get: () => {
+    if (!props.modelValue || isDateFilterValue(props.modelValue)) return undefined;
+    const aux = Array.isArray(props.modelValue) ? props.modelValue : [props.modelValue];
+    return aux.filter(val => isPrimitiveValue(val));
+  },
   set: val => (localModel.value = val),
 });
 
-const arrayModel = computed<string[], unknown[]>({
-  get: () => ensureStringArray(props.modelValue),
-  set: val => (localModel.value = ensureStringArray(val)),
-});
-
-// Array if isMultiple
-const selectModel = computed<modelTypes>({
+/*
+FilterEntity if return-object
+Array if multiple
+*/
+const selectModel = computed<Primitive | FilterEntity | Primitive[] | FilterEntity[] | undefined>({
   get: () => {
-    if (isDateFilterValue(props.modelValue)) return undefined;
-    if (isMultiple.value && !props.modelValue) return [];
-    return props.modelValue;
+    const val = props.modelValue;
+    if (!val || isDateFilterValue(val)) return undefined;
+
+    if (isMultiple.value) {
+      const arr = Array.isArray(val) ? val : [val];
+      return props.options?.returnObject ? arr.filter(isFilterEntity) : arr.filter(isPrimitiveValue);
+    }
+
+    if (props.options?.returnObject) return isFilterEntity(val) ? val : undefined;
+    return isPrimitiveValue(val) ? val : undefined;
   },
-  set: (val: modelTypes) => (localModel.value = val),
+  set: val => (localModel.value = val),
 });
 
 const dateModel = computed<DateFilterValue | undefined>({
@@ -137,20 +137,23 @@ const sortedItems = computed(() => {
   });
 });
 
-function ensureStringArray(val?: unknown[] | unknown | null): string[] {
-  if (!val) return [];
-
-  const strArray = Array.isArray(val) ? val.map(String) : [String(val)];
-
-  return [...new Set(strArray)];
-}
-
 function trimmedStringFilter(value: string, query: string, _item?: any) {
   return value.toLowerCase().includes(query.trim().toLowerCase());
 }
 
 function isDateFilterValue(val: any): val is DateFilterValue {
   return !!val && typeof val === 'object' && 'from' in val && 'to' in val;
+}
+
+function isPrimitiveValue(val: any): val is Primitive {
+  if (val === null) return true;
+
+  const type = typeof val;
+  return ['string', 'number', 'boolean', 'bigint', 'symbol'].includes(type);
+}
+
+function isFilterEntity(val: any): val is FilterEntity {
+  return !!val && typeof val === 'object' && typeof val.label === 'string' && isPrimitiveValue(val.value);
 }
 </script>
 

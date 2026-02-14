@@ -59,7 +59,7 @@ class AnalysisSortColumn(NamedIntEnum):
 
 class AnalysisFilters(BaseSchema):
     name: List[str] | None = None
-    owner: List[int] | None = None
+    owner: List[str] | None = None
     status: List[AnalysisStatus] | None = None
-    created_after: str | None = None
-    created_before: str | None = None
+    date_from: datetime | None = None
+    date_to: datetime | None = None

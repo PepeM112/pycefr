@@ -120,6 +120,7 @@ export default {
     fetching: {
       analyses: 'Error fetching analyses.',
       analysis_data: 'Error fetching analysis data.',
+      owners: 'Error fetching owners.',
       summary: 'Error fetching summary.',
     },
   },

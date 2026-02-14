@@ -76,9 +76,15 @@
   </page-view>
 </template>
 <script setup lang="ts">
-import { AnalysisSortColumn, AnalysisStatus, type AnalysisSummaryPublic, type Pagination } from '@/client';
-import { createAnalysis, deleteAnalysis, listAnalysis } from '@/client';
-import { type FilterItem, type FilterValue, FilterType } from '@/types/filter';
+import {
+  AnalysisSortColumn,
+  AnalysisStatus,
+  type AnalysisSummaryPublic,
+  type EntityLabelString,
+  type Pagination,
+} from '@/client';
+import { createAnalysis, deleteAnalysis, getOwners, listAnalysis } from '@/client';
+import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
@@ -89,7 +95,7 @@ import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useRules } from '@/composables/useRules';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import GTable from '@/components/GTable.vue';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { type TableHeader } from '@/types/table';
@@ -111,25 +117,34 @@ const analysisBeingDeleted = ref<number | undefined>(undefined);
 const newAnalysisName = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
+const ownersList = ref<FilterEntity[]>([]);
 
 const statusList = Enums.buildList(AnalysisStatus);
 
-const filterList: FilterItem[] = [
+const filterList = computed<FilterItem[]>(() => [
   { label: 'name', type: FilterType.MULTIPLE, key: 'name' },
-  { label: 'owner', type: FilterType.MULTIPLE, key: 'owner' },
+  {
+    label: 'owner',
+    type: FilterType.MULTIPLE_SELECT,
+    key: 'owner',
+    options: {
+      items: ownersList.value,
+      itemTitle: 'label',
+      itemValue: 'value',
+    },
+  },
   {
     label: 'status',
     type: FilterType.MULTIPLE_SELECT,
     key: 'status',
     options: {
       items: statusList,
-      returnObject: true,
       itemTitle: 'label',
       itemValue: 'value',
     },
   },
   { label: 'dates', type: FilterType.DATE, key: 'dates' },
-];
+]);
 
 const MENU_ITEMS: MenuProps[] = [
   {
@@ -147,15 +162,20 @@ const headers: TableHeader[] = [
   { label: 'error_message', key: 'error_message' },
 ];
 
-watch(
-  () => filter.value,
-  () => {
-    /* TODO: Uncomment this 
-    loadData(); 
-    */
-  },
-  { deep: true }
-);
+async function getOwnersList() {
+  const { data, error } = await getOwners();
+  if (error) {
+    console.error('error.fetching.owners:', error);
+    snackbarStore.add({
+      text: 'error.fetching.owners',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
+    return;
+  }
+  ownersList.value = data?.map((owner: EntityLabelString) => ({ label: owner.label, value: owner.id })) ?? [];
+}
 
 async function loadData() {
   loadingStatus.value = LoadingStatus.LOADING;
@@ -169,8 +189,8 @@ async function loadData() {
       name: filter.value.name as string[],
       owner: filter.value.owner as number[],
       status: filter.value.status as AnalysisStatus[],
-      created_before: filter.value.created_before as string,
-      created_after: filter.value.created_after as string,
+      date_from: (filter.value.dates as DateFilterValue)?.from,
+      date_to: (filter.value.dates as DateFilterValue)?.to,
     },
   });
 
@@ -260,6 +280,15 @@ function getAnalysisStatusColor(status: string): string {
 }
 
 watch(
+  () => filter.value,
+  () => {
+    loadData(); 
+   
+  },
+  { deep: true }
+);
+
+watch(
   () => route.query,
   () => {
     loadData();
@@ -267,6 +296,7 @@ watch(
 );
 
 onMounted(async () => {
+  await getOwnersList();
   await loadData();
 });
 </script>

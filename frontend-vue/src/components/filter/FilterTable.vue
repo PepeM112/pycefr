@@ -5,7 +5,7 @@
         <th class="text-left" scope="row" style="width: 1px">{{ $t(filterItem.label) }}</th>
         <td class="bg-background px-0" style="width: 100%">
           <filter-field
-            v-model="filter[filterItem.key]"
+            v-model="(filter[filterItem.key] as any)"
             :type="filterItem.type"
             :options="filterItem.options"
           />
