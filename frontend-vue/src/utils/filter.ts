@@ -44,10 +44,7 @@ export const serializeFilterValue = (filterItem: FilterItem, filterValue: Filter
   }
 
   // Selects with 'return-object' (FilterEntity | FilterEntity[]) => Primitive or Primitive[]
-  if (
-    (filterItem.type === FilterType.SELECT || filterItem.type === FilterType.MULTIPLE_SELECT) &&
-    filterItem.options?.returnObject
-  ) {
+  if (filterItem.options?.returnObject) {
     // This is FilterEntity or FilterEntity[] because the returnObject flag is set
     return serializeFilterEntity(value as FilterEntity | FilterEntity[], urlKey, filterItem.options.itemValue);
   }
@@ -75,7 +72,7 @@ export const deserializeFilterValue = (
   const queryValue = query[urlKey];
   if (queryValue === undefined || queryValue === null) return undefined;
 
-  return deserializeStandardValue(queryValue, filterItem.options);
+  return deserializeStandardValue(queryValue, filterItem);
 };
 
 // --- HELPERS (Internal) ---
@@ -141,86 +138,70 @@ function deserializeDateFilterValue(query: LocationQuery, key: string): DateFilt
   return result.from || result.to ? result : undefined;
 }
 
-function deserializeStandardValue(
-  queryValue: LocationQueryValue | LocationQueryValue[],
-  filterOptions: FilterOptions = {}
-): Primitive | Primitive[] | FilterEntity | FilterEntity[] | undefined {
-  const items = filterOptions.items;
-  const valueKey = filterOptions.itemValue || 'value';
+/**
+ * The "Brain" of deserialization.
+ * * Logic:
+ * 1. Normalize input to Array (handles Vue Router's string vs string[] inconsistency).
+ * 2. If 'items' are provided, use them as a dictionary to recover original types (Boolean, BigInt, etc.)
+ * or to find the original Entity object.
+ * 3. Fallback to raw string or manual Number casting if no items match.
+ * 4. Return either a single value or an array based on FilterType.
+ *
+ * Scenarios Matrix:
+ * | URL Query   | Filter Type      | Options              | Items List          | Result (UI Model)    | Logic Applied                |
+ * | :---------- | :--------------- | :------------------- | :------------------ | :------------------- | :--------------------------- |
+ * | "pepe"      | SINGLE           | {}                   | []                  | "pepe"               | Raw String                   |
+ * | "pepe"      | SELECT           | { returnObject: true }| [{l:'P', v:'pepe'}] | {l:'P', v:'pepe'}    | Entity Match                 |
+ * | "pepe"      | MULTIPLE         | {}                   | []                  | ["pepe"]             | Normalized to Array          |
+ * | "123"       | SINGLE           | { number: true }     | []                  | 123                  | Manual Number casting        |
+ * | "123"       | SELECT           | {}                   | [100, 123, 200]     | 123                  | Type recovered from Items    |
+ * | "true"      | SELECT           | {}                   | [true, false]       | true                 | Boolean recovered from Items |
+ * | "900"       | SELECT           | {}                   | [900n, 100n]        | 900n                 | BigInt recovered from Items  |
+ * | ["1", "2"]  | MULTIPLE         | { number: true }     | []                  | [1, 2]               | Array + Number casting       |
+ * | "1"         | MULTIPLE_SELECT  | { returnObject: true }| [{l:'A', v:1}]      | [{l:'A', v:1}]       | Single URL -> Array[Object]  |
+ * | "pepe"      | SELECT           | { returnObject: true }| [{l:'A', v:1}]      | "pepe"               | Mismatch -> Fallback to Raw  |
+ * | null        | Any              | {}                   | Any                 | undefined            | Filter ignored               |
+ */
+function deserializeStandardValue(queryValue: LocationQueryValue | LocationQueryValue[], item: FilterItem): any {
+  const { type, options = {} } = item;
+  const isMultiple = [FilterType.MULTIPLE, FilterType.MULTIPLE_SELECT].includes(type);
+  const valueKey = options.itemValue || 'value';
 
-  const findFilterEntityItem = (queryVal: LocationQueryValue): FilterEntity | undefined => {
-    if (queryVal === null || queryVal === undefined || !items) return undefined;
-    if (!items.every(isFilterEntity)) {
-      console.error(`deserializeStandardValue: Expected items to be FilterEntity[] but got a different type`);
-      return undefined;
-    }
-    return items.find(it => {
-      const entityVal = it[valueKey as keyof typeof it];
-      if (!entityVal) {
-        console.error(`deserializeStandardValue: Item is missing the value key '${valueKey}'`);
-        return undefined;
+  // 1. NORMALIZE: Always work with an array internally to avoid "single string" bugs
+  const rawValues = Array.isArray(queryValue) ? queryValue : [queryValue];
+  const cleanValues = rawValues.filter((v): v is string => v !== null);
+
+  // 2. MAPPING: Translate URL strings back to their original form
+  const mappedValues = cleanValues.map(urlVal => {
+    // Look for match in the items list (recovers Types and Objects)
+    if (options.items && options.items.length > 0) {
+      const match = options.items.find((it: any) => {
+        // If it's an object, check the dynamic valueKey.
+        // If it's a primitive, compare directly.
+        const actualValue = it !== null && typeof it === 'object' ? it[valueKey] : it;
+        return String(actualValue) === urlVal;
+      });
+
+      if (match !== undefined) {
+        // If match found, return the full object or the typed value
+        if (options.returnObject) return match;
+        return isFilterEntity(match) ? match[valueKey as keyof typeof match] : match;
       }
-      return String(entityVal) === queryVal;
-    });
-  };
-
-  const findPrimitiveItem = (queryVal: LocationQueryValue): Primitive | undefined => {
-    if (queryVal === null || queryVal === undefined || !items) return undefined;
-    if (!items.every(isPrimitiveValue)) {
-      console.error(`deserializeStandardValue: Expected items to be Primitive[] but got a different type`);
-      return undefined;
-    }
-    return items.find(it => String(it) === queryVal);
-  };
-
-  if (filterOptions.returnObject) {
-    // We expect FilterEntity or FilterEntity[]
-    if (!items) {
-      // Items are always required with FilterEntity
-      console.error(`deserializeStandardValue: returnObject is true but items are undefined`);
-      return undefined;
     }
 
-    if (!items.every(isFilterEntity)) {
-      console.error(`deserializeStandardValue: returnObject is true but some items are not FilterEntity`);
-      return undefined;
+    // Fallback: If no match or no items, apply basic casting if requested
+    if (options.number) {
+      const num = Number(urlVal);
+      return isNaN(num) ? urlVal : num;
     }
 
-    if (Array.isArray(queryValue)) {
-      const result = queryValue.map(findFilterEntityItem);
-      if (!result.every(isFilterEntity)) {
-        console.error(`deserializeStandardValue: Some query values did not match any FilterEntity`);
-        return undefined;
-      }
-      return result.length > 0 ? result : undefined;
-    }
+    return urlVal;
+  });
 
-    return findFilterEntityItem(queryValue) as FilterEntity | undefined;
-  } else {
-    // We expect Primitive or Primitive[]
-    if (items) {
-      // If items are provided, they must be Primitive to match the expected return type
-      if (!items.every(isPrimitiveValue)) {
-        console.error(`deserializeStandardValue: returnObject is false but some items are not Primitive`);
-        return undefined;
-      }
-
-      if (Array.isArray(queryValue)) {
-        const result = queryValue.map(findPrimitiveItem);
-        if (!result.every(isPrimitiveValue)) {
-          console.error(`deserializeStandardValue: Some query values did not match any Primitive`);
-          return undefined;
-        }
-        return result.length > 0 ? result : undefined;
-      }
-      return findPrimitiveItem(queryValue) as Primitive | undefined;
-    } else {
-      // No items provided, just return the raw query value as Primitive or Primitive[]
-      if (Array.isArray(queryValue)) {
-        const result = queryValue.filter(v => v !== null && v !== undefined);
-        return filterOptions?.number ? result.map(Number) : (result as Primitive[]);
-      }
-      return filterOptions?.number ? Number(queryValue) : (queryValue as Primitive);
-    }
+  // Return array for multiple types, otherwise return the first element
+  if (isMultiple) {
+    return mappedValues;
   }
+
+  return mappedValues.length > 0 ? mappedValues[0] : undefined;
 }
