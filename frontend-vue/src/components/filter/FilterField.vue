@@ -41,6 +41,8 @@
     :closable-chips="isMultiple"
     :return-object="props.options?.returnObject"
     :custom-filter="trimmedStringFilter"
+    item-title="label"
+    item-value="value"
     clearable
     hide-details
     hide-selected
@@ -57,7 +59,7 @@
 import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
 import type { DateFilterValue, FilterEntity, FilterMapping, FilterOptions } from '@/types/filter';
 import { FilterType } from '@/types/filter';
-import { isDateFilterValue, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
+import { isDateFilterValue, isFilterEntity, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Primitive } from 'vuetify/lib/util';
@@ -104,11 +106,23 @@ const selectModel = computed<Primitive | FilterEntity | Primitive[] | FilterEnti
       const arr = Array.isArray(val) ? val : [val];
       return props.options?.returnObject
         ? arr.map(item => normalizeToFilterEntity(item))
-        : arr.filter(isPrimitiveValue);
-    }
+        : arr
+            .map(item => (isPrimitiveValue(item) ? item : isFilterEntity(item) ? item.value : undefined))
+            .filter((v: Primitive | undefined) => v !== undefined);
+    } else {
+      if (Array.isArray(val)) {
+        console.error('Expected single value for non-multiple filter, but got array. Using first item.', val);
+      }
+      const singleVal = Array.isArray(val) ? val[0] : val;
 
-    if (props.options?.returnObject) return normalizeToFilterEntity(val);
-    return isPrimitiveValue(val) ? val : undefined;
+      if (props.options?.returnObject) return normalizeToFilterEntity(singleVal);
+      else if (isPrimitiveValue(singleVal)) return singleVal;
+      else if (isFilterEntity(singleVal)) return singleVal.value;
+      else {
+        console.error('Unexpected value type for select filter', val);
+        return undefined;
+      }
+    }
   },
   set: val => (localModel.value = val),
 });
@@ -122,11 +136,11 @@ const isMultiple = computed(() => [FilterType.MULTIPLE, FilterType.MULTIPLE_SELE
 
 const isSelectType = computed(() => [FilterType.SELECT, FilterType.MULTIPLE_SELECT].includes(props.type));
 
-const sortedItems = computed<Primitive[] | FilterEntity[]>(() => {
+const sortedItems = computed<FilterEntity[]>(() => {
   if (!props.options?.items) return [];
 
   if (props.options?.sortItems) {
-    return props.options.items.sort(props.options.sortItems);
+    return props.options.items.sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
   }
 
   const normalized = props.options.items.map(it => normalizeToFilterEntity(it));
