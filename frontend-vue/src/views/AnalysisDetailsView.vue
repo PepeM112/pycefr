@@ -3,8 +3,10 @@
     <template #actions>
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
-    <div class="charts"></div>
     <generic-loader :model-value="loaderStatus">
+      <g-container class="mb-8" title="insights">
+        <analysis-charts v-if="chartData && loaderStatus === LoadingStatus.IDLE" :data="chartData" :items="tableData" />
+      </g-container>
       <g-container title="properties">
         <div class="d-flex">
           <file-tree
@@ -62,7 +64,13 @@
 import { computed, onMounted, ref } from 'vue';
 import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
 import Enums from '@/utils/enums';
-import { getLevelColor, type TableDataItem } from '@/components/repo/utils';
+import {
+  getLevelColor,
+  type TableDataItem,
+  type ChartData,
+  type ChartCommitItem,
+  type ChartFileItem,
+} from '@/components/repo/utils';
 import {
   type AnalysisPublic,
   type AnalysisClassPublic,
@@ -84,6 +92,7 @@ import GTable from '@/components/GTable.vue';
 import { type TableHeader } from '@/types/table';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
+import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -113,6 +122,40 @@ const MENU_ITEMS: MenuProps[] = [
     },
   },
 ];
+
+const chartData = computed<ChartData | null>(() => {
+  if (!analysisData.value) return null;
+
+  const selectedPathsSet = new Set<string>();
+  selectedTreeNodeIds.value.forEach(id => {
+    const path = ID_PATH_MAP[id];
+    if (path) selectedPathsSet.add(path);
+  });
+
+  const hasSelection = selectedPathsSet.size > 0;
+
+  const files: ChartFileItem[] = (analysisData.value.fileClasses || [])
+    .filter(f => (hasSelection ? selectedPathsSet.has(f.filename) : true))
+    .map(f => ({
+      name: f.filename.split('/').pop() || f.filename,
+      fullPath: f.filename,
+      instances: f.classes?.reduce((acc, c) => acc + c.instances, 0) || 0,
+    }))
+    .sort((a, b) => b.instances - a.instances)
+    .slice(0, 10);
+
+  const commits: ChartCommitItem[] = (analysisData.value.repo?.commits || []).map(c => ({
+    hash: c.githubUser || c.username || 'unknown',
+    filesCount: c.totalFilesModified,
+    complexity: c.loc,
+  }));
+
+  return {
+    items: tableData.value,
+    files,
+    commits,
+  };
+});
 
 const tableData = computed<TableDataItem[]>(() => {
   const elements: AnalysisFilePublic[] = analysisData.value?.fileClasses ?? [];

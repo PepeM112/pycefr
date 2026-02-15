@@ -25,7 +25,7 @@
       <generic-loader :model-value="loadingStatus">
         <g-table :model-value="analysesData" :headers="headers" :pagination="pagination" v-model:sort="sorting">
           <template #item-status="{ item }">
-            <span class="status-badge" :class="`bg-${getAnalysisStatusColor(item.status)}`">
+            <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
               {{ $t(item.status) }}
             </span>
           </template>
@@ -98,33 +98,37 @@
 </template>
 <script setup lang="ts">
 import {
-  AnalysisSortColumn,
-  AnalysisStatus,
   type AnalysisSummaryPublic,
   type EntityLabelString,
   type Pagination,
+  AnalysisSortColumn,
+  AnalysisStatus,
+  createAnalysis, deleteAnalysis,
+  downloadAnalysis,
+  getOwners, listAnalysis,
   Origin,
+  uploadAnalysis,
 } from '@/client';
-import { createAnalysis, deleteAnalysis, getOwners, listAnalysis, uploadAnalysis, downloadAnalysis } from '@/client';
-import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
 import GDialogCard from '@/components/GDialogCard.vue';
+import GenericLoader from '@/components/GenericLoader.vue';
 import GInput from '@/components/GInput.vue';
+import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
+import { getStatusColor } from '@/components/repo/utils';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import { useFilters } from '@/composables/useFilter';
 import { useRules } from '@/composables/useRules';
+import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { computed, onMounted, ref } from 'vue';
-import GTable from '@/components/GTable.vue';
-import { useSortFilter } from '@/composables/useSortFilter';
-import { type TableHeader } from '@/types/table';
-import GenericLoader from '@/components/GenericLoader.vue';
+import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import { LoadingStatus } from '@/types/loading';
+import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
-import { useFilters } from '@/composables/useFilter';
+import { computed, onMounted, ref } from 'vue';
 
 const rules = useRules();
 const sorting = useSortFilter();
@@ -363,19 +367,6 @@ async function handleDownload(id: number, name: string) {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
-}
-
-function getAnalysisStatusColor(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'success';
-    case 'in_progress':
-      return 'warning';
-    case 'failed':
-      return 'error';
-    default:
-      return 'grey';
-  }
 }
 
 function getOriginIcon(origin: Origin): string {
