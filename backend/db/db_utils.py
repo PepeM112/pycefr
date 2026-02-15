@@ -414,6 +414,116 @@ def get_unique_owners() -> List[EntityLabelString]:
         conn.close()
 
 
+def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None:
+    """
+    Imports a full analysis from a validated object.
+    Generates new IDs to avoid collisions.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        status_to_save = analysis_data.status
+        if status_to_save == AnalysisStatus.DELETED:
+            status_to_save = AnalysisStatus.COMPLETED
+
+        cursor.execute(
+            """
+            INSERT INTO analyses (
+                name, status, origin, repo_url, repo_name, repo_description,
+                repo_owner_name, repo_owner_login, repo_owner_avatar, repo_owner_profile_url,
+                repo_created_at, repo_last_update, estimated_hours, error_message, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                analysis_data.name,
+                status_to_save.value,
+                Origin.LOCAL.value,
+                analysis_data.repo.url if analysis_data.repo else None,
+                analysis_data.repo.name if analysis_data.repo else None,
+                analysis_data.repo.description if analysis_data.repo else None,
+                analysis_data.repo.owner.name if analysis_data.repo and analysis_data.repo.owner else None,
+                analysis_data.repo.owner.github_user if analysis_data.repo and analysis_data.repo.owner else None,
+                analysis_data.repo.owner.avatar if analysis_data.repo and analysis_data.repo.owner else None,
+                analysis_data.repo.owner.profile_url if analysis_data.repo and analysis_data.repo.owner else None,
+                analysis_data.repo.created_at.isoformat()
+                if analysis_data.repo and analysis_data.repo.created_at
+                else None,
+                analysis_data.repo.last_updated_at.isoformat()
+                if analysis_data.repo and analysis_data.repo.last_updated_at
+                else None,
+                sum(c.estimated_hours for c in analysis_data.repo.commits) if analysis_data.repo else 0,
+                analysis_data.error_message,
+                datetime.now(timezone.utc).isoformat()
+            ),
+        )
+        new_analysis_id = cursor.lastrowid
+
+        if not new_analysis_id:
+            raise sqlite3.Error("Failed to get new ID for imported analysis")
+
+        if analysis_data.file_classes:
+            for file in analysis_data.file_classes:
+                cursor.execute(
+                    "INSERT INTO analysis_files (analysis_id, filename) VALUES (?, ?)", (new_analysis_id, file.filename)
+                )
+                new_file_id = cursor.lastrowid
+
+                if file.classes:
+                    file_class_data = [(new_file_id, cls.class_id.value, cls.instances) for cls in file.classes]
+                    cursor.executemany(
+                        "INSERT INTO analysis_file_classes (file_id, class_id, instances) VALUES (?, ?, ?)",
+                        file_class_data,
+                    )
+
+        if analysis_data.repo:
+            if analysis_data.repo.commits:
+                cursor.executemany(
+                    """
+                    INSERT INTO repo_commits
+                    (analysis_id, username, github_user, loc, commits, estimated_hours, total_files_modified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (
+                            new_analysis_id,
+                            c.username,
+                            c.github_user,
+                            c.loc,
+                            c.commits,
+                            c.estimated_hours,
+                            c.total_files_modified,
+                        )
+                        for c in analysis_data.repo.commits
+                    ],
+                )
+
+            if analysis_data.repo.contributors:
+                cursor.executemany(
+                    """
+                    INSERT INTO repo_contributors
+                    (analysis_id, name, github_user, avatar, profile_url, contributions)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (new_analysis_id, c.name, c.github_user, c.avatar, c.profile_url, c.contributions)
+                        for c in analysis_data.repo.contributors
+                    ],
+                )
+
+        conn.commit()
+
+        analysis_data.id = new_analysis_id
+        analysis_data.origin = Origin.LOCAL
+        return analysis_data
+
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error uploading analysis: {e}")
+        raise e
+    finally:
+        conn.close()
+
+
 # --- HELPERS ---
 
 

@@ -80,8 +80,8 @@ const props = withDefaults(
     confirmationKey?: string;
     disableConfirm?: boolean;
     // Will run BEFORE emitting events
-    onConfirmPre?: () => Promise<void>;
-    onClosePre?: () => Promise<void>;
+    onConfirmPre?: () => (Promise<void> | void);
+    onClosePre?: () => (Promise<void> | void);
   }>(),
   {
     width: '400px',

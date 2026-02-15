@@ -108,6 +108,8 @@ export default {
   deleted: 'Deleted',
   delete_analysis: 'Delete Analysis',
   disable_filtering_by_files: 'Disable filtering by files',
+  download: 'Download',
+  download_analysis: 'Download Analysis',
   enable_filtering_by_files: 'Enable filtering by files',
   english: 'English',
   error: {
@@ -117,11 +119,17 @@ export default {
     deleting: {
       analysis: 'Error deleting analysis.',
     },
+    downloading: {
+      analysis: 'Error downloading analysis.',
+    },
     fetching: {
       analyses: 'Error fetching analyses.',
       analysis_data: 'Error fetching analysis data.',
       owners: 'Error fetching owners.',
       summary: 'Error fetching summary.',
+    },
+    uploading: {
+      analysis: 'Error uploading analysis.',
     },
   },
   error_message: 'Error message',
@@ -133,13 +141,16 @@ export default {
   invalid_email: 'Invalid email format',
   invalid_url_format: 'Invalid URL format',
   instances: 'Instances',
+  github: 'GitHub',
   last_update: 'Last update',
   level: 'Level',
+  local: 'Local',
   must_be_number: 'Must be a number',
   name: 'Name',
   new_analysis: 'New Analysis',
   no_data: 'No data available',
   of_total: 'of {total}',
+  origin: 'Origin',
   owner: 'Owner',
   properties: 'Properties',
   refresh_data: 'Refresh Data',
@@ -158,4 +169,6 @@ export default {
     },
   },
   summary: 'Summary',
+  upload: 'Upload',
+  upload_analysis: 'Upload Analysis',
 };

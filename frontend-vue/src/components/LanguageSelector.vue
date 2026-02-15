@@ -1,7 +1,7 @@
 <template>
   <v-menu v-model="isMenuOpen" class="language-selector">
     <template #activator="{ props }">
-      <v-btn v-bind="props" :icon="`iconify:${langStore.currentFlag}`" variant="text" />
+      <v-btn v-bind="props" density="comfortable" :icon="`iconify:${langStore.currentFlag}`" variant="text" />
     </template>
 
     <v-list class="rounded-lg pa-0">
@@ -13,7 +13,7 @@
         density="comfortable"
       >
         <template #prepend>
-          <v-icon :icon="`iconify:${lang.flag}`" size="20" />
+          <v-icon :icon="`iconify:${lang.flag}`" size="20"/>
         </template>
         <v-list-item-title>{{ t(lang.label) }}</v-list-item-title>
       </v-list-item>

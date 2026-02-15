@@ -1,9 +1,12 @@
+import json
 import logging
 import sqlite3
 from datetime import datetime
 from typing import Annotated, List
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from backend.db import db_utils
 from backend.models.schemas.analysis import (
@@ -152,6 +155,78 @@ def delete_analysis(analysis_id: int) -> None:
         logger.error(f"Unexpected error in delete_analysis ID {analysis_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error deleting the analysis"
+        ) from e
+
+
+@router.post(
+    "/upload", response_model=AnalysisPublic, status_code=status.HTTP_201_CREATED, operation_id="upload_analysis"
+)
+async def upload_analysis(file: Annotated[UploadFile, File()]) -> AnalysisPublic:
+    """
+    Receives a JSON file, validates its structure against the AnalysisPublic schema,
+    and inserts it into the database generating new IDs.
+    """
+    if file.content_type != "application/json" and file.filename and not file.filename.endswith(".json"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file type. Only JSON files are allowed."
+        )
+
+    try:
+        content = await file.read()
+        json_data = json.loads(content)
+
+        analysis_model = AnalysisPublic(**json_data)
+
+        imported_analysis = db_utils.upload_analysis_data(analysis_model)
+
+        if not imported_analysis:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error uploading the analysis"
+            )
+
+        return imported_analysis
+
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.") from e
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Schema validation failed: {e.errors()}"
+        ) from e
+    except Exception as e:
+        logger.error(f"Error uploading analysis: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error during upload processing"
+        ) from e
+
+
+@router.get("/{analysis_id}/download", operation_id="download_analysis")
+def download_analysis(analysis_id: int) -> JSONResponse:
+    """
+    Devuelve el JSON completo de un análisis como archivo adjunto para descargar.
+    """
+    try:
+        analysis = db_utils.get_analysis_details(analysis_id)
+        if not analysis:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
+            )
+
+        # Usamos model_dump(mode='json') para que las fechas (datetime) se serialicen a strings ISO automáticamente
+        analysis_dict = analysis.model_dump(mode="json")
+
+        filename = f"analysis_{analysis.name}_{analysis.id}.json"
+
+        return JSONResponse(
+            content=analysis_dict,
+            headers={"Content-Disposition": f"attachment; filename={filename}", "Content-Type": "application/json"},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading analysis {analysis_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error generating download file"
         ) from e
 
 
