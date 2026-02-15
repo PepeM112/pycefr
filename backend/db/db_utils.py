@@ -453,7 +453,7 @@ def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None
                 else None,
                 sum(c.estimated_hours for c in analysis_data.repo.commits) if analysis_data.repo else 0,
                 analysis_data.error_message,
-                analysis_data.created_at.isoformat(),
+                datetime.now(timezone.utc).isoformat()
             ),
         )
         new_analysis_id = cursor.lastrowid
