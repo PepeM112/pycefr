@@ -1,9 +1,17 @@
 <template>
   <v-menu v-model="showMenu" :close-on-content-click="false">
     <template #activator="{ props: menuProps }">
-      <div v-bind="menuProps" class="d-flex align-center h-100 px-4" style="cursor: pointer">
-        <span>{{ dateFilterValueToString(localDate) }}</span>
-      </div>
+      <v-text-field
+        v-bind="menuProps"
+        :model-value="dateFilterValueToString(localDate)"
+        readonly
+        clearable
+        hide-details
+        variant="plain"
+        class="bg-transparent w-100 px-4"
+        clear-icon="mdi-close"
+        @click:clear="clearDate"
+      />
     </template>
     <v-sheet class="pa-2" rounded="lg">
       <vue-date-picker
@@ -72,6 +80,12 @@ function dateFilterValueToString(date: DateFilterValue | undefined): string {
   const to = date.to ? formatDate(date.to, 'DD-MM-YYYY HH:mm:ss') : '';
   return from && to ? `${from} - ${to}` : from || to;
 }
+
+function clearDate() {
+  localDate.value = undefined;
+  datePickerDate.value = undefined;
+  emit('update:modelValue', undefined);
+}
 </script>
 <style lang="scss" scoped>
 :deep(.dp__menu) {
@@ -79,5 +93,20 @@ function dateFilterValueToString(date: DateFilterValue | undefined): string {
 }
 :deep(.dp__theme_dark) {
   --dp-background-color: rgb(var(--v-theme-primary));
+}
+
+:deep(.v-field) {
+  display: flex;
+  align-items: center;
+
+  .v-field__append-inner,
+  .v-field__clearable,
+  .v-field__input {
+    padding: 0 !important;
+  }
+
+  .v-field__input {
+    font-size: 0.875rem;
+  }
 }
 </style>

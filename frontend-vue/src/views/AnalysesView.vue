@@ -4,7 +4,7 @@
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
     <div class="bg-primary mb-6 rounded-lg">
-      <v-menu :close-on-content-click="false">
+      <v-menu :close-on-content-click="false" eager>
         <template #activator="{ props: menuProps }">
           <v-btn
             v-bind="menuProps"

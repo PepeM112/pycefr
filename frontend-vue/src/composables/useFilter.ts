@@ -3,6 +3,7 @@ import { useRoute } from 'vue-router';
 import { useQuery } from './useQuery';
 import { useFetchOnQuery } from './useFetchOnQuery';
 import type { FilterItem, FilterValue } from '@/types/filter';
+import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
 
 interface FilterOptions {
   debounceWait?: number;
@@ -29,15 +30,11 @@ export function useFilters(
    * Maps filter values to their 'query' aliases defined in filterList.
    */
   const syncToUrl = () => {
-    const queryToUpdate: Record<string, any> = {};
+    let queryToUpdate: Record<string, any> = {};
 
     filterList.value.forEach(item => {
-      const value = filters.value[item.key];
-      // Only sync non-empty values
-      if (value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
-        const urlKey = item.query || item.key;
-        queryToUpdate[urlKey] = value;
-      }
+      const serialized = serializeFilterValue(item, filters.value);
+      queryToUpdate = { ...queryToUpdate, ...serialized };
     });
 
     updateQuery(queryToUpdate);
@@ -52,18 +49,9 @@ export function useFilters(
     const newFilters: FilterValue = { ...filters.value };
 
     filterList.value.forEach(item => {
-      const urlKey = item.query || item.key;
-      const urlValue = route.query[urlKey];
-
-      if (urlValue !== undefined && urlValue !== null) {
-        // Fix: Cast LocationQueryValue | LocationQueryValue[] to your expected types
-        if (Array.isArray(urlValue)) {
-          // Filter out null values from the array to satisfy string[] or number[]
-          newFilters[item.key] = urlValue.filter((v): v is string => v !== null);
-        } else {
-          newFilters[item.key] = urlValue as string;
-        }
-      }
+      const deserialized = deserializeFilterValue(item, route.query);
+      if (deserialized === undefined) return;
+      newFilters[item.key] = deserialized;
     });
 
     filters.value = newFilters;
