@@ -103,6 +103,9 @@ export default {
   created_before: 'Antes de',
   created_after: 'Después de',
   creation_date: 'Fecha de creación',
+  date: 'Fecha',
+  dates: 'Fechas',
+  deleted: 'Eliminado',
   delete_analysis: 'Eliminar Análisis',
   disable_filtering_by_files: 'Desactivar filtrado por archivos',
   enable_filtering_by_files: 'Activar filtrado por archivos',
@@ -117,6 +120,7 @@ export default {
     fetching: {
       analyses: 'Error al obtener los análisis.',
       analysis_data: 'Error al obtener los datos del análisis.',
+      owners: 'Error al obtener los propietarios.',
       summary: 'Error al obtener el resumen.',
     },
   },

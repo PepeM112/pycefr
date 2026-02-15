@@ -4,7 +4,7 @@
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
     <div class="bg-primary mb-6 rounded-lg">
-      <v-menu :close-on-content-click="false">
+      <v-menu :close-on-content-click="false" eager>
         <template #activator="{ props: menuProps }">
           <v-btn
             v-bind="menuProps"
@@ -17,7 +17,7 @@
           </v-btn>
         </template>
         <v-card class="bg-primary" width="400">
-          <filter-table v-model:filter="filter" :filterList="FILTER_LIST" />
+          <filter-table v-model:filter="filter" :filterList="filterList" />
         </v-card>
       </v-menu>
     </div>
@@ -76,9 +76,15 @@
   </page-view>
 </template>
 <script setup lang="ts">
-import { AnalysisSortColumn, type AnalysisSummaryPublic, type Pagination } from '@/client';
-import { createAnalysis, deleteAnalysis, listAnalysis } from '@/client';
-import { type FilterItem, type FilterValue, FilterType } from '@/components/filter';
+import {
+  AnalysisSortColumn,
+  AnalysisStatus,
+  type AnalysisSummaryPublic,
+  type EntityLabelString,
+  type Pagination,
+} from '@/client';
+import { createAnalysis, deleteAnalysis, getOwners, listAnalysis } from '@/client';
+import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
@@ -89,15 +95,15 @@ import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useRules } from '@/composables/useRules';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import GTable from '@/components/GTable.vue';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { type TableHeader } from '@/types/table';
-import { useRoute } from 'vue-router';
 import GenericLoader from '@/components/GenericLoader.vue';
 import { LoadingStatus } from '@/types/loading';
+import Enums from '@/utils/enums';
+import { useFilters } from '@/composables/useFilter';
 
-const route = useRoute();
 const rules = useRules();
 const sorting = useSortFilter();
 const snackbarStore = useSnackbarStore();
@@ -110,13 +116,44 @@ const analysisBeingDeleted = ref<number | undefined>(undefined);
 const newAnalysisName = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
+const ownersList = ref<FilterEntity[]>([]);
 
-const FILTER_LIST: FilterItem[] = [
-  { label: 'name', type: FilterType.MULTIPLE_TEXT, key: 'name' },
-  { label: 'owner', type: FilterType.MULTIPLE_NUMBER, key: 'owner' },
-  { label: 'created_before', type: FilterType.DATE, key: 'created_before' },
-  { label: 'created_after', type: FilterType.DATE, key: 'created_after' },
-];
+const statusList = Enums.buildList(AnalysisStatus);
+
+const filterList = computed<FilterItem[]>(() => [
+  {
+    label: 'name',
+    type: FilterType.MULTIPLE,
+    key: 'name',
+    query: 'n',
+  },
+  {
+    label: 'owner',
+    type: FilterType.MULTIPLE_SELECT,
+    key: 'owner',
+    query: 'o',
+    options: {
+      items: ownersList.value,
+    },
+  },
+  {
+    label: 'status',
+    type: FilterType.MULTIPLE_SELECT,
+    key: 'status',
+    query: 's',
+    options: {
+      items: statusList,
+    },
+  },
+  {
+    label: 'dates',
+    type: FilterType.DATE,
+    key: 'dates',
+    query: 'd',
+  },
+]);
+
+useFilters(filter, filterList, loadData, { debounceWait: 500 });
 
 const MENU_ITEMS: MenuProps[] = [
   {
@@ -134,6 +171,21 @@ const headers: TableHeader[] = [
   { label: 'error_message', key: 'error_message' },
 ];
 
+async function getOwnersList() {
+  const { data, error } = await getOwners();
+  if (error) {
+    console.error('error.fetching.owners:', error);
+    snackbarStore.add({
+      text: 'error.fetching.owners',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
+    return;
+  }
+  ownersList.value = data?.map((owner: EntityLabelString) => ({ label: owner.label, value: owner.id })) ?? [];
+}
+
 async function loadData() {
   loadingStatus.value = LoadingStatus.LOADING;
   const { data, error } = await listAnalysis({
@@ -142,6 +194,12 @@ async function loadData() {
       per_page: pagination.value.perPage,
       sort_column: Number(sorting.value.column) as AnalysisSortColumn,
       sort_direction: sorting.value.direction,
+      // Filters
+      name: filter.value.name as string[],
+      owner: filter.value.owner as string[],
+      status: filter.value.status as AnalysisStatus[],
+      date_from: (filter.value.dates as DateFilterValue)?.from,
+      date_to: (filter.value.dates as DateFilterValue)?.to,
     },
   });
 
@@ -230,15 +288,8 @@ function getAnalysisStatusColor(status: string): string {
   }
 }
 
-watch(
-  () => route.query,
-  () => {
-    loadData();
-  }
-);
-
 onMounted(async () => {
-  await loadData();
+  await getOwnersList();
 });
 </script>
 <style lang="scss" scoped>

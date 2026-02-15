@@ -1,12 +1,14 @@
 import logging
 import sqlite3
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, List
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 
 from backend.db import db_utils
 from backend.models.schemas.analysis import (
     AnalysisCreate,
+    AnalysisFilters,
     AnalysisPublic,
     AnalysisSortColumn,
     AnalysisStatus,
@@ -23,14 +25,35 @@ router = APIRouter(prefix="/analyses", tags=["Analysis"])
 
 @router.get("", response_model=PaginatedResponse[AnalysisSummaryPublic], operation_id="list_analysis")
 def list_analysis(
+    # Pagination and Sorting
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(10, ge=1, description="Number of items per page"),
     sort_column: Annotated[AnalysisSortColumn, Query(description="Column to sort by")] = AnalysisSortColumn.ID,
     sort_direction: Annotated[SortDirection, Query(description="Sort direction (ASC or DESC)")] = SortDirection.DESC,
+    # Filters
+    name: Annotated[List[str] | None, Query(description="Filter by name (partial match, multiple values)")] = None,
+    owner: Annotated[List[str] | None, Query(description="Filter by owner ID (multiple values)")] = None,
+    analysis_status: Annotated[
+        List[AnalysisStatus] | None, Query(alias="status", description="Filter by status (multiple values)")
+    ] = None,
+    date_from: Annotated[
+        datetime | None, Query(description="Filter analyses created after this date (ISO format)")
+    ] = None,
+    date_to: Annotated[
+        datetime | None, Query(description="Filter analyses created before this date (ISO format)")
+    ] = None,
 ) -> PaginatedResponse[AnalysisSummaryPublic]:
     try:
+        filters = AnalysisFilters(
+            name=name,
+            owner=owner,
+            status=analysis_status,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
         data, total = db_utils.get_analyses(
-            page=page, per_page=per_page, sorting=Sorting(column=sort_column, direction=sort_direction)
+            page=page, per_page=per_page, sorting=Sorting(column=sort_column, direction=sort_direction), filters=filters
         )
 
         return PaginatedResponse[AnalysisSummaryPublic](

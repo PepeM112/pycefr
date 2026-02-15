@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.logging import DefaultFormatter
 
-from backend.api import analysis_routes, labels
+from backend.api import analysis_routes, common, labels
 
 # --- LOGGING CONFIGURATION ---
 formatter = DefaultFormatter(fmt="%(levelprefix)-10s %(message)s", use_colors=True)
@@ -29,6 +29,7 @@ app.add_middleware(
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(analysis_routes.router)
+api_v1_router.include_router(common.router)
 api_v1_router.include_router(labels.router)
 
 app.include_router(api_v1_router)

@@ -103,6 +103,9 @@ export default {
   created_after: 'Created after',
   created_before: 'Created before',
   creation_date: 'Creation date',
+  date: 'Date',
+  dates: 'Dates',
+  deleted: 'Deleted',
   delete_analysis: 'Delete Analysis',
   disable_filtering_by_files: 'Disable filtering by files',
   enable_filtering_by_files: 'Enable filtering by files',
@@ -117,6 +120,7 @@ export default {
     fetching: {
       analyses: 'Error fetching analyses.',
       analysis_data: 'Error fetching analysis data.',
+      owners: 'Error fetching owners.',
       summary: 'Error fetching summary.',
     },
   },

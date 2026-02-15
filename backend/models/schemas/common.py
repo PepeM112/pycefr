@@ -1,7 +1,8 @@
+from datetime import datetime
 from enum import Enum
 from typing import Dict, Generic, List, TypeVar
 
-from pydantic import BaseModel, ConfigDict, GetJsonSchemaHandler
+from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler
 from pydantic.alias_generators import to_camel
 from pydantic_core import CoreSchema
 
@@ -73,3 +74,20 @@ class SortDirection(NamedIntEnum):
 class Sorting(BaseSchema, Generic[T]):
     column: T
     direction: SortDirection
+
+
+class DateRange(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: datetime | None = Field(None, alias="from")
+    to: datetime | None = None
+
+
+class EntityLabel(BaseSchema):
+    id: int
+    label: str
+
+
+class EntityLabelString(BaseSchema):
+    id: str
+    label: str
