@@ -1,11 +1,11 @@
-import { AnalysisStatus, ClassId } from '@/client';
+import { AnalysisStatus, ClassId, Origin } from '@/client';
 import { BooleanValue } from '@/types/common';
 
-type Enum = typeof AnalysisStatus | typeof BooleanValue | typeof ClassId;
+type Enum = typeof AnalysisStatus | typeof BooleanValue | typeof ClassId | typeof Origin;
 
 interface EnumsLabelsItem<T extends Record<string | number, string | number> = any> {
   enum: T;
-  labels: Record<Exclude<T[keyof T], 0>, string>;
+  labels: Record<Exclude<T[keyof T], 0 | 'UNKNOWN'>, string>;
 }
 
 function createEnumsLabelsItem<T extends Record<keyof T, string | number>>(
@@ -148,6 +148,14 @@ const enumsLabels: EnumsLabelsItem<Enum>[] = [
       [ClassId.EXCEPTION_ASSERT]: 'analysis_rules.exception_assert',
       // With
       [ClassId.WITH_SIMPLE]: 'analysis_rules.with_simple',
+    },
+  }),
+  createEnumsLabelsItem({
+    enum: Origin,
+    labels: {
+      [Origin.USER]: 'user',
+      [Origin.GITHUB]: 'github',
+      [Origin.LOCAL]: 'local',
     },
   }),
 ];

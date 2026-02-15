@@ -55,6 +55,7 @@ class AnalysisSortColumn(NamedIntEnum):
     NAME = 2
     STATUS = 3
     CREATED_AT = 4
+    ORIGIN = 5
 
 
 class AnalysisFilters(BaseSchema):

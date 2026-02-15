@@ -13,7 +13,7 @@
             <v-icon size="20">{{ getSortIcon(header.sortColumn) }}</v-icon>
           </v-btn>
         </th>
-        <th v-if="$slots['actions']" class="font-weight-bold" style="width: 1px">
+        <th v-if="$slots['actions']" class="font-weight-bold text-center" style="width: 1px">
           {{ $t('actions') }}
         </th>
       </tr>

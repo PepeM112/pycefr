@@ -1,7 +1,7 @@
 <template>
   <page-view :header="$t('analyses')">
     <template #actions>
-      <three-dots-menu :model-value="MENU_ITEMS" />
+      <three-dots-menu :model-value="menuItems" />
     </template>
     <div class="bg-primary mb-6 rounded-lg">
       <v-menu :close-on-content-click="false" eager>
@@ -16,7 +16,7 @@
             {{ $t('filter') }}
           </v-btn>
         </template>
-        <v-card class="bg-primary" width="400">
+        <v-card class="bg-primary" width="420">
           <filter-table v-model:filter="filter" :filterList="filterList" />
         </v-card>
       </v-menu>
@@ -28,6 +28,10 @@
             <span class="status-badge" :class="`bg-${getAnalysisStatusColor(item.status)}`">
               {{ $t(item.status) }}
             </span>
+          </template>
+          <template #item-origin="{ item }">
+            <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
+            {{ $t(Enums.getLabel(Origin, item.origin)) }}
           </template>
           <template #item-created_at="{ item }">
             <g-date :date="item.createdAt" />
@@ -41,6 +45,7 @@
               icon="mdi-eye-outline"
               :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
             />
+            <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
             <v-btn
               density="comfortable"
               icon="mdi-trash-can-outline"
@@ -52,7 +57,7 @@
         </g-table>
       </generic-loader>
       <g-dialog-card
-        v-model="showAnalysisForm"
+        v-model="showNewAnalysisDialog"
         title="new_analysis"
         width="400"
         :disable-confirm="!isFormValid"
@@ -63,6 +68,22 @@
             <v-text-field v-model="newAnalysisName" :rules="[rules.required, rules.url]" />
           </g-input>
         </v-form>
+      </g-dialog-card>
+      <g-dialog-card
+        v-model="showUploadDialog"
+        title="upload_analysis"
+        confirm-label="upload"
+        width="400"
+        show-size
+        :disableConfirm="fileToUpload.length === 0"
+        @confirm-pre="() => handleUpload()"
+        @close-pre="
+          () => {
+            fileToUpload = [];
+          }
+        "
+      >
+        <v-file-upload v-model="fileToUpload" accept="application/json" density="comfortable" rounded="lg" clearable />
       </g-dialog-card>
       <g-dialog-card
         :model-value="!!analysisBeingDeleted"
@@ -82,8 +103,9 @@ import {
   type AnalysisSummaryPublic,
   type EntityLabelString,
   type Pagination,
+  Origin,
 } from '@/client';
-import { createAnalysis, deleteAnalysis, getOwners, listAnalysis } from '@/client';
+import { createAnalysis, deleteAnalysis, getOwners, listAnalysis, uploadAnalysis, downloadAnalysis } from '@/client';
 import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
@@ -111,7 +133,10 @@ const snackbarStore = useSnackbarStore();
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 const filter = ref<FilterValue>({});
-const showAnalysisForm = ref<boolean>(false);
+const showNewAnalysisDialog = ref<boolean>(false);
+const showUploadDialog = ref<boolean>(false);
+const fileToUpload = ref<File[]>([]);
+const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
 const newAnalysisName = ref<string>('');
 const isFormValid = ref(false);
@@ -155,17 +180,23 @@ const filterList = computed<FilterItem[]>(() => [
 
 useFilters(filter, filterList, loadData, { debounceWait: 500 });
 
-const MENU_ITEMS: MenuProps[] = [
+const menuItems: MenuProps[] = [
   {
     label: 'new_analysis',
     icon: 'mdi-plus',
-    onClick: async () => (showAnalysisForm.value = true),
+    onClick: async () => (showNewAnalysisDialog.value = true),
+  },
+  {
+    label: 'upload_analysis',
+    icon: 'mdi-tray-arrow-up',
+    onClick: async () => (showUploadDialog.value = true),
   },
 ];
 
 const headers: TableHeader[] = [
   { label: 'id', key: 'id', width: '1px', sortColumn: AnalysisSortColumn.ID },
   { label: 'name', key: 'name', sortColumn: AnalysisSortColumn.NAME },
+  { label: 'origin', key: 'origin', sortColumn: AnalysisSortColumn.ORIGIN },
   { label: 'creation_date', key: 'created_at', sortColumn: AnalysisSortColumn.CREATED_AT },
   { label: 'status', key: 'status', sortColumn: AnalysisSortColumn.STATUS },
   { label: 'error_message', key: 'error_message' },
@@ -272,7 +303,66 @@ async function saveForm() {
     closable: true,
   });
   analysesData.value.unshift(data);
-  showAnalysisForm.value = false;
+  showNewAnalysisDialog.value = false;
+}
+
+async function handleUpload() {
+  if (!fileToUpload.value) return;
+
+  isUploading.value = true;
+
+  const { data, error } = await uploadAnalysis({
+    body: { file: fileToUpload.value[0] as File },
+  });
+
+  isUploading.value = false;
+
+  if (error) {
+    snackbarStore.add({
+      text: 'error.uploading.analysis',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+    });
+    return;
+  }
+
+  snackbarStore.add({
+    text: 'success.uploading.analysis',
+    color: 'success',
+    icon: 'mdi-check-circle-outline',
+  });
+
+  fileToUpload.value = [];
+  showUploadDialog.value = false;
+
+  if (data) analysesData.value.unshift(data);
+}
+
+async function handleDownload(id: number, name: string) {
+  const { data, error } = await downloadAnalysis({
+    path: { analysis_id: id },
+    parseAs: 'blob',
+  });
+
+  if (error || !data) {
+    snackbarStore.add({
+      text: 'error.downloading.analysis',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+    });
+    return;
+  }
+
+  const blob = data instanceof Blob ? data : new Blob([JSON.stringify(data)], { type: 'application/json' });
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `downloaded_${name}.json`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 function getAnalysisStatusColor(status: string): string {
@@ -285,6 +375,17 @@ function getAnalysisStatusColor(status: string): string {
       return 'error';
     default:
       return 'grey';
+  }
+}
+
+function getOriginIcon(origin: Origin): string {
+  switch (origin) {
+    case Origin.GITHUB:
+      return 'iconify:simple-icons:github';
+    case Origin.LOCAL:
+      return 'mdi-laptop';
+    default:
+      return '';
   }
 }
 

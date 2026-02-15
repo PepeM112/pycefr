@@ -3,6 +3,7 @@ import { h } from 'vue';
 import { createVuetify } from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
+import * as labsComponents from 'vuetify/labs/components';
 
 const savedTheme = localStorage.getItem('theme') || 'light';
 
@@ -16,6 +17,9 @@ export default createVuetify({
         component: (props: any) => h(Icon, { ...props }),
       },
     },
+  },
+  components: {
+    ...labsComponents,
   },
   defaults: {
     global: {
