@@ -74,6 +74,20 @@ describe('utils/filter.ts', () => {
         const from = new Date('2023-01-01');
         expect(serializeFilterValue(item, { date: { from } as any })).toEqual({});
       });
+
+      it('should serialize partial date ranges if keys exist but are null', () => {
+        const item = createItem({ key: 'date', type: FilterType.DATE });
+        const from = new Date('2023-01-01');
+
+        const result = serializeFilterValue(item, {
+          date: { from, to: null } as any,
+        });
+
+        expect(result).toEqual({
+          date_from: from.getTime(),
+          date_to: undefined,
+        });
+      });
     });
 
     describe('Entities and Objects (SELECT / MULTIPLE_SELECT)', () => {
@@ -82,17 +96,6 @@ describe('utils/filter.ts', () => {
         const item = createItem({ key: 'u', type: FilterType.SELECT, options: { returnObject: true } });
         const entity = { label: 'A', value: 1 };
         expect(serializeFilterValue(item, { u: entity } as any)).toEqual({ u: 1 });
-      });
-
-      it('should extract a custom property using "itemValue" option', () => {
-        // LOGIC: Use 'id' instead of 'value' if specified in options.
-        const item = createItem({
-          key: 'u',
-          type: FilterType.SELECT,
-          options: { returnObject: true, itemValue: 'id' },
-        });
-        const entity = { label: 'A', id: 99, value: 'ignore' };
-        expect(serializeFilterValue(item, { u: entity } as any)).toEqual({ u: 99 });
       });
 
       it('should serialize an array of entities into an array of values', () => {
@@ -137,6 +140,11 @@ describe('utils/filter.ts', () => {
         const item = createItem({ key: 'tags', type: FilterType.MULTIPLE });
         expect(deserializeFilterValue(item, { tags: 'one' })).toEqual(['one']);
       });
+
+      it('should filter out null values from a query array', () => {
+        const item = createItem({ key: 'tags', type: FilterType.MULTIPLE });
+        expect(deserializeFilterValue(item, { tags: ['one', null, 'two'] as any })).toEqual(['one', 'two']);
+      });
     });
 
     describe('Casting and Type Recovery', () => {
@@ -166,6 +174,12 @@ describe('utils/filter.ts', () => {
         const item = createItem({ key: 'nums', type: FilterType.MULTIPLE, options: { number: true } });
         expect(deserializeFilterValue(item, { nums: ['1', '2'] })).toEqual([1, 2]);
       });
+
+      it('should recover a Number type from items list match', () => {
+        const item = createItem({ key: 'id', options: { items: [100, 200] } });
+        // URL '200' (string) matches 200 (number) in items
+        expect(deserializeFilterValue(item, { id: '200' })).toBe(200);
+      });
     });
 
     describe('Object Reconstruction (returnObject)', () => {
@@ -177,15 +191,6 @@ describe('utils/filter.ts', () => {
           options: { returnObject: true, items: [obj] },
         });
         expect(deserializeFilterValue(item, { role: 'adm' })).toEqual(obj);
-      });
-
-      it('should find object using custom itemValue (e.g., code)', () => {
-        const obj = { label: 'A', code: 'A1' };
-        const item = createItem({
-          key: 'x',
-          options: { returnObject: true, itemValue: 'code', items: [obj as any] },
-        });
-        expect(deserializeFilterValue(item, { x: 'A1' })).toEqual(obj);
       });
 
       it('should return the raw value if no matching object is found in items', () => {
@@ -204,6 +209,15 @@ describe('utils/filter.ts', () => {
           options: { returnObject: true, items: [obj1] },
         });
         expect(deserializeFilterValue(item, { u: '1' })).toEqual([obj1]);
+      });
+
+      it('should return raw string on mismatch even if returnObject is true', () => {
+        const item = createItem({
+          key: 'role',
+          options: { returnObject: true, items: [{ label: 'Admin', value: 'admin' }] },
+        });
+        // URL value 'user' is not in items -> return 'user' (string)
+        expect(deserializeFilterValue(item, { role: 'user' })).toBe('user');
       });
     });
 

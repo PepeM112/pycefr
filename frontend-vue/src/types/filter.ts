@@ -38,8 +38,6 @@ export type FilterOptions = {
   items?: Primitive[] | FilterEntity[];
   number?: boolean; // Limit filter values to numbers only. Meant to be used with Primitives
   returnObject?: boolean; // If true, model uses the full object, URL uses the value
-  itemTitle?: string;
-  itemValue?: string;
   sortItems?: (a: Primitive | FilterEntity, b: Primitive | FilterEntity) => number;
 };
 

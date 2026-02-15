@@ -134,8 +134,6 @@ const filterList = computed<FilterItem[]>(() => [
     query: 'o',
     options: {
       items: ownersList.value,
-      itemTitle: 'label',
-      itemValue: 'value',
     },
   },
   {
@@ -145,8 +143,6 @@ const filterList = computed<FilterItem[]>(() => [
     query: 's',
     options: {
       items: statusList,
-      itemTitle: 'label',
-      itemValue: 'value',
     },
   },
   {

@@ -1,4 +1,4 @@
-import type { DateFilterValue, FilterEntity, FilterItem, FilterOptions, FilterValue } from '@/types/filter';
+import type { DateFilterValue, FilterEntity, FilterItem, FilterValue } from '@/types/filter';
 import { FilterType } from '@/types/filter';
 import type { LocationQuery, LocationQueryValue } from 'vue-router';
 import type { Primitive } from 'vuetify/lib/util';
@@ -21,6 +21,23 @@ export function isFilterEntity(val: any): val is FilterEntity {
 }
 
 // --- MAIN FUNCTIONS ---
+
+/**
+ * Normalizes any object into a FilterEntity based on provided options.
+ */
+export function normalizeToFilterEntity(
+  item: Primitive | Record<string, any>,
+  itemTitle: string = 'label',
+  itemValue: string = 'value'
+): FilterEntity {
+  if (isPrimitiveValue(item)) return { label: String(item), value: item };
+
+  return {
+    ...item,
+    label: item[itemTitle],
+    value: item[itemValue],
+  };
+}
 
 /**
  * Converts a specific filter value into a dictionary of URL parameters.
@@ -46,7 +63,7 @@ export const serializeFilterValue = (filterItem: FilterItem, filterValue: Filter
   // Selects with 'return-object' (FilterEntity | FilterEntity[]) => Primitive or Primitive[]
   if (filterItem.options?.returnObject) {
     // This is FilterEntity or FilterEntity[] because the returnObject flag is set
-    return serializeFilterEntity(value as FilterEntity | FilterEntity[], urlKey, filterItem.options.itemValue);
+    return serializeFilterEntity(value as FilterEntity | FilterEntity[], urlKey);
   }
 
   // Default Primitive
@@ -93,15 +110,14 @@ function serializeDateFilterValue(value: DateFilterValue, key: string): Record<s
 
 function serializeFilterEntity(
   value: FilterEntity | FilterEntity[],
-  key: string,
-  valueKey: string = 'value'
+  key: string
 ): Record<string, Primitive | Primitive[]> {
   if (Array.isArray(value) && value.every(isFilterEntity)) {
     // FilterEntity[] => Primitive[]
-    return { [key]: value.map(v => (typeof v === 'object' ? v[valueKey as keyof typeof v] : v)) };
+    return { [key]: value.map(v => (typeof v === 'object' ? v.value : v)) };
   } else if (isFilterEntity(value)) {
     // FilterEntity => Primitive
-    return { [key]: value[valueKey as keyof typeof value] };
+    return { [key]: value.value };
   } else {
     console.error(`serializeFilterEntity: Expected object or array, got ${typeof value}`);
     return {};
@@ -165,27 +181,24 @@ function deserializeDateFilterValue(query: LocationQuery, key: string): DateFilt
 function deserializeStandardValue(queryValue: LocationQueryValue | LocationQueryValue[], item: FilterItem): any {
   const { type, options = {} } = item;
   const isMultiple = [FilterType.MULTIPLE, FilterType.MULTIPLE_SELECT].includes(type);
-  const valueKey = options.itemValue || 'value';
 
-  // 1. NORMALIZE: Always work with an array internally to avoid "single string" bugs
+  // Always work with an array internally to avoid "single string" bugs
   const rawValues = Array.isArray(queryValue) ? queryValue : [queryValue];
   const cleanValues = rawValues.filter((v): v is string => v !== null);
 
-  // 2. MAPPING: Translate URL strings back to their original form
   const mappedValues = cleanValues.map(urlVal => {
     // Look for match in the items list (recovers Types and Objects)
     if (options.items && options.items.length > 0) {
-      const match = options.items.find((it: any) => {
-        // If it's an object, check the dynamic valueKey.
-        // If it's a primitive, compare directly.
-        const actualValue = it !== null && typeof it === 'object' ? it[valueKey] : it;
+      const match = options.items.find((it: Primitive | FilterEntity) => {
+        // Use the dynamic key for comparison
+        const actualValue = isFilterEntity(it) ? it.value : it;
         return String(actualValue) === urlVal;
       });
 
       if (match !== undefined) {
         // If match found, return the full object or the typed value
-        if (options.returnObject) return match;
-        return isFilterEntity(match) ? match[valueKey as keyof typeof match] : match;
+        if (options.returnObject) return normalizeToFilterEntity(match);
+        return isFilterEntity(match) ? match.value : match;
       }
     }
 

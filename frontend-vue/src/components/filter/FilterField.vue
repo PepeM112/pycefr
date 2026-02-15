@@ -40,8 +40,6 @@
     :chips="isMultiple"
     :closable-chips="isMultiple"
     :return-object="props.options?.returnObject"
-    :item-title="(item: any) => $t(item[props.options?.itemTitle ?? 'title'])"
-    :item-value="props.options?.itemValue ?? 'value'"
     :custom-filter="trimmedStringFilter"
     clearable
     hide-details
@@ -59,7 +57,7 @@
 import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
 import type { DateFilterValue, FilterEntity, FilterMapping, FilterOptions } from '@/types/filter';
 import { FilterType } from '@/types/filter';
-import { isDateFilterValue, isFilterEntity, isPrimitiveValue } from '@/utils/filter';
+import { isDateFilterValue, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Primitive } from 'vuetify/lib/util';
@@ -104,10 +102,12 @@ const selectModel = computed<Primitive | FilterEntity | Primitive[] | FilterEnti
 
     if (isMultiple.value) {
       const arr = Array.isArray(val) ? val : [val];
-      return props.options?.returnObject ? arr.filter(isFilterEntity) : arr.filter(isPrimitiveValue);
+      return props.options?.returnObject
+        ? arr.map(item => normalizeToFilterEntity(item))
+        : arr.filter(isPrimitiveValue);
     }
 
-    if (props.options?.returnObject) return isFilterEntity(val) ? val : undefined;
+    if (props.options?.returnObject) return normalizeToFilterEntity(val);
     return isPrimitiveValue(val) ? val : undefined;
   },
   set: val => (localModel.value = val),
@@ -122,20 +122,18 @@ const isMultiple = computed(() => [FilterType.MULTIPLE, FilterType.MULTIPLE_SELE
 
 const isSelectType = computed(() => [FilterType.SELECT, FilterType.MULTIPLE_SELECT].includes(props.type));
 
-const sortedItems = computed(() => {
+const sortedItems = computed<Primitive[] | FilterEntity[]>(() => {
   if (!props.options?.items) return [];
 
   if (props.options?.sortItems) {
     return props.options.items.sort(props.options.sortItems);
   }
 
-  const titleKey = props.options?.itemTitle ?? 'title';
-  return [...props.options.items].sort((a, b) => {
-    const labelA = t(String(a[titleKey as keyof typeof a] || ''));
-    const labelB = t(String(b[titleKey as keyof typeof b] || ''));
+  const normalized = props.options.items.map(it => normalizeToFilterEntity(it));
 
-    return labelA.localeCompare(labelB, undefined, { sensitivity: 'base' });
-  });
+  return normalized.sort((a, b) =>
+    t(String(a.label)).localeCompare(t(String(b.label)), undefined, { sensitivity: 'base' })
+  );
 });
 
 function trimmedStringFilter(value: string, query: string, _item?: any) {
