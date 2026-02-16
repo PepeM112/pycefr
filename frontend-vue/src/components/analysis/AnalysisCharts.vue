@@ -145,8 +145,15 @@ const treemapOptions = computed(() => ({
   plugins: {
     legend: { display: false },
     tooltip: {
+      displayColors: false,
       callbacks: {
-        label: (item: any) => `${item.raw.g || 'Root'}: ${item.raw.v || 0} ${t('charts.instances')}`,
+        title: (items: any) => {
+          const item = items[0].raw;
+          return item.g;
+        },
+        label: (item: any) => {
+          return `${t('charts.instances')}: ${item.raw.v}`;
+        },
       },
     },
   },
@@ -235,27 +242,59 @@ const topClassesData = computed(() => {
 
 const treemapData = computed<any>(() => {
   const groups: Record<string, number> = {};
+
   props.data.files.forEach(f => {
     const parts = f.fullPath.split('/');
-    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : 'root';
+    const folder = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '/';
     groups[folder] = (groups[folder] || 0) + f.instances;
   });
+
+  const flatData = Object.entries(groups).map(([name, value]) => ({
+    g: name,
+    v: value,
+  }));
+
+  const maxVal = Math.max(...flatData.map(d => d.v), 1);
+
+  const getLogRatio = (v: number) => {
+    return Math.log(v + 1) / Math.log(maxVal + 1);
+  };
 
   return {
     datasets: [
       {
-        tree: Object.entries(groups).map(([name, value]) => ({ g: name, v: value })),
+        tree: flatData,
         key: 'v',
         groups: ['g'],
         spacing: 1,
         borderWidth: 1,
         borderColor: themeStore.currentTheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
         backgroundColor: (ctx: any) => {
-          const val = ctx.raw?.v || 0;
-          return val > 50 ? '#E64A19' : val > 20 ? '#FF7043' : '#FFAB91';
+          if (!ctx.raw) return '#CCC';
+
+          const ratio = getLogRatio(ctx.raw.v);
+
+          if (ratio > 0.85) return '#BF360C';
+          if (ratio > 0.65) return '#E64A19';
+          if (ratio > 0.45) return '#FF8A65';
+          if (ratio > 0.25) return '#FFAB91';
+          return '#FFCCBC';
         },
-        labels: { display: true, formatter: (ctx: any) => ctx.raw?.g || '' },
-        data: [],
+        labels: {
+          display: true,
+          color: (ctx: any) => {
+            const ratio = getLogRatio(ctx.raw?.v || 0);
+            return ratio > 0.45 ? '#FFFFFF' : '#333333';
+          },
+          formatter: (ctx: any) => {
+            if (!ctx.raw) return '';
+            return ctx.raw.g;
+          },
+          font: {
+            size: 12,
+            weight: 'bold',
+          },
+        },
       },
     ],
   };
