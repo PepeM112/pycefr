@@ -24,21 +24,7 @@
         </v-card>
       </v-col>
 
-      <v-col cols="12" lg="6">
-        <v-card variant="outlined" class="pa-4 h-100">
-          <h3 class="text-subtitle-1 font-weight-bold mb-4">{{ t('charts.effort_by_level') }}</h3>
-          <div class="chart-container"><Bar :data="effortLevelData" :options="stackedOptions" /></div>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" lg="6">
-        <v-card variant="outlined" class="pa-4 h-100">
-          <h3 class="text-subtitle-1 font-weight-bold mb-4">{{ t('charts.complexity_hotspots') }}</h3>
-          <div class="chart-container"><Scatter :data="hotspotData" :options="hotspotOptions" /></div>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" lg="6">
+      <v-col cols="6">
         <v-card variant="outlined" class="pa-4 h-100">
           <h3 class="text-subtitle-1 font-weight-bold mb-4">{{ t('charts.directory_density_map') }}</h3>
           <div class="chart-container">
@@ -67,13 +53,12 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
-  LogarithmicScale,
   PointElement,
   LineElement,
   Filler,
 } from 'chart.js';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
-import { PolarArea, Bar, Radar, Doughnut, Pie, Scatter, Chart } from 'vue-chartjs';
+import { Bar, Radar, Doughnut, Pie, Chart } from 'vue-chartjs';
 
 ChartJS.register(
   Title,
@@ -84,7 +69,6 @@ ChartJS.register(
   BarElement,
   CategoryScale,
   LinearScale,
-  LogarithmicScale,
   PointElement,
   LineElement,
   Filler,
@@ -97,7 +81,6 @@ const themeStore = useThemeStore();
 
 const props = defineProps<{ data: ChartData }>();
 
-// --- COLORES DINÁMICOS ---
 const themeColors = computed(() => {
   const isDark = themeStore.currentTheme === 'dark';
   return {
@@ -106,7 +89,6 @@ const themeColors = computed(() => {
     textMain: isDark ? '#EEE' : '#333',
     textMuted: isDark ? '#BBB' : '#666',
     pointLabels: isDark ? '#FFFFFF' : '#666666',
-    ticks: isDark ? 'rgba(255, 255, 255, 0.6)' : '#666666',
   };
 });
 
@@ -125,25 +107,14 @@ const levelBarOptions = computed(() => ({
   ...baseOptions.value,
   scales: {
     y: {
-      type: 'linear' as const,
       beginAtZero: true,
-      title: {
-        display: true,
-        text: t('charts.instances'),
-        color: themeColors.value.textMain,
-      },
+      title: { display: true, text: t('charts.instances'), color: themeColors.value.textMain },
       grid: { color: themeColors.value.grid },
       ticks: { color: themeColors.value.textMuted },
     },
-    x: {
-      grid: { display: false },
-      ticks: { color: themeColors.value.textMuted },
-    },
+    x: { grid: { display: false }, ticks: { color: themeColors.value.textMuted } },
   },
-  plugins: {
-    ...baseOptions.value.plugins,
-    legend: { display: false },
-  },
+  plugins: { ...baseOptions.value.plugins, legend: { display: false } },
 }));
 
 const radarOptions = computed(() => ({
@@ -152,58 +123,39 @@ const radarOptions = computed(() => ({
     r: {
       grid: { color: themeColors.value.grid },
       angleLines: { color: themeColors.value.angleLines },
-      pointLabels: {
-        color: themeColors.value.pointLabels,
-        font: { size: 11 },
-      },
+      pointLabels: { color: themeColors.value.pointLabels, font: { size: 11 } },
       ticks: { display: false },
     },
   },
 }));
 
-const horizontalBarOptions = {
-  ...baseOptions,
+const horizontalBarOptions = computed(() => ({
+  ...baseOptions.value,
   indexAxis: 'y' as const,
-  plugins: { legend: { display: false } },
-};
-
-const stackedOptions = {
-  ...baseOptions,
+  plugins: { ...baseOptions.value.plugins, legend: { display: false } },
   scales: {
-    x: { stacked: true },
-    y: { stacked: true, title: { display: true, text: t('charts.hours') } },
+    x: { grid: { color: themeColors.value.grid }, ticks: { color: themeColors.value.textMuted } },
+    y: { ticks: { color: themeColors.value.textMuted } },
   },
-  plugins: { legend: { position: 'right' as const } },
-};
+}));
 
-const hotspotOptions = {
-  ...baseOptions,
-  scales: {
-    x: { title: { display: true, text: t('charts.files_modified') } },
-    y: { title: { display: true, text: t('charts.complexity_index') } },
-  },
-};
-
-const treemapOptions = {
+const treemapOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
       callbacks: {
-        label(item: any) {
-          const data = item.raw;
-          return `${data.g || 'Root'}: ${data.v || 0} ${t('charts.instances')}`;
-        },
+        label: (item: any) => `${item.raw.g || 'Root'}: ${item.raw.v || 0} ${t('charts.instances')}`,
       },
     },
   },
-};
+}));
 
 const mainCharts = computed(() => [
   { title: 'charts.level_distribution', component: Bar, data: levelData.value, options: levelBarOptions.value },
   { title: 'charts.competency_radar', component: Radar, data: radarData.value, options: radarOptions.value },
-  { title: 'charts.top_patterns', component: Bar, data: topClassesData.value, options: horizontalBarOptions },
+  { title: 'charts.top_patterns', component: Bar, data: topClassesData.value, options: horizontalBarOptions.value },
 ]);
 
 const levelData = computed(() => {
@@ -273,18 +225,6 @@ const exceptionData = computed(() => {
   };
 });
 
-const effortLevelData = computed(() => {
-  const levels = Enums.buildList(Level);
-  return {
-    labels: [t('charts.effort_distribution')],
-    datasets: levels.map(l => ({
-      label: t(l.label),
-      data: [props.data.items.filter(it => it.level === l.value).reduce((s, it) => s + it.instances * 0.5, 0)],
-      backgroundColor: getLevelColor(l.value as Level),
-    })),
-  };
-});
-
 const topClassesData = computed(() => {
   const top = [...props.data.items].sort((a, b) => b.instances - a.instances).slice(0, 10);
   return {
@@ -293,20 +233,7 @@ const topClassesData = computed(() => {
   };
 });
 
-const hotspotData = computed(() => ({
-  datasets: [
-    {
-      label: t('commits'),
-      data: props.data.commits.map(c => ({
-        x: c.filesCount,
-        y: c.complexity / (c.filesCount || 1),
-      })),
-      backgroundColor: '#F44336',
-    },
-  ],
-}));
-
-const treemapData = computed(() => {
+const treemapData = computed<any>(() => {
   const groups: Record<string, number> = {};
   props.data.files.forEach(f => {
     const parts = f.fullPath.split('/');
@@ -322,7 +249,7 @@ const treemapData = computed(() => {
         groups: ['g'],
         spacing: 1,
         borderWidth: 1,
-        borderColor: '#fff',
+        borderColor: themeStore.currentTheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
         backgroundColor: (ctx: any) => {
           const val = ctx.raw?.v || 0;
           return val > 50 ? '#E64A19' : val > 20 ? '#FF7043' : '#FFAB91';
