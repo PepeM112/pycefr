@@ -4,7 +4,10 @@
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
     <generic-loader :model-value="loaderStatus">
-      <g-container class="mb-8" title="insights">
+      <g-container class="mb-8" title="insights" expandable>
+        <template #actions>
+
+        </template>
         <analysis-charts v-if="chartData && loaderStatus === LoadingStatus.IDLE" :data="chartData" :items="tableData" />
       </g-container>
       <g-container title="properties">
