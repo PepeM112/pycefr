@@ -1,6 +1,7 @@
 export default {
   actions: 'Actions',
   analyses: 'Analyses',
+  analysis_name: 'Analysis name',
   analysis_rules: {
     list_simple: 'List: Simple',
     list_nested: 'List: Nested',
@@ -180,6 +181,8 @@ export default {
   properties: 'Properties',
   pythonic: 'Pythonic',
   refresh_data: 'Refresh Data',
+  repository_url: 'Repository URL',
+  retry: 'Retry',
   robust_handling: 'Robust Handling',
   see_more: 'See more',
   select_all: 'Select all',

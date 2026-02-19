@@ -1,6 +1,7 @@
 export default {
   actions: 'Acciones',
   analyses: 'Análisis',
+  analysis_name: 'Nombre del análisis',
   analysis_rules: {
     list_simple: 'Lista simple',
     list_nested: 'Lista anidada',
@@ -142,11 +143,17 @@ export default {
     deleting: {
       analysis: 'Error al eliminar el análisis.',
     },
+    downloading: {
+      analysis: 'Error al descargar el análisis.',
+    },
     fetching: {
       analyses: 'Error al obtener los análisis.',
       analysis_data: 'Error al obtener los datos del análisis.',
       owners: 'Error al obtener los propietarios.',
       summary: 'Error al obtener el resumen.',
+    },
+    uploading: {
+      analysis: 'Error al subir el análisis.',
     },
   },
   error_message: 'Mensaje de error',
@@ -174,6 +181,8 @@ export default {
   properties: 'Propiedades',
   pythonic: 'Pythonic',
   refresh_data: 'Actualizar datos',
+  repository_url: 'URL del repositorio',
+  retry: 'Reintentar',
   robust_handling: 'Manejo Robusto',
   see_more: 'Ver más',
   select_all: 'Seleccionar todo',

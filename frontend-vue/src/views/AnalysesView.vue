@@ -40,12 +40,25 @@
             {{ item.errorMessage }}
           </template>
           <template #actions="{ item }">
-            <v-btn
-              density="comfortable"
-              icon="mdi-eye-outline"
-              :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
-            />
-            <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
+            <template v-if="item.status !== AnalysisStatus.FAILED">
+              <v-btn
+                density="comfortable"
+                icon="mdi-eye-outline"
+                :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+              />
+              <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
+            </template>
+            <v-tooltip v-else-if="item.repo?.url">
+              <template #activator="{ props: tooltipProps }">
+                <v-btn
+                  v-bind="tooltipProps"
+                  density="comfortable"
+                  icon="mdi-reload"
+                  @click="newAnalysis(item.repo?.url)"
+                />
+              </template>
+              <span>{{ $t('retry') }}</span>
+            </v-tooltip>
             <v-btn
               density="comfortable"
               icon="mdi-trash-can-outline"
@@ -61,11 +74,14 @@
         title="new_analysis"
         width="400"
         :disable-confirm="!isFormValid"
-        @confirm-pre="saveForm"
+        @confirm-pre="newAnalysis(newAnalysisUrl)"
       >
-        <v-form v-model="isFormValid">
-          <g-input label="Repository url" required>
-            <v-text-field v-model="newAnalysisName" :rules="[rules.required, rules.url]" />
+        <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
+          <g-input label="analysis_name">
+            <v-text-field v-model="newAnalysisName" />
+          </g-input>
+          <g-input label="repository_url" required>
+            <v-text-field v-model="newAnalysisUrl" :rules="[rules.required, rules.url]" />
           </g-input>
         </v-form>
       </g-dialog-card>
@@ -103,9 +119,11 @@ import {
   type Pagination,
   AnalysisSortColumn,
   AnalysisStatus,
-  createAnalysis, deleteAnalysis,
+  createAnalysis,
+  deleteAnalysis,
   downloadAnalysis,
-  getOwners, listAnalysis,
+  getOwners,
+  listAnalysis,
   Origin,
   uploadAnalysis,
 } from '@/client';
@@ -143,6 +161,7 @@ const fileToUpload = ref<File[]>([]);
 const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
 const newAnalysisName = ref<string>('');
+const newAnalysisUrl = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const ownersList = ref<FilterEntity[]>([]);
@@ -285,9 +304,9 @@ async function removeAnalysis(id: number = 0) {
   pagination.value.total -= 1;
 }
 
-async function saveForm() {
+async function newAnalysis(url: string) {
   const { data, error } = await createAnalysis({
-    body: { repoUrl: newAnalysisName.value },
+    body: { repoUrl: url },
   });
 
   if (error) {
