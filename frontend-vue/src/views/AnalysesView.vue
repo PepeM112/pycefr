@@ -25,7 +25,7 @@
       <generic-loader :model-value="loadingStatus">
         <g-table :model-value="analysesData" :headers="headers" :pagination="pagination" v-model:sort="sorting">
           <template #item-status="{ item }">
-            <span class="status-badge" :class="`bg-${getAnalysisStatusColor(item.status)}`">
+            <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
               {{ $t(item.status) }}
             </span>
           </template>
@@ -40,12 +40,25 @@
             {{ item.errorMessage }}
           </template>
           <template #actions="{ item }">
-            <v-btn
-              density="comfortable"
-              icon="mdi-eye-outline"
-              :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
-            />
-            <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
+            <template v-if="item.status !== AnalysisStatus.FAILED">
+              <v-btn
+                density="comfortable"
+                icon="mdi-eye-outline"
+                :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+              />
+              <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
+            </template>
+            <v-tooltip v-else-if="item.repo?.url">
+              <template #activator="{ props: tooltipProps }">
+                <v-btn
+                  v-bind="tooltipProps"
+                  density="comfortable"
+                  icon="mdi-reload"
+                  @click="newAnalysis(item.repo?.url)"
+                />
+              </template>
+              <span>{{ $t('retry') }}</span>
+            </v-tooltip>
             <v-btn
               density="comfortable"
               icon="mdi-trash-can-outline"
@@ -61,11 +74,14 @@
         title="new_analysis"
         width="400"
         :disable-confirm="!isFormValid"
-        @confirm-pre="saveForm"
+        @confirm-pre="newAnalysis(newAnalysisUrl)"
       >
-        <v-form v-model="isFormValid">
-          <g-input label="Repository url" required>
-            <v-text-field v-model="newAnalysisName" :rules="[rules.required, rules.url]" />
+        <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
+          <g-input label="analysis_name">
+            <v-text-field v-model="newAnalysisName" />
+          </g-input>
+          <g-input label="repository_url" required>
+            <v-text-field v-model="newAnalysisUrl" :rules="[rules.required, rules.url]" />
           </g-input>
         </v-form>
       </g-dialog-card>
@@ -98,33 +114,39 @@
 </template>
 <script setup lang="ts">
 import {
-  AnalysisSortColumn,
-  AnalysisStatus,
   type AnalysisSummaryPublic,
   type EntityLabelString,
   type Pagination,
+  AnalysisSortColumn,
+  AnalysisStatus,
+  createAnalysis,
+  deleteAnalysis,
+  downloadAnalysis,
+  getOwners,
+  listAnalysis,
   Origin,
+  uploadAnalysis,
 } from '@/client';
-import { createAnalysis, deleteAnalysis, getOwners, listAnalysis, uploadAnalysis, downloadAnalysis } from '@/client';
-import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
 import GDialogCard from '@/components/GDialogCard.vue';
+import GenericLoader from '@/components/GenericLoader.vue';
 import GInput from '@/components/GInput.vue';
+import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
+import { getStatusColor } from '@/components/repo/utils';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import { useFilters } from '@/composables/useFilter';
 import { useRules } from '@/composables/useRules';
+import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { computed, onMounted, ref } from 'vue';
-import GTable from '@/components/GTable.vue';
-import { useSortFilter } from '@/composables/useSortFilter';
-import { type TableHeader } from '@/types/table';
-import GenericLoader from '@/components/GenericLoader.vue';
+import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import { LoadingStatus } from '@/types/loading';
+import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
-import { useFilters } from '@/composables/useFilter';
+import { computed, onMounted, ref } from 'vue';
 
 const rules = useRules();
 const sorting = useSortFilter();
@@ -139,6 +161,7 @@ const fileToUpload = ref<File[]>([]);
 const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
 const newAnalysisName = ref<string>('');
+const newAnalysisUrl = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const ownersList = ref<FilterEntity[]>([]);
@@ -281,9 +304,9 @@ async function removeAnalysis(id: number = 0) {
   pagination.value.total -= 1;
 }
 
-async function saveForm() {
+async function newAnalysis(url: string) {
   const { data, error } = await createAnalysis({
-    body: { repoUrl: newAnalysisName.value },
+    body: { repoUrl: url },
   });
 
   if (error) {
@@ -363,19 +386,6 @@ async function handleDownload(id: number, name: string) {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
-}
-
-function getAnalysisStatusColor(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'success';
-    case 'in_progress':
-      return 'warning';
-    case 'failed':
-      return 'error';
-    default:
-      return 'grey';
-  }
 }
 
 function getOriginIcon(origin: Origin): string {

@@ -14,6 +14,19 @@ export function getLevelColor(level: Level): string {
   return LEVEL_COLOR_MAP[level];
 }
 
+export function getStatusColor(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'success';
+    case 'in_progress':
+      return 'warning';
+    case 'failed':
+      return 'error';
+    default:
+      return 'grey';
+  }
+}
+
 // Tables
 export enum SortDirection {
   UNKNOWN = 0,
@@ -52,4 +65,22 @@ export interface TableDataItem {
   class: ClassId;
   level: Level;
   instances: number;
+}
+
+export interface ChartFileItem {
+  name: string;
+  fullPath: string;
+  instances: number;
+}
+
+export interface ChartCommitItem {
+  hash: string;
+  filesCount: number;
+  complexity: number;
+}
+
+export interface ChartData {
+  items: TableDataItem[];
+  files: ChartFileItem[];
+  commits: ChartCommitItem[];
 }

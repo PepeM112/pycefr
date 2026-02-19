@@ -13,7 +13,7 @@
         </span>
       </h3>
       <v-spacer />
-      <span class="status-badge" :class="`bg-${getAnalysisStatusColor(modelValue?.status)}`">
+      <span class="status-badge" :class="`bg-${getStatusColor(modelValue?.status)}`">
         {{ $t(modelValue?.status) }}
       </span>
     </div>
@@ -59,7 +59,7 @@ const props = defineProps<{
   modelValue: AnalysisSummaryPublic;
 }>();
 
-function getAnalysisStatusColor(status: string): string {
+function getStatusColor(status: string): string {
   switch (status) {
     case 'completed':
       return 'success';
