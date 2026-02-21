@@ -1,7 +1,7 @@
 <template>
   <v-text-field
     v-if="type === FilterType.SINGLE"
-    class="bg-transparent w-100 px-4"
+    class="bg-transparent w-100"
     v-model="simpleModel"
     :type="props.options?.number ? 'number' : 'text'"
     clearable
@@ -13,7 +13,7 @@
 
   <v-combobox
     v-else-if="type === FilterType.MULTIPLE"
-    class="bg-transparent w-100 px-4"
+    class="bg-transparent w-100"
     v-model="arrayModel"
     :type="props.options?.number ? 'number' : 'text'"
     multiple
@@ -33,9 +33,11 @@
 
   <v-autocomplete
     v-else-if="isSelectType"
-    class="bg-transparent w-100 px-4"
+    class="bg-transparent w-100"
     v-model="selectModel"
+    v-model:search="search"
     :items="sortedItems"
+    :loading="props.options?.fetcher?.loading.value"
     :multiple="isMultiple"
     :chips="isMultiple"
     :closable-chips="isMultiple"
@@ -49,6 +51,8 @@
     hide-spin-buttons
     variant="plain"
     clear-icon="mdi-close"
+    @update:model-value="onSelectionUpdate"
+    @update:menu="onMenuUpdate"
     @keydown.enter.stop
   />
 
@@ -60,7 +64,7 @@ import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
 import type { DateFilterValue, FilterEntity, FilterMapping, FilterOptions } from '@/types/filter';
 import { FilterType } from '@/types/filter';
 import { isDateFilterValue, isFilterEntity, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Primitive } from 'vuetify/lib/util';
 
@@ -73,6 +77,8 @@ const props = defineProps<{
   type: FilterType;
   options?: FilterOptions;
 }>();
+
+const search = ref('');
 
 const localModel = computed({
   get: () => props.modelValue,
@@ -132,18 +138,22 @@ const dateModel = computed<DateFilterValue | undefined>({
   set: val => (localModel.value = val),
 });
 
+const localItems = computed<Primitive[] | FilterEntity[]>(() => {
+  if (props.options?.items) return props.options.items;
+  if (props.options?.fetcher) return props.options?.fetcher.items.value;
+  return [];
+});
+
 const isMultiple = computed(() => [FilterType.MULTIPLE, FilterType.MULTIPLE_SELECT].includes(props.type));
 
 const isSelectType = computed(() => [FilterType.SELECT, FilterType.MULTIPLE_SELECT].includes(props.type));
 
 const sortedItems = computed<FilterEntity[]>(() => {
-  if (!props.options?.items) return [];
-
   if (props.options?.sortItems) {
-    return props.options.items.sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
+    return localItems.value.sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
   }
 
-  const normalized = props.options.items.map(it => normalizeToFilterEntity(it));
+  const normalized = localItems.value.map(it => normalizeToFilterEntity(it));
 
   return normalized.sort((a, b) =>
     t(String(a.label)).localeCompare(t(String(b.label)), undefined, { sensitivity: 'base' })
@@ -153,6 +163,26 @@ const sortedItems = computed<FilterEntity[]>(() => {
 function trimmedStringFilter(value: string, query: string, _item?: any) {
   return value.toLowerCase().includes(query.trim().toLowerCase());
 }
+
+function onSelectionUpdate() {
+  search.value = '';
+}
+
+/* Fetch when opening menu */
+function onMenuUpdate(isOpen: boolean) {
+  if (isOpen && props.options?.fetcher) {
+    props.options.fetcher.fetch(search.value);
+  }
+}
+
+watch(
+  () => search.value,
+  newValue => {
+    if (props.options?.fetcher) {
+      props.options.fetcher.fetch(newValue);
+    }
+  }
+);
 </script>
 
 <style lang="scss" scoped>
@@ -167,7 +197,20 @@ function trimmedStringFilter(value: string, query: string, _item?: any) {
   .v-field__append-inner,
   .v-field__clearable,
   .v-field__input {
-    padding: 0 !important;
+    padding-top: 0;
+    padding-bottom: 0;
   }
+
+  .v-field__input {
+    padding-left: 16px;
+  }
+
+  .v-field__append-inner {
+    padding-right: 16px;
+  }
+}
+
+:deep(.v-autocomplete .v-input__control) {
+  padding: 0 16px !important;
 }
 </style>

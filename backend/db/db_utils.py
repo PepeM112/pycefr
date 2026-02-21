@@ -392,20 +392,32 @@ def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
         conn.close()
 
 
-def get_unique_owners() -> List[EntityLabelString]:
+def get_unique_owners(search_query: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        rows = cursor.execute(
-            """
+
+        query = """
             SELECT DISTINCT
             repo_owner_login AS id,
             COALESCE(repo_owner_name, repo_owner_login) AS label -- use login as fallback, since name is optional
             FROM analyses
             WHERE repo_owner_login IS NOT NULL
-            ORDER BY repo_owner_name;
-            """
-        ).fetchall()
+        """
+        params: List[str] = []
+
+        if search_query:
+            query += " AND (repo_owner_login LIKE ? OR repo_owner_name LIKE ?)"
+            search_param = f"%{search_query}%"
+            params.extend([search_param, search_param])
+
+        query += " ORDER BY label"
+
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(str(limit))
+
+        rows = cursor.execute(query, params).fetchall()
         return [EntityLabelString(id=row["id"], label=row["label"]) for row in rows]
     except sqlite3.Error as e:
         logger.error(f"Database error while fetching unique owners: {e}")
@@ -453,7 +465,7 @@ def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None
                 else None,
                 sum(c.estimated_hours for c in analysis_data.repo.commits) if analysis_data.repo else 0,
                 analysis_data.error_message,
-                datetime.now(timezone.utc).isoformat()
+                datetime.now(timezone.utc).isoformat(),
             ),
         )
         new_analysis_id = cursor.lastrowid

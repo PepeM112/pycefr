@@ -12,12 +12,12 @@ router = APIRouter(prefix="/common", tags=["Common"])
 
 
 @router.get("/owners", response_model=List[EntityLabelString], operation_id="get_owners")
-def get_owners() -> List[EntityLabelString]:
+def get_owners(search: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
     """
     Retrieves the complete list of owners
     """
     try:
-        owners = get_unique_owners()
+        owners = get_unique_owners(search_query=search, limit=limit)
 
         if not owners:
             logger.warning("No owners found in the database")
