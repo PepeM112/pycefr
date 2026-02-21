@@ -1,6 +1,8 @@
 import ast
+from typing import Dict
 
 from backend.models.schemas.class_model import ClassId
+from backend.models.schemas.common import Level
 
 
 def get_class_from_ast_node(node: ast.AST) -> ClassId:
@@ -258,3 +260,103 @@ def get_level_try(node: ast.Try) -> ClassId:
     if any(isinstance(n, ast.Try) for n in node.body):
         return ClassId.EXCEPTION_TRY_TRY
     return ClassId.EXCEPTION_TRY_EXCEPT
+
+
+def get_default_class_level(class_id: ClassId) -> int:
+    """
+    Returns the default CEFR level associated with a given ClassId based on a predefined mapping.
+    """
+    default_levels: Dict[ClassId, Level] = {
+        ClassId.LIST_SIMPLE: Level.A1,
+        ClassId.LIST_NESTED: Level.A2,
+        ClassId.LIST_WITH_DICT: Level.B1,
+        ClassId.LISTCOMP_SIMPLE: Level.A2,
+        ClassId.LISTCOMP_NESTED: Level.B1,
+        ClassId.LISTCOMP_WITH_IF: Level.B1,
+        ClassId.DICT_SIMPLE: Level.A2,
+        ClassId.DICT_NESTED: Level.B1,
+        ClassId.DICT_WITH_LIST: Level.B1,
+        ClassId.DICT_WITH_DICT_LIST: Level.B2,
+        ClassId.DICTCOMP_SIMPLE: Level.B1,
+        ClassId.DICTCOMP_WITH_IF: Level.B1,
+        ClassId.DICTCOMP_WITH_IF_ELSE: Level.B1,
+        ClassId.DICTCOMP_NESTED: Level.B2,
+        ClassId.TUPLE_SIMPLE: Level.A1,
+        ClassId.TUPLE_NESTED: Level.A2,
+        ClassId.FILE_OPEN: Level.A2,
+        ClassId.FILE_WRITE: Level.A2,
+        ClassId.FILE_WRITELINES: Level.B1,
+        ClassId.FILE_READ: Level.A2,
+        ClassId.FILE_READLINE: Level.A2,
+        ClassId.PRINT_SIMPLE: Level.A1,
+        ClassId.ASSIGN_SIMPLE: Level.A1,
+        ClassId.ASSIGN_WITH_OPERATOR: Level.A1,
+        ClassId.ASSIGN_INCREMENTS: Level.A1,
+        ClassId.IF_SIMPLE: Level.A1,
+        ClassId.IF_EXPRESSION: Level.A2,
+        ClassId.IF_NAME_MAIN: Level.A2,
+        ClassId.LOOP_BREAK: Level.A2,
+        ClassId.LOOP_CONTINUE: Level.A2,
+        ClassId.LOOP_PASS: Level.A1,
+        ClassId.LOOP_WHILE_SIMPLE: Level.A2,
+        ClassId.LOOP_WHILE_ELSE: Level.B1,
+        ClassId.LOOP_FOR_SIMPLE: Level.A1,
+        ClassId.LOOP_FOR_NESTED: Level.A2,
+        ClassId.LOOP_FOR_TUPLE_NAME: Level.A2,
+        ClassId.LOOP_FOR_LIST_ITERATE: Level.A1,
+        ClassId.LOOP_FOR_TUPLE_ITERATE: Level.A1,
+        ClassId.LOOP_RANGE: Level.A1,
+        ClassId.LOOP_ZIP: Level.B1,
+        ClassId.LOOP_MAP: Level.B1,
+        ClassId.LOOP_ENUMERATE: Level.A2,
+        ClassId.FUNCTIONDEF_SIMPLE: Level.A2,
+        ClassId.FUNCTIONDEF_ARGUM_DEFAULT: Level.B1,
+        ClassId.FUNCTIONDEF_ARGUM_STAR: Level.B1,
+        ClassId.FUNCTIONDEF_ARGUM_DBL_STAR: Level.B1,
+        ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY: Level.B2,
+        ClassId.FUNCTIONDEF_RECURSIVE: Level.B2,
+        ClassId.RETURN_SIMPLE: Level.A2,
+        ClassId.LAMBDA_SIMPLE: Level.B1,
+        ClassId.GENERATORS_FUNCTION: Level.B2,
+        ClassId.GENERATORS_EXPRESSION: Level.B2,
+        ClassId.IMPORT_SIMPLE: Level.A1,
+        ClassId.IMPORT_FROM_SIMPLE: Level.A1,
+        ClassId.IMPORT_FROM_RELATIVE: Level.B1,
+        ClassId.IMPORT_FROM_STAR: Level.A2,
+        ClassId.IMPORT_AS_EXTENSION: Level.A1,
+        ClassId.MODULES_STRUCT: Level.B2,
+        ClassId.MODULES_PICKLE: Level.B2,
+        ClassId.MODULES_SHELVE: Level.B2,
+        ClassId.MODULES_DBM: Level.B2,
+        ClassId.MODULES_RE: Level.B1,
+        ClassId.MODULES_IMPORTLIB: Level.C1,
+        ClassId.CLASS_SIMPLE: Level.B1,
+        ClassId.CLASS_INHERITED: Level.B2,
+        ClassId.CLASS_INIT: Level.B1,
+        ClassId.CLASS_DESCRIPTORS: Level.C1,
+        ClassId.CLASS_PROPERTIES: Level.B2,
+        ClassId.CLASS_PRIVATE: Level.B2,
+        ClassId.STATIC_CLASSMETHOD: Level.B2,
+        ClassId.STATIC_STATICMETHOD: Level.B2,
+        ClassId.DECORATORS_FUNCTION: Level.B2,
+        ClassId.DECORATORS_CLASS: Level.C1,
+        ClassId.METACLASS_NEW: Level.C2,
+        ClassId.METACLASS_METACLASS: Level.C2,
+        ClassId.METACLASS_ATTR_METACLASS: Level.C2,
+        ClassId.SUPERFUNCTION_SIMPLE: Level.B2,
+        ClassId.SLOTS_ATTR: Level.C1,
+        ClassId.ATTRIBUTES_SIMPLE: Level.A2,
+        ClassId.ATTRIBUTES_CLASS_REF: Level.C1,
+        ClassId.ATTRIBUTES_DICT_REF: Level.C1,
+        ClassId.EXCEPTION_TRY_EXCEPT: Level.A2,
+        ClassId.EXCEPTION_TRY_ELSE_EXCEPT: Level.B1,
+        ClassId.EXCEPTION_TRY_TRY: Level.B1,
+        ClassId.EXCEPTION_TRY_FINALLY: Level.B1,
+        ClassId.EXCEPTION_TRY_EXCEPT_FINALLY: Level.B1,
+        ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY: Level.B2,
+        ClassId.EXCEPTION_RAISE: Level.B1,
+        ClassId.EXCEPTION_ASSERT: Level.B1,
+        ClassId.WITH_SIMPLE: Level.B1,
+    }
+
+    return default_levels.get(class_id, Level.UNKNOWN)

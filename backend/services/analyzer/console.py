@@ -1,12 +1,16 @@
 import json
 import os
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from tabulate import tabulate
 
+from backend.models.schemas.analysis import AnalysisPublic
+from backend.models.schemas.repo import RepoPublic
+from backend.services.analyzer.levels import get_default_class_level
 
-def read_data(file_path: str) -> Dict[str, Any]:
+
+def read_data(file_path: str) -> AnalysisPublic:
     """
     Read JSON data from a file.
 
@@ -14,7 +18,7 @@ def read_data(file_path: str) -> Dict[str, Any]:
         file_path (str): The path to the JSON file.
 
     Returns:
-        dict: The parsed JSON data.
+        AnalysisPublic: The parsed JSON data as an AnalysisPublic object.
 
     Raises:
         FileNotFoundError: If the file does not exist.
@@ -23,138 +27,104 @@ def read_data(file_path: str) -> Dict[str, Any]:
         raise FileNotFoundError(f"Couldn't find file '{file_path.replace('results/', '')}'.")
 
     with open(file_path, "r") as file:
-        return json.load(file)
+        data = json.load(file)
+        print(data)
+
+        # Local analysis do not have id but is required by the model
+        if not data.get("id"):
+            data["id"] = 0
+
+        return AnalysisPublic.model_validate(data)
 
 
-def display_author_info(repo_data: Dict[str, Any]) -> None:
+def display_author_info(repo: RepoPublic) -> None:
     """
     Display author information in a formatted table.
 
     Args:
-        data (dict): The JSON data containing commit and contributor information.
+        repo (RepoPublic): The repository data containing commit and contributor information.
     """
-    # Initialize a dictionary to combine data by github_user
-    combined_commits_data: Dict[str, Any] = defaultdict(
-        lambda: {"commits": 0, "estimated_hours": 0, "loc": 0, "total_files_modified": 0}
-    )
+    # Map commits by user to cross-reference with contributors
+    stats_map = {c.github_user: c for c in repo.commits}
 
-    # Extract commit information
-    for commit in repo_data.get("commits", []):
-        github_user = commit["github_user"]
-        combined_commits_data[github_user]["commits"] += commit["commits"]
-        combined_commits_data[github_user]["estimated_hours"] += commit["estimated_hours"]
-        combined_commits_data[github_user]["loc"] += commit["loc"]
-        combined_commits_data[github_user]["total_files_modified"] += commit["total_files_modified"]
-
-    # Extract contributor information
-    contributors = repo_data.get("contributors", [])
     table: List[List[Any]] = []
-    for contributor in contributors:
-        # Get commit data for the corresponding GitHub user
-        commit_info = combined_commits_data.get(contributor["profile_url"].split("/")[-1], {})
+    for contributor in repo.contributors:
+        s = stats_map.get(contributor.github_user)
 
         table.append(
             [
-                contributor["name"],
-                contributor.get("commits", "N/A"),
-                commit_info.get("estimated_hours", "N/A"),
-                commit_info.get("loc", "N/A"),
-                commit_info.get("total_files_modified", "N/A"),
+                contributor.name or contributor.github_user,
+                s.commits if s else 0,
+                f"{s.estimated_hours:.1f}" if s else "0.0",
+                s.loc if s else 0,
+                s.total_files_modified if s else 0,
             ]
         )
 
+    if not table:
+        return
+
     headers = ["Author", "Commits", "Hours", "LOC", "Files Modified"]
-
-    # Create the table with tabulate to calculate the width
     table_str = tabulate(table, headers, tablefmt="pipe", colalign=("left", "center", "center", "center", "center"))
+    width = len(table_str.split("\n")[0])
 
-    # Calculate the table width
-    table_lines = table_str.split("\n")
-    if table_lines:
-        table_width = len(table_lines[0])
-    else:
-        table_width = 80  # Default value if the table is empty
-
-    # Calculate totals
-    total_commits = sum(row[1] if isinstance(row[1], int) else 0 for row in table)
-    estimated_hours = sum(row[2] if isinstance(row[2], int) else 0 for row in table)
-    total_loc = sum(row[3] if isinstance(row[3], int) else 0 for row in table)
-
-    # Print the centered header
-    print("\n|" + "-" * (table_width - 2) + "|")
-    print("|" + "AUTHOR INFORMATION".center(table_width - 2, " ") + "|")
-    print("|" + "-" * (table_width - 2) + "|")
-
-    # Print the table with subheaders
+    print("\n|" + "-" * (width - 2) + "|")
+    print("|" + "AUTHOR INFORMATION".center(width - 2, " ") + "|")
+    print("|" + "-" * (width - 2) + "|")
     print(table_str)
-    print("|" + "-" * (table_width - 2) + "|")
-
-    # Print totals
-    print(
-        "| Total commits".ljust(table_width - len(str(total_commits)) - 4)
-        + f"  {total_commits:>{len(str(total_commits))}} |"
-    )
-    print(
-        "| Total hours".ljust(table_width - len(str(estimated_hours)) - 4)
-        + f"  {estimated_hours:>{len(str(estimated_hours))}} |"
-    )
-    print("| Total loc".ljust(table_width - len(str(total_loc)) - 4) + f"  {total_loc:>{len(str(total_loc))}} |")
-    print("|" + "-" * (table_width - 2) + "|")
 
 
-def display_analysis(elements: Dict[str, Any]) -> None:
+def display_analysis(analysis: AnalysisPublic) -> None:
     """
     Display analysis data in a formatted table.
 
     Args:
-        elements (dict): A dictionary where keys are filenames and values are lists of dictionaries containing element
+        analysis (AnalysisPublic): The analysis data to display.
+
         information.
     """
     # Aggregate data across all files
-    aggregated_elements: Dict[Any, int] = {}
-    for _filename, file_elements in elements.items():
-        for element in file_elements:
-            key = (element["class"], element["level"])
-            if key not in aggregated_elements:
-                aggregated_elements[key] = 0
-            aggregated_elements[key] += element["numberOfInstances"]
+    aggregated: Dict[Tuple[str, int], int] = defaultdict(int)
 
-    # Compute totals per level
-    totals: Dict[Any, int] = {}
-    for (_cls, level), count in aggregated_elements.items():
-        if level not in totals:
-            totals[level] = 0
-        totals[level] += count
+    # Navegación correcta por los objetos Pydantic
+    for f_class in analysis.file_classes:
+        for cls in f_class.classes:
+            # Acceso directo a atributos del objeto ClassId
+            name = cls.class_id.name
+            level = get_default_class_level(cls.class_id)
+            aggregated[(name, level)] += cls.instances
 
-    # Create table with aggregated data
-    table: List[List[Any]] = [[cls, level, count] for (cls, level), count in aggregated_elements.items()]
+    if not aggregated:
+        print("\nNo analysis data found in the file.")
+        return
 
-    headers = ["Element", "Level", "Number"]
+    table: List[List[Any]] = []
+    totals_by_level: Dict[str, int] = defaultdict(int)
 
-    # Create the table with tabulate for calculating width
+    # Ordenamos por Level and then by Name
+    sorted_items = sorted(aggregated.items(), key=lambda x: (x[0][1], x[0][0]))
+
+    for (name, level), count in sorted_items:
+        table.append([name, level, count])
+        totals_by_level[str(level)] += count
+
+    headers = ["Element", "Level", "Instances"]
     table_str = tabulate(table, headers, tablefmt="pipe", colalign=("left", "center", "right"))
 
-    # Calculate the table width
-    table_lines = table_str.split("\n")
-    if table_lines:
-        table_width = len(table_lines[0])
-    else:
-        table_width = 80  # Default value if the table is empty
+    # Compute width based on the first line of the table for consistent formatting
+    lines = table_str.split("\n")
+    width = len(lines[0]) if lines else 80
 
-    # Print centered header
-    print("\n|" + "-" * (table_width - 2) + "|")
-    print("|" + "ANALYSIS".center(table_width - 2, " ") + "|")
-    print("|" + "-" * (table_width - 2) + "|")
-
-    # Print table with subheaders
+    print("\n|" + "-" * (width - 2) + "|")
+    print("|" + "PYTHON LEVEL ANALYSIS".center(width - 2, " ") + "|")
+    print("|" + "-" * (width - 2) + "|")
     print(table_str)
+    print("|" + "-" * (width - 2) + "|")
 
-    # Print totals
-    max_total: int = max(totals.values(), default=0)
-    print("|" + "-" * (table_width - 2) + "|")
-    for level, total in sorted(totals.items()):
-        print(f"| Total {level}".ljust(table_width - len(str(max_total)) - 2) + f"{total:>{len(str(max_total))}} |")
-    print("|" + "-" * (table_width - 2) + "|")
+    for level, total in sorted(totals_by_level.items()):
+        label = f"Total Level {level}:"
+        print(f"| {label.ljust(width - 11)} {str(total).rjust(6)} |")
+    print("|" + "-" * (width - 2) + "|")
 
 
 def main(file_path: str) -> None:
@@ -167,15 +137,15 @@ def main(file_path: str) -> None:
     try:
         data = read_data(file_path)
 
-        if "elements" in data:
-            display_analysis(data["elements"])
-            print()
-
-        if data.get("repo"):
-            display_author_info(data["repo"])
+        if data:
+            display_analysis(data)
+        else:
+            print("\nCouldn't read analysis data from the file.")
 
     except FileNotFoundError as e:
-        print(e)
+        print(f"Error: {e}")
+    except Exception as e:
+        print(f"Error processing file: {e}")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from backend.models.schemas import analysis
+from backend.models.schemas.analysis import AnalysisStatus
+from backend.models.schemas.common import Origin
 from backend.services.analyzer import console
 from backend.services.analyzer.analyzer_class import Analyzer
 from backend.services.analyzer.github_manager import GitHubManager
@@ -21,9 +23,11 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
         analysis_result = an.get_results()
         analysis_result.repo = repo_info
 
-        repo_name = repo_info.name
-        analysis_result.name = repo_name or "unknown"
-        analysis_result.status = analysis.AnalysisStatus.COMPLETED
+        repo_name = repo_info.name or "unknown"
+
+        analysis_result.name = repo_name
+        analysis_result.status = AnalysisStatus.COMPLETED
+        analysis_result.created_at = datetime.now()
 
         file_path = Path(f"results/{repo_name}.json")
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,8 +67,12 @@ def run_directory(directory: str, include_repo: bool = False, print_results: boo
         analysis_result = an.get_results()
 
         repo_name = Path(directory).resolve().name
+
         analysis_result.name = repo_name
-        analysis_result.status = analysis.AnalysisStatus.COMPLETED
+        analysis_result.status = AnalysisStatus.COMPLETED
+        analysis_result.created_at = datetime.now()
+        analysis_result.origin = Origin.LOCAL
+
         file_path = Path(f"results/{repo_name}.json")
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
