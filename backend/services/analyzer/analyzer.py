@@ -1,13 +1,27 @@
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from backend.models.schemas import analysis
+from backend.models.schemas.analysis import AnalysisStatus
+from backend.models.schemas.common import Origin
+from backend.services.analyzer import console
 from backend.services.analyzer.analyzer_class import Analyzer
 from backend.services.analyzer.github_manager import GitHubManager
 
 
-def request_url(url: str) -> None:
+def request_url(url: str, include_repo: bool = False, print_results: bool = False) -> None:
+    """
+    Process a remote GitHub repository analysis via its URL.
+
+    Args:
+        url (str): The GitHub repository URL.
+        include_repo (bool): Whether to include repository metadata (commits, contributors).
+        print_results (bool): Whether to display the results in the console after analysis.
+
+    Raises:
+        Exception: If repository validation, cloning, or analysis fails.
+    """
     try:
         gh = GitHubManager(repo_url=url, is_cli=True)
         gh.validate_repo_url()
@@ -16,13 +30,17 @@ def request_url(url: str) -> None:
         an = Analyzer(cloned_repo, is_cli=True)
         an.analyse_project()
 
-        repo_info = gh.get_repo_info()
         analysis_result = an.get_results()
-        analysis_result.repo = repo_info
+        if include_repo:
+            repo_info = gh.get_repo_info()
+            analysis_result.repo = repo_info
 
-        repo_name = repo_info.name
+        # Extract name and set metadata
+        url_name_fallback = url.rstrip("/").split("/")[-1]
+        repo_name = analysis_result.repo.name or url_name_fallback if analysis_result.repo else url_name_fallback
         analysis_result.name = repo_name
-        analysis_result.status = analysis.AnalysisStatus.COMPLETED
+        analysis_result.status = AnalysisStatus.COMPLETED
+        analysis_result.created_at = datetime.now()
 
         file_path = Path(f"results/{repo_name}.json")
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,12 +48,26 @@ def request_url(url: str) -> None:
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(analysis_result.model_dump_json(indent=4))
 
+        if print_results:
+            console.main(str(file_path))
+
     except Exception as e:
         print(f"\nERROR: {e}")
         sys.exit(1)
 
 
-def run_directory(directory: str) -> None:
+def run_directory(directory: str, include_repo: bool = False, print_results: bool = False) -> None:
+    """
+    Perform a local analysis of a specific directory.
+
+    Args:
+        directory (str): The local path to the project directory.
+        include_repo (bool): Whether to include git repository info if detected.
+        print_results (bool): Whether to display the results in the console after analysis.
+
+    Raises:
+        Exception: If the directory analysis or file writing fails.
+    """
     git_url = GitHubManager.get_git_repo_url(directory)
 
     if git_url:
@@ -49,7 +81,7 @@ def run_directory(directory: str) -> None:
                 .lower()
             )
             if repo_input == "y":
-                request_url(git_url)
+                request_url(git_url, include_repo, print_results)
                 return
             elif repo_input == "n":
                 break
@@ -62,13 +94,21 @@ def run_directory(directory: str) -> None:
         analysis_result = an.get_results()
 
         repo_name = Path(directory).resolve().name
+
         analysis_result.name = repo_name
-        analysis_result.status = analysis.AnalysisStatus.COMPLETED
+        analysis_result.status = AnalysisStatus.COMPLETED
+        analysis_result.created_at = datetime.now()
+        analysis_result.origin = Origin.LOCAL
+
         file_path = Path(f"results/{repo_name}.json")
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(analysis_result.model_dump_json(indent=4))
+
+        if print_results:
+            console.main(str(file_path))
+
     except Exception as e:
         print(f"\nERROR: {e}")
         sys.exit(1)
@@ -76,14 +116,25 @@ def run_directory(directory: str) -> None:
         Analyzer.delete_tmp_files()
 
 
-def run_user(user: str) -> None:
+def run_user(user: str, include_repo: bool = False, print_results: bool = False) -> None:
+    """
+    Search for a GitHub user's repositories and allow choosing one for analysis.
+
+    Args:
+        user (str): The GitHub username.
+        include_repo (bool): Whether to include repository metadata in the analysis.
+        print_results (bool): Whether to display the results in the console after analysis.
+
+    Raises:
+        Exception: If fetching the user or their repositories fails.
+    """
     try:
         gh = GitHubManager(user=user, is_cli=True)
         gh.fetch_user()
         repos = gh.fetch_user_repos()
         repo_url = _choose_repo_cli(repos)
         if repo_url:
-            request_url(repo_url)
+            request_url(repo_url, include_repo, print_results)
 
     except Exception as e:
         print(f"\nERROR: {e}")
@@ -91,7 +142,18 @@ def run_user(user: str) -> None:
 
 
 def _choose_repo_cli(repos: List[Dict[str, Any]]) -> str:
-    """Función auxiliar exclusiva para la interfaz CLI"""
+    """
+    Provide a command-line interface to select a repository from a list.
+
+    Args:
+        repos (List[Dict[str, Any]]): A list of dictionaries containing repository information.
+
+    Returns:
+        str: The URL of the selected repository.
+
+    Raises:
+        SystemExit: If the user chooses to exit (enters '0').
+    """
     print("Repositories found:")
     for idx, repo in enumerate(repos, start=1):
         print(f"\t[{idx}] {repo.get('name')}")

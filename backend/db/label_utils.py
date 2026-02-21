@@ -10,7 +10,19 @@ logger = logging.getLogger(__name__)
 
 
 def get_class_labels() -> List[ClassPublic]:
-    """Retrieves all language classes (metadata) from the database."""
+    """
+    Retrieve all language classes and their metadata from the database.
+
+    Connects to the local SQLite database to fetch the mapping between
+    class identifiers and their assigned CEFR levels.
+
+    Returns:
+        List[ClassPublic]: A list of ClassPublic objects containing ID and Level.
+            Returns an empty list if a database error occurs.
+
+    Raises:
+        sqlite3.Error: Logged internally if the query fails, but not raised to caller.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()

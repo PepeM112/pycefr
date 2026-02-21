@@ -17,7 +17,23 @@ logger = logging.getLogger(__name__)
 
 
 class Analyzer:
+    """
+    Core engine for analyzing Python source code files within a project.
+
+    Attributes:
+        root_path (str): The base directory path to analyze.
+        is_cli (bool): Flag to enable console-specific output like progress bars.
+        analysis_result (AnalysisPublic): The object storing gathered analysis data.
+    """
+
     def __init__(self, root_path: str, is_cli: bool = True) -> None:
+        """
+        Initialize the Analyzer with a path and display settings.
+
+        Args:
+            root_path (str): The directory path to be scanned.
+            is_cli (bool): If True, progress will be printed to stdout.
+        """
         self.root_path = root_path
         self.is_cli = is_cli
         self.analysis_result = AnalysisPublic(
@@ -32,6 +48,13 @@ class Analyzer:
         self._processed_files = 0
 
     def analyse_project(self) -> None:
+        """
+        Walk through the project directory and perform AST analysis on all Python files.
+
+        Raises:
+            FileNotFoundError: If the root_path does not exist.
+            ValueError: If the root_path is not a directory.
+        """
         if self.is_cli:
             print("[ ] Analysing code", end=" ", flush=True)
 
@@ -53,6 +76,12 @@ class Analyzer:
         logger.info(f"Analysis completed for {root_path}")
 
     def _analyse_directory(self, path: str) -> None:
+        """
+        Recursively scan a directory for Python files to analyze.
+
+        Args:
+            path (str): The current directory path being scanned.
+        """
         try:
             items = os.listdir(path)
             for item in items:
@@ -74,6 +103,9 @@ class Analyzer:
             logger.error(f"Error reading directory {path}: {e}")
 
     def _update_progress(self) -> None:
+        """
+        Update and display the analysis progress bar or log message.
+        """
         if self._file_count == 0:
             return
 
@@ -89,6 +121,12 @@ class Analyzer:
                 logger.info(f"Analysis progress: {percent}%")
 
     def _analyse_file(self, file_path: str) -> None:
+        """
+        Read a file, parse its AST, and append the results to the analysis.
+
+        Args:
+            file_path (str): The absolute path of the Python file to analyze.
+        """
         try:
             with open(file_path, encoding="utf-8") as fp:
                 my_code = fp.read()
@@ -105,6 +143,15 @@ class Analyzer:
             logger.error(f"Could not analyse file {file_path}: {e}")
 
     def _analyse_ast(self, tree: ast.AST) -> List[AnalysisClassPublic]:
+        """
+        Walk through an AST tree to identify and count Python CEFR classes.
+
+        Args:
+            tree (ast.AST): The parsed AST of a file.
+
+        Returns:
+            List[AnalysisClassPublic]: A list of identified classes and their instance counts.
+        """
         counter: defaultdict[ClassId, int] = defaultdict(int)
         for node in ast.walk(tree):
             class_id = get_class_from_ast_node(node)
@@ -124,6 +171,15 @@ class Analyzer:
         return elements
 
     def _should_ignore(self, path: str) -> bool:
+        """
+        Determine if a path should be ignored based on settings.
+
+        Args:
+            path (str): The path to check.
+
+        Returns:
+            bool: True if the path should be ignored, False otherwise.
+        """
         ignore_folders = settings.ignore_folders
         path_norm = path.replace("\\", "/")
 
@@ -134,6 +190,15 @@ class Analyzer:
         return False
 
     def _count_python_files(self, directory: str) -> int:
+        """
+        Count total number of Python files in a directory for progress tracking.
+
+        Args:
+            directory (str): The root directory to start counting from.
+
+        Returns:
+            int: The total count of .py files.
+        """
         count = 0
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if not self._should_ignore(os.path.join(root, d))]
@@ -141,10 +206,22 @@ class Analyzer:
         return count
 
     def get_results(self) -> AnalysisPublic:
+        """
+        Get the final analysis results.
+
+        Returns:
+            AnalysisPublic: The completed analysis data object.
+        """
         return self.analysis_result
 
     @staticmethod
     def delete_tmp_files() -> None:
+        """
+        Remove the temporary directory used during analysis.
+
+        Note:
+            Logs an error if the directory cannot be deleted.
+        """
         tmp_path = Path("backend/tmp")
         if tmp_path.exists():
             try:

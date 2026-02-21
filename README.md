@@ -3,7 +3,7 @@
 ## *Identifying Python3 Code Level Using the CERFL Framework as Inspiration*
 
 ### What is this project about?
-The goal of pycefrl is to create a tool capable of obtaining an evaluation inspired by the [''Common European Framework of Reference for Languages''](https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages) for code written in the Python programming language, version 3.
+The goal of pycefr is to create a tool capable of obtaining an evaluation inspired by the [''Common European Framework of Reference for Languages''](https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages) for code written in the Python programming language, version 3.
 
 With this tool it is possible to analyze the level of GitHub repositories (and their developers) or code snippets in Python3.
 
@@ -35,12 +35,12 @@ Performs full analysis on a directory. If it is detected that the directory is a
 
 #### 4. List all result files
 ```bash
-python3 pycefrl.py [-l | --list]
+python3 pycefr.py [-l | --list]
 ```
 
 #### 5. Visualize results in console
 ```bash
-python3 pycefrl.py [-c | --console] <results_file>
+python3 pycefr.py [-c | --console] <results_file>
 ```
 
 ### After analysis

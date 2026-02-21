@@ -14,8 +14,18 @@ router = APIRouter(prefix="/labels", tags=["Labels"])
 @router.get("/class", response_model=List[ClassPublic], operation_id="class_label")
 def class_label() -> List[ClassPublic]:
     """
-    Retrieves the complete list of code construct labels and their associated
-    CEFR levels from the database.
+    Retrieve all code construct labels and their assigned CEFR levels.
+
+    This endpoint fetches the master list of classification identifiers
+    (e.g., 'LIST_NESTED', 'CLASS_INHERITED') and their corresponding
+    language levels (A1-C2) from the database.
+
+    Returns:
+        List[ClassPublic]: A list of objects containing ClassId and Level.
+
+    Raises:
+        HTTPException: 500 status code if there is an error accessing the
+            labels in the database.
     """
     try:
         labels = get_class_labels()

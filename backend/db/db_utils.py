@@ -28,6 +28,15 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "database/pycefr.db")
 
 
 def get_db_connection() -> sqlite3.Connection:
+    """
+    Establish a connection to the SQLite database.
+
+    Returns:
+        sqlite3.Connection: A connection object with Row factory enabled.
+
+    Raises:
+        sqlite3.OperationalError: If the database connection fails.
+    """
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         conn.row_factory = sqlite3.Row
@@ -43,6 +52,19 @@ def get_db_connection() -> sqlite3.Connection:
 def get_analyses(
     page: int, per_page: int, sorting: Sorting[AnalysisSortColumn] | None = None, filters: AnalysisFilters | None = None
 ) -> Tuple[List[AnalysisSummaryPublic], int]:
+    """
+    Retrieve a paginated list of analysis summaries with filtering and sorting.
+
+    Args:
+        page (int): The current page number (starting at 1).
+        per_page (int): Number of items per page.
+        sorting (Sorting[AnalysisSortColumn] | None): Sorting configuration.
+        filters (AnalysisFilters | None): Filtering criteria for the query.
+
+    Returns:
+        Tuple[List[AnalysisSummaryPublic], int]: A list of summaries and the
+            total count of records matching the filters.
+    """
     offset = (page - 1) * per_page
     conn = get_db_connection()
     try:
@@ -103,7 +125,6 @@ def get_analyses(
         """
 
         query_params = params + [per_page, offset]
-
         rows = cursor.execute(query, query_params).fetchall()
 
         count_query = f"SELECT COUNT(*) FROM analyses WHERE {where_sql}"
@@ -145,6 +166,15 @@ def get_analyses(
 
 
 def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
+    """
+    Fetch full details of a specific analysis, including files, commits, and contributors.
+
+    Args:
+        analysis_id (int): The unique identifier of the analysis.
+
+    Returns:
+        Optional[AnalysisPublic]: The full analysis object if found, else None.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -152,7 +182,6 @@ def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
         if not row:
             return None
 
-        # Reconstruir estructura de archivos y clases
         file_rows = cursor.execute(
             """
             SELECT f.filename, c.class_id, c.instances
@@ -228,13 +257,20 @@ def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
 
 
 def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
+    """
+    Create an initial analysis record with status 'IN_PROGRESS'.
+
+    Args:
+        repo_url (str): The URL of the repository to be analyzed.
+
+    Returns:
+        AnalysisPublic | None: The placeholder analysis object, or None if creation fails.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         repo_name = repo_url.rstrip("/").split("/")[-1]
-
         now_utc = datetime.now(timezone.utc)
-
         name = f"{now_utc.strftime('%Y%m%d')}_{repo_name}"
 
         cursor.execute(
@@ -273,7 +309,16 @@ def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
 
 
 def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> None:
-    """Actualiza un análisis existente con los resultados finales."""
+    """
+    Update an existing analysis record with final results.
+
+    Args:
+        analysis_id (int): The ID of the analysis to update.
+        analysis_data (AnalysisPublic): The gathered results to save.
+
+    Raises:
+        ValueError: If repository data is missing.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -290,7 +335,7 @@ def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> 
             WHERE id = ?
             """,
             (
-                analysis_data.status,
+                analysis_data.status.value,
                 analysis_data.repo.name,
                 analysis_data.repo.description,
                 analysis_data.repo.owner.name if analysis_data.repo.owner else None,
@@ -315,7 +360,7 @@ def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> 
                     (file_id, cls.class_id.value, cls.instances),
                 )
 
-        # Inserción de Commits
+        # Insert commits
         cursor.executemany(
             """
             INSERT INTO repo_commits
@@ -336,7 +381,7 @@ def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> 
             ],
         )
 
-        # Inserción de Contributors
+        # Insert contributors
         cursor.executemany(
             """
             INSERT INTO repo_contributors
@@ -366,6 +411,15 @@ def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> 
 
 
 def delete_analysis(analysis_id: int) -> bool:
+    """
+    Soft-delete an analysis by updating its status to 'deleted'.
+
+    Args:
+        analysis_id (int): The ID of the analysis.
+
+    Returns:
+        bool: True if the update affected a row, False otherwise.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -377,6 +431,13 @@ def delete_analysis(analysis_id: int) -> bool:
 
 
 def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
+    """
+    Update analysis status to 'FAILED' and record the error reason.
+
+    Args:
+        analysis_id (int): The ID of the analysis.
+        error_message (str): Description of why the analysis failed.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -392,20 +453,43 @@ def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
         conn.close()
 
 
-def get_unique_owners() -> List[EntityLabelString]:
+def get_unique_owners(search_query: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
+    """
+    Fetch a list of unique repository owners from existing analyses.
+
+    Args:
+        search_query (str | None): Optional string to filter owner logins or names.
+        limit (int | None): Maximum number of records to return.
+
+    Returns:
+        List[EntityLabelString]: A list of objects containing owner ID and label.
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        rows = cursor.execute(
-            """
+
+        # We use login as fallback, since name is optional
+        query = """
             SELECT DISTINCT
             repo_owner_login AS id,
-            COALESCE(repo_owner_name, repo_owner_login) AS label -- use login as fallback, since name is optional
+            COALESCE(repo_owner_name, repo_owner_login) AS label
             FROM analyses
             WHERE repo_owner_login IS NOT NULL
-            ORDER BY repo_owner_name;
-            """
-        ).fetchall()
+        """
+        params: List[str] = []
+
+        if search_query:
+            query += " AND (repo_owner_login LIKE ? OR repo_owner_name LIKE ?)"
+            search_param = f"%{search_query}%"
+            params.extend([search_param, search_param])
+
+        query += " ORDER BY label"
+
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(str(limit))
+
+        rows = cursor.execute(query, params).fetchall()
         return [EntityLabelString(id=row["id"], label=row["label"]) for row in rows]
     except sqlite3.Error as e:
         logger.error(f"Database error while fetching unique owners: {e}")
@@ -416,8 +500,15 @@ def get_unique_owners() -> List[EntityLabelString]:
 
 def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None:
     """
-    Imports a full analysis from a validated object.
-    Generates new IDs to avoid collisions.
+    Import a full analysis object into the database.
+
+    Generates a new ID and sets origin to LOCAL to avoid collisions.
+
+    Args:
+        analysis_data (AnalysisPublic): The full analysis data to import.
+
+    Returns:
+        AnalysisPublic | None: The imported analysis object with its new ID.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -453,7 +544,7 @@ def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None
                 else None,
                 sum(c.estimated_hours for c in analysis_data.repo.commits) if analysis_data.repo else 0,
                 analysis_data.error_message,
-                datetime.now(timezone.utc).isoformat()
+                datetime.now(timezone.utc).isoformat(),
             ),
         )
         new_analysis_id = cursor.lastrowid
@@ -511,7 +602,6 @@ def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None
                 )
 
         conn.commit()
-
         analysis_data.id = new_analysis_id
         analysis_data.origin = Origin.LOCAL
         return analysis_data
@@ -528,6 +618,15 @@ def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None
 
 
 def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommitPublic:
+    """
+    Map a database row to a RepoCommitPublic schema.
+
+    Args:
+        row (sqlite3.Row): The source database row.
+
+    Returns:
+        RepoCommitPublic: The validated schema object.
+    """
     return RepoCommitPublic(
         username=row["username"],
         github_user=row["github_user"],
@@ -539,6 +638,15 @@ def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommitPublic:
 
 
 def _map_row_to_repo_contributor(row: sqlite3.Row) -> GitHubContributorPublic:
+    """
+    Map a database row to a GitHubContributorPublic schema.
+
+    Args:
+        row (sqlite3.Row): The source database row.
+
+    Returns:
+        GitHubContributorPublic: The validated schema object.
+    """
     return GitHubContributorPublic(
         name=row["name"],
         github_user=row["github_user"],

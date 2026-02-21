@@ -115,14 +115,12 @@
 <script setup lang="ts">
 import {
   type AnalysisSummaryPublic,
-  type EntityLabelString,
   type Pagination,
   AnalysisSortColumn,
   AnalysisStatus,
   createAnalysis,
   deleteAnalysis,
   downloadAnalysis,
-  getOwners,
   listAnalysis,
   Origin,
   uploadAnalysis,
@@ -137,20 +135,22 @@ import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
 import { getStatusColor } from '@/components/repo/utils';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useFilters } from '@/composables/useFilter';
 import { useRules } from '@/composables/useRules';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { type DateFilterValue, type FilterEntity, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
+import { type DateFilterValue, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const rules = useRules();
 const sorting = useSortFilter();
 const snackbarStore = useSnackbarStore();
+const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
@@ -164,7 +164,6 @@ const newAnalysisName = ref<string>('');
 const newAnalysisUrl = ref<string>('');
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
-const ownersList = ref<FilterEntity[]>([]);
 
 const statusList = Enums.buildList(AnalysisStatus);
 
@@ -181,7 +180,7 @@ const filterList = computed<FilterItem[]>(() => [
     key: 'owner',
     query: 'o',
     options: {
-      items: ownersList.value,
+      fetcher: ownerFetcher,
     },
   },
   {
@@ -224,21 +223,6 @@ const headers: TableHeader[] = [
   { label: 'status', key: 'status', sortColumn: AnalysisSortColumn.STATUS },
   { label: 'error_message', key: 'error_message' },
 ];
-
-async function getOwnersList() {
-  const { data, error } = await getOwners();
-  if (error) {
-    console.error('error.fetching.owners:', error);
-    snackbarStore.add({
-      text: 'error.fetching.owners',
-      color: 'error',
-      icon: 'mdi-alert-circle-outline',
-      closable: true,
-    });
-    return;
-  }
-  ownersList.value = data?.map((owner: EntityLabelString) => ({ label: owner.label, value: owner.id })) ?? [];
-}
 
 async function loadData() {
   loadingStatus.value = LoadingStatus.LOADING;
@@ -398,10 +382,6 @@ function getOriginIcon(origin: Origin): string {
       return '';
   }
 }
-
-onMounted(async () => {
-  await getOwnersList();
-});
 </script>
 <style lang="scss" scoped>
 .status-badge {

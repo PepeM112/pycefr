@@ -1,9 +1,23 @@
 import ast
+from typing import Dict
 
 from backend.models.schemas.class_model import ClassId
+from backend.models.schemas.common import Level
 
 
 def get_class_from_ast_node(node: ast.AST) -> ClassId:
+    """
+    Determine the CEFR ClassId for a given AST node.
+
+    This function acts as a dispatcher, routing specific AST types to their
+    corresponding level-checking logic.
+
+    Args:
+        node (ast.AST): The AST node to evaluate.
+
+    Returns:
+        ClassId: The identified CEFR classification, or ClassId.UNKNOWN.
+    """
     if isinstance(node, ast.List):
         return get_level_list(node)
     if isinstance(node, ast.ListComp):
@@ -54,6 +68,15 @@ def get_class_from_ast_node(node: ast.AST) -> ClassId:
 
 
 def get_level_list(node: ast.List) -> ClassId:
+    """
+    Analyze list literals to determine complexity.
+
+    Args:
+        node (ast.List): The list node to analyze.
+
+    Returns:
+        ClassId: The classification based on nesting or content.
+    """
     has_nested_list = any(isinstance(e, ast.List) for e in node.elts)
     if has_nested_list:
         return ClassId.LIST_NESTED
@@ -64,6 +87,15 @@ def get_level_list(node: ast.List) -> ClassId:
 
 
 def get_level_list_comp(node: ast.ListComp) -> ClassId:
+    """
+    Analyze list comprehensions for complexity.
+
+    Args:
+        node (ast.ListComp): The list comprehension node.
+
+    Returns:
+        ClassId: The classification based on filters or nesting.
+    """
     if len(node.generators) > 1:
         return ClassId.LISTCOMP_NESTED
     if any(gen.ifs for gen in node.generators):
@@ -72,6 +104,15 @@ def get_level_list_comp(node: ast.ListComp) -> ClassId:
 
 
 def get_level_dict(node: ast.Dict) -> ClassId:
+    """
+    Analyze dictionary literals for complexity.
+
+    Args:
+        node (ast.Dict): The dictionary node.
+
+    Returns:
+        ClassId: The classification based on nested structures.
+    """
     has_dict_inside = any(isinstance(v, ast.Dict) for v in node.values)
     has_list_inside = any(isinstance(v, ast.List) for v in node.values)
     if has_dict_inside:
@@ -85,6 +126,15 @@ def get_level_dict(node: ast.Dict) -> ClassId:
 
 
 def get_level_dict_comp(node: ast.DictComp) -> ClassId:
+    """
+    Analyze dictionary comprehensions for complexity.
+
+    Args:
+        node (ast.DictComp): The dictionary comprehension node.
+
+    Returns:
+        ClassId: The classification based on logic inside the comprehension.
+    """
     if isinstance(node.value, ast.DictComp):
         return ClassId.DICTCOMP_NESTED
     if isinstance(node.value, ast.IfExp):
@@ -95,6 +145,15 @@ def get_level_dict_comp(node: ast.DictComp) -> ClassId:
 
 
 def get_level_tuple(node: ast.Tuple) -> ClassId:
+    """
+    Analyze tuple literals for complexity.
+
+    Args:
+        node (ast.Tuple): The tuple node.
+
+    Returns:
+        ClassId: Simple or Nested tuple classification.
+    """
     has_nested_tuple = any(isinstance(e, ast.Tuple) for e in node.elts)
     if has_nested_tuple:
         return ClassId.TUPLE_NESTED
@@ -102,6 +161,15 @@ def get_level_tuple(node: ast.Tuple) -> ClassId:
 
 
 def get_level_call(node: ast.Call) -> ClassId:
+    """
+    Identify complexity of function calls based on built-ins or attributes.
+
+    Args:
+        node (ast.Call): The function call node.
+
+    Returns:
+        ClassId: Classification based on the specific function or attribute called.
+    """
     if isinstance(node.func, ast.Name):
         func_id = node.func.id
         mapper = {
@@ -129,6 +197,15 @@ def get_level_call(node: ast.Call) -> ClassId:
 
 
 def get_level_assign(node: ast.AST) -> ClassId:
+    """
+    Analyze assignment operations.
+
+    Args:
+        node (ast.AST): An Assignment or Augmented Assignment node.
+
+    Returns:
+        ClassId: Simple, operator-based, or incremental assignment classification.
+    """
     if isinstance(node, ast.AugAssign):
         return ClassId.ASSIGN_INCREMENTS
     if isinstance(node, ast.Assign) and isinstance(node.value, ast.BinOp):
@@ -137,6 +214,15 @@ def get_level_assign(node: ast.AST) -> ClassId:
 
 
 def get_level_if(node: ast.If) -> ClassId:
+    """
+    Analyze if-statements, specifically checking for the main entry point pattern.
+
+    Args:
+        node (ast.If): The if-statement node.
+
+    Returns:
+        ClassId: Simple If or the __name__ == "__main__" pattern.
+    """
     if (
         isinstance(node.test, ast.Compare)
         and isinstance(node.test.left, ast.Name)
@@ -150,6 +236,15 @@ def get_level_if(node: ast.If) -> ClassId:
 
 
 def get_level_for(node: ast.For) -> ClassId:
+    """
+    Analyze for-loops for complexity and iteration style.
+
+    Args:
+        node (ast.For): The for-loop node.
+
+    Returns:
+        ClassId: Classification based on nesting and iteration targets.
+    """
     has_nested_for = any(isinstance(e, ast.For) for e in node.body)
     if has_nested_for:
         return ClassId.LOOP_FOR_NESTED
@@ -163,31 +258,46 @@ def get_level_for(node: ast.For) -> ClassId:
 
 
 def get_level_while(node: ast.While) -> ClassId:
+    """
+    Analyze while-loops.
+
+    Args:
+        node (ast.While): The while-loop node.
+
+    Returns:
+        ClassId: Simple While or While/Else classification.
+    """
     if node.orelse:
         return ClassId.LOOP_WHILE_ELSE
     return ClassId.LOOP_WHILE_SIMPLE
 
 
 def get_level_function(node: ast.FunctionDef) -> ClassId:
-    # Decorators
+    """
+    Analyze function definitions for advanced features like decorators,
+    recursion, generators, or complex argument signatures.
+
+    Args:
+        node (ast.FunctionDef): The function definition node.
+
+    Returns:
+        ClassId: Classification based on the most advanced feature found.
+    """
     for decorator in node.decorator_list:
         if isinstance(decorator, ast.Name) and decorator.id == "staticmethod":
             return ClassId.STATIC_CLASSMETHOD
         if isinstance(decorator, ast.Name) and decorator.id == "classmethod":
             return ClassId.STATIC_STATICMETHOD
 
-    # Recursion
     for subnode in ast.walk(node):
         if isinstance(subnode, ast.Call) and isinstance(subnode.func, ast.Name) and subnode.func.id == node.name:
             return ClassId.FUNCTIONDEF_RECURSIVE
 
-    # Generators (contains yield)
     for subnode in node.body:
         for depth_node in ast.walk(subnode):
             if isinstance(depth_node, (ast.Yield, ast.YieldFrom)):
                 return ClassId.GENERATORS_FUNCTION
 
-    # Arguments
     if node.args.kwonlyargs:
         return ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY
     if node.args.kwarg:
@@ -201,21 +311,27 @@ def get_level_function(node: ast.FunctionDef) -> ClassId:
 
 
 def get_level_class(node: ast.ClassDef) -> ClassId:
+    """
+    Analyze class definitions for OOP features like inheritance,
+    private members, or descriptors.
+
+    Args:
+        node (ast.ClassDef): The class definition node.
+
+    Returns:
+        ClassId: Classification based on found OOP characteristics.
+    """
     if node.bases:
         return ClassId.CLASS_INHERITED
     for item in node.body:
         if isinstance(item, ast.FunctionDef):
-            # Constructor
             if item.name == "__init__":
                 return ClassId.CLASS_INIT
-            # Has private attributes/methods
             if item.name.startswith("__") and not item.name.endswith("__"):
                 return ClassId.CLASS_PRIVATE
-            # Descriptors
             if item.name in ["__get__", "__set__", "__delete__"]:
                 return ClassId.CLASS_DESCRIPTORS
 
-        # Properties (e.g., @property)
         for decorator in getattr(item, "decorator_list", []):
             if isinstance(decorator, ast.Name) and decorator.id == "property":
                 return ClassId.CLASS_PROPERTIES
@@ -224,6 +340,15 @@ def get_level_class(node: ast.ClassDef) -> ClassId:
 
 
 def get_level_import(node: ast.AST) -> ClassId:
+    """
+    Analyze import statements.
+
+    Args:
+        node (ast.AST): An Import or ImportFrom node.
+
+    Returns:
+        ClassId: Classification based on import style or specific complex modules.
+    """
     modules = {
         "re": ClassId.MODULES_RE,
         "pickle": ClassId.MODULES_PICKLE,
@@ -251,6 +376,15 @@ def get_level_import(node: ast.AST) -> ClassId:
 
 
 def get_level_try(node: ast.Try) -> ClassId:
+    """
+    Analyze try-except blocks for error handling complexity.
+
+    Args:
+        node (ast.Try): The try block node.
+
+    Returns:
+        ClassId: Classification based on else/finally clauses or nesting.
+    """
     if node.finalbody:
         return ClassId.EXCEPTION_TRY_EXCEPT_FINALLY
     if node.orelse:
@@ -258,3 +392,109 @@ def get_level_try(node: ast.Try) -> ClassId:
     if any(isinstance(n, ast.Try) for n in node.body):
         return ClassId.EXCEPTION_TRY_TRY
     return ClassId.EXCEPTION_TRY_EXCEPT
+
+
+def get_default_class_level(class_id: ClassId) -> int:
+    """
+    Map a ClassId to its corresponding CEFR numerical level.
+
+    Args:
+        class_id (ClassId): The class identifier to look up.
+
+    Returns:
+        int: The CEFR level (A1=1, A2=2, etc.), or Level.UNKNOWN if not found.
+    """
+    default_levels: Dict[ClassId, Level] = {
+        ClassId.LIST_SIMPLE: Level.A1,
+        ClassId.LIST_NESTED: Level.A2,
+        ClassId.LIST_WITH_DICT: Level.B1,
+        ClassId.LISTCOMP_SIMPLE: Level.A2,
+        ClassId.LISTCOMP_NESTED: Level.B1,
+        ClassId.LISTCOMP_WITH_IF: Level.B1,
+        ClassId.DICT_SIMPLE: Level.A2,
+        ClassId.DICT_NESTED: Level.B1,
+        ClassId.DICT_WITH_LIST: Level.B1,
+        ClassId.DICT_WITH_DICT_LIST: Level.B2,
+        ClassId.DICTCOMP_SIMPLE: Level.B1,
+        ClassId.DICTCOMP_WITH_IF: Level.B1,
+        ClassId.DICTCOMP_WITH_IF_ELSE: Level.B1,
+        ClassId.DICTCOMP_NESTED: Level.B2,
+        ClassId.TUPLE_SIMPLE: Level.A1,
+        ClassId.TUPLE_NESTED: Level.A2,
+        ClassId.FILE_OPEN: Level.A2,
+        ClassId.FILE_WRITE: Level.A2,
+        ClassId.FILE_WRITELINES: Level.B1,
+        ClassId.FILE_READ: Level.A2,
+        ClassId.FILE_READLINE: Level.A2,
+        ClassId.PRINT_SIMPLE: Level.A1,
+        ClassId.ASSIGN_SIMPLE: Level.A1,
+        ClassId.ASSIGN_WITH_OPERATOR: Level.A1,
+        ClassId.ASSIGN_INCREMENTS: Level.A1,
+        ClassId.IF_SIMPLE: Level.A1,
+        ClassId.IF_EXPRESSION: Level.A2,
+        ClassId.IF_NAME_MAIN: Level.A2,
+        ClassId.LOOP_BREAK: Level.A2,
+        ClassId.LOOP_CONTINUE: Level.A2,
+        ClassId.LOOP_PASS: Level.A1,
+        ClassId.LOOP_WHILE_SIMPLE: Level.A2,
+        ClassId.LOOP_WHILE_ELSE: Level.B1,
+        ClassId.LOOP_FOR_SIMPLE: Level.A1,
+        ClassId.LOOP_FOR_NESTED: Level.A2,
+        ClassId.LOOP_FOR_TUPLE_NAME: Level.A2,
+        ClassId.LOOP_FOR_LIST_ITERATE: Level.A1,
+        ClassId.LOOP_FOR_TUPLE_ITERATE: Level.A1,
+        ClassId.LOOP_RANGE: Level.A1,
+        ClassId.LOOP_ZIP: Level.B1,
+        ClassId.LOOP_MAP: Level.B1,
+        ClassId.LOOP_ENUMERATE: Level.A2,
+        ClassId.FUNCTIONDEF_SIMPLE: Level.A2,
+        ClassId.FUNCTIONDEF_ARGUM_DEFAULT: Level.B1,
+        ClassId.FUNCTIONDEF_ARGUM_STAR: Level.B1,
+        ClassId.FUNCTIONDEF_ARGUM_DBL_STAR: Level.B1,
+        ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY: Level.B2,
+        ClassId.FUNCTIONDEF_RECURSIVE: Level.B2,
+        ClassId.RETURN_SIMPLE: Level.A2,
+        ClassId.LAMBDA_SIMPLE: Level.B1,
+        ClassId.GENERATORS_FUNCTION: Level.B2,
+        ClassId.GENERATORS_EXPRESSION: Level.B2,
+        ClassId.IMPORT_SIMPLE: Level.A1,
+        ClassId.IMPORT_FROM_SIMPLE: Level.A1,
+        ClassId.IMPORT_FROM_RELATIVE: Level.B1,
+        ClassId.IMPORT_FROM_STAR: Level.A2,
+        ClassId.IMPORT_AS_EXTENSION: Level.A1,
+        ClassId.MODULES_STRUCT: Level.B2,
+        ClassId.MODULES_PICKLE: Level.B2,
+        ClassId.MODULES_SHELVE: Level.B2,
+        ClassId.MODULES_DBM: Level.B2,
+        ClassId.MODULES_RE: Level.B1,
+        ClassId.MODULES_IMPORTLIB: Level.C1,
+        ClassId.CLASS_SIMPLE: Level.B1,
+        ClassId.CLASS_INHERITED: Level.B2,
+        ClassId.CLASS_INIT: Level.B1,
+        ClassId.CLASS_DESCRIPTORS: Level.C1,
+        ClassId.CLASS_PROPERTIES: Level.B2,
+        ClassId.CLASS_PRIVATE: Level.B2,
+        ClassId.STATIC_CLASSMETHOD: Level.B2,
+        ClassId.STATIC_STATICMETHOD: Level.B2,
+        ClassId.DECORATORS_FUNCTION: Level.B2,
+        ClassId.DECORATORS_CLASS: Level.C1,
+        ClassId.METACLASS_NEW: Level.C2,
+        ClassId.METACLASS_METACLASS: Level.C2,
+        ClassId.METACLASS_ATTR_METACLASS: Level.C2,
+        ClassId.SUPERFUNCTION_SIMPLE: Level.B2,
+        ClassId.SLOTS_ATTR: Level.C1,
+        ClassId.ATTRIBUTES_SIMPLE: Level.A2,
+        ClassId.ATTRIBUTES_CLASS_REF: Level.C1,
+        ClassId.ATTRIBUTES_DICT_REF: Level.C1,
+        ClassId.EXCEPTION_TRY_EXCEPT: Level.A2,
+        ClassId.EXCEPTION_TRY_ELSE_EXCEPT: Level.B1,
+        ClassId.EXCEPTION_TRY_TRY: Level.B1,
+        ClassId.EXCEPTION_TRY_FINALLY: Level.B1,
+        ClassId.EXCEPTION_TRY_EXCEPT_FINALLY: Level.B1,
+        ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY: Level.B2,
+        ClassId.EXCEPTION_RAISE: Level.B1,
+        ClassId.EXCEPTION_ASSERT: Level.B1,
+        ClassId.WITH_SIMPLE: Level.B1,
+    }
+
+    return default_levels.get(class_id, Level.UNKNOWN)

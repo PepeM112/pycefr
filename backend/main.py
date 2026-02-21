@@ -17,8 +17,11 @@ root_logger.handlers = []
 root_logger.addHandler(console_handler)
 root_logger.setLevel(logging.INFO)
 
-app = FastAPI(title="PyCEFR API", description="API para el análisis y clasificación de código.", version="1.0.0")
+app = FastAPI(
+    title="PyCEFR API", description="API for Python code complexity analysis and CEFR classification.", version="1.0.0"
+)
 
+# --- MIDDLEWARE ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -27,6 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- ROUTING ---
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(analysis_routes.router)
 api_v1_router.include_router(common.router)
@@ -35,6 +39,15 @@ api_v1_router.include_router(labels.router)
 app.include_router(api_v1_router)
 
 
-@app.get("/")
+@app.get("/", tags=["Health"])
 def read_root() -> dict[str, str]:
+    """
+    Health check endpoint.
+
+    Provides a simple confirmation that the API service is reachable
+    and running correctly.
+
+    Returns:
+        dict[str, str]: A dictionary containing the status and a welcome message.
+    """
     return {"status": "ok", "message": "API is running"}
