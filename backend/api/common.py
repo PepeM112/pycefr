@@ -14,7 +14,20 @@ router = APIRouter(prefix="/common", tags=["Common"])
 @router.get("/owners", response_model=List[EntityLabelString], operation_id="get_owners")
 def get_owners(search: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
     """
-    Retrieves the complete list of owners
+    Retrieve a unique list of repository owners found in the database.
+
+    This endpoint is primarily used for populating filter dropdowns or search
+    autocompletion in the frontend.
+
+    Args:
+        search (str | None): A search string to filter owners by name or login.
+        limit (int | None): The maximum number of owner entities to return.
+
+    Returns:
+        List[EntityLabelString]: A list of objects containing owner IDs and labels.
+
+    Raises:
+        HTTPException: 500 status code if a database or server error occurs.
     """
     try:
         owners = get_unique_owners(search_query=search, limit=limit)

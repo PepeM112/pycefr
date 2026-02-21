@@ -25,7 +25,29 @@ python_threshold_percentage = settings.python_threshold_percentage
 
 
 class GitHubManager:
+    """
+    Manager for interacting with the GitHub API (REST and GraphQL).
+
+    Handles repository validation, cloning, metadata extraction, and commit history
+    analysis to calculate contribution statistics.
+
+    Attributes:
+        user (str): GitHub username or organization name.
+        repo_url (str): The full HTTPS URL of the repository.
+        repo_name (str): The extracted name of the repository.
+        is_cli (bool): Whether to output progress messages to the console.
+        session (requests.Session): Authenticated session for API requests.
+    """
+
     def __init__(self, user: str = "", repo_url: str = "", is_cli: bool = True) -> None:
+        """
+        Initialize the GitHubManager with credentials and targets.
+
+        Args:
+            user (str): GitHub username.
+            repo_url (str): Repository URL.
+            is_cli (bool): Enable CLI status printing.
+        """
         self.user = user
         self.repo_url = repo_url
         self.repo_name = ""
@@ -38,15 +60,42 @@ class GitHubManager:
         self._profile_url_cache: Dict[str, str] = {}
 
     def _print_status(self, message: str, end: str = "\n", flush: bool = False) -> None:
+        """
+        Print a status message to the console if CLI mode is enabled.
+
+        Args:
+            message (str): The message to display.
+            end (str): The string appended after the last character.
+            flush (bool): Whether to forcibly flush the stream.
+        """
         if self.is_cli:
             print(f"\r{message}\033[K", end=end, flush=flush)
 
     @property
     def api_url(self) -> str:
+        """
+        Construct the base GitHub REST API URL for the current repository.
+
+        Returns:
+            str: The formatted REST API URL.
+        """
         return f"https://api.github.com/repos/{self.user}/{self.repo_name}"
 
     def _query_graphql(self, query: str, variables: Dict[str, Any]) -> Dict[str, Any]:
-        """Helper to execute GraphQL queries."""
+        """
+        Execute a GraphQL query against the GitHub API.
+
+        Args:
+            query (str): The GraphQL query string.
+            variables (Dict[str, Any]): Variables required by the query.
+
+        Returns:
+            Dict[str, Any]: The 'data' payload from the JSON response.
+
+        Raises:
+            FileNotFoundError: If the repository is not found.
+            RuntimeError: If the GraphQL response contains API errors.
+        """
         response = self.session.post(self.graphql_url, json={"query": query, "variables": variables})
 
         self._check_response(response)
@@ -62,6 +111,14 @@ class GitHubManager:
         return cast(Dict[str, Any], data["data"])
 
     def validate_repo_url(self) -> None:
+        """
+        Validate the format of the GitHub URL and extract user/repo info.
+
+        Also verifies if the repository meets the Python language percentage threshold.
+
+        Raises:
+            ValueError: If the URL format is invalid or the Python threshold is not met.
+        """
         self._print_status("[ ] Validating URL", end="")
         if not self.repo_url:
             raise ValueError("Incorrect URL format. Use: https://github.com/USER/REPO")
@@ -78,7 +135,12 @@ class GitHubManager:
         self._print_status("[✓] Validating URL")
 
     def validate_python_language(self) -> bool:
-        """Fast check for Python threshold using REST."""
+        """
+        Check if the repository reaches the required Python language threshold.
+
+        Returns:
+            bool: True if Python usage is above the threshold, False otherwise.
+        """
         response = self.session.get(f"{self.api_url}/languages")
         self._check_response(response)
         languages = response.json()
@@ -87,6 +149,15 @@ class GitHubManager:
         return python_bytes >= total_bytes * python_threshold_percentage / 100 if total_bytes > 0 else False
 
     def clone_repo(self) -> str:
+        """
+        Clone the GitHub repository into a temporary local directory.
+
+        Returns:
+            str: The absolute path where the repository was cloned.
+
+        Raises:
+            subprocess.CalledProcessError: If the git clone command fails.
+        """
         self._print_status("[ ] Cloning repository", end="")
         clone_dir = Path("backend/tmp")
         clone_path = clone_dir / self.repo_name
@@ -99,7 +170,12 @@ class GitHubManager:
         return str(clone_path)
 
     def get_repo_info(self) -> RepoPublic:
-        """Fetch all repository info using optimized GraphQL calls."""
+        """
+        Fetch comprehensive repository data, including commits and contributors.
+
+        Returns:
+            RepoPublic: An object containing metadata, commits, and contributor list.
+        """
         self._print_status("[ ] Fetching data via GraphQL...", end="")
         repo_data = self._get_repo_base_data()
         repo_commits = self._get_repo_commits_graphql()
@@ -136,7 +212,12 @@ class GitHubManager:
         )
 
     def _get_repo_base_data(self) -> RepoSummaryPublic:
-        """Consolidated GraphQL query for metadata, PRs, and initial user cache."""
+        """
+        Fetch basic repository metadata and initial contributor cache.
+
+        Returns:
+            RepoSummaryPublic: Summary information about the repository.
+        """
         query = """
         query($owner: String!, $name: String!) {
           repository(owner: $owner, name: $name) {
@@ -201,7 +282,12 @@ class GitHubManager:
         )
 
     def _get_repo_commits_graphql(self) -> List[RepoCommitPublic]:
-        """Fetch paginated commit history with unifications and PR compensation."""
+        """
+        Fetch and process paginated commit history with PR compensation.
+
+        Returns:
+            List[RepoCommitPublic]: Aggregated commit statistics per contributor.
+        """
         user_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "username": "",
@@ -331,6 +417,17 @@ class GitHubManager:
         return final_results
 
     def _check_response(self, response: requests.Response) -> None:
+        """
+        Check for common HTTP errors in API responses.
+
+        Args:
+            response (requests.Response): The response object to check.
+
+        Raises:
+            PermissionError: If API rate limits are hit or the token is invalid.
+            FileNotFoundError: If the resource is not found (404).
+            RuntimeError: For other non-200 status codes.
+        """
         if response.status_code in [401, 403]:
             raise PermissionError("API rate limit exceeded or invalid token.")
         if response.status_code == 404:
@@ -344,6 +441,17 @@ class GitHubManager:
         session_threshold_seconds: int = 7200,
         default_commit_time_seconds: int = 1200,
     ) -> float:
+        """
+        Estimate development hours based on the time gaps between commits.
+
+        Args:
+            commit_timestamps (List[float]): List of unix timestamps of commits.
+            session_threshold_seconds (int): Maximum gap before considering a new session.
+            default_commit_time_seconds (int): Time credited for the first commit of a session.
+
+        Returns:
+            float: Total estimated hours rounded to 2 decimal places.
+        """
         if not commit_timestamps:
             return 0.0
         commit_timestamps.sort()
@@ -357,6 +465,12 @@ class GitHubManager:
         return round(total_seconds / 3600, 2)
 
     def fetch_user(self) -> GitHubUserPublic:
+        """
+        Fetch basic information about a GitHub user.
+
+        Returns:
+            GitHubUserPublic: Public profile data of the user.
+        """
         self._print_status(f"[ ] Fetching user: {self.user}", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}")
         self._check_response(response)
@@ -370,6 +484,12 @@ class GitHubManager:
         )
 
     def fetch_user_repos(self) -> List[Dict[str, Any]]:
+        """
+        Fetch a list of repositories belonging to a user.
+
+        Returns:
+            List[Dict[str, Any]]: List of repository data dictionaries.
+        """
         self._print_status("[ ] Fetching repositories", end="")
         response = self.session.get(f"https://api.github.com/users/{self.user}/repos")
         self._check_response(response)
@@ -378,6 +498,15 @@ class GitHubManager:
 
     @staticmethod
     def get_git_repo_url(dir: str = ".") -> str:
+        """
+        Extract the GitHub remote origin URL from a local .git directory.
+
+        Args:
+            dir (str): The local directory to check.
+
+        Returns:
+            str: The HTTPS URL of the remote origin, or empty string if not found.
+        """
         git_dir = os.path.join(dir, ".git")
         if not os.path.isdir(git_dir):
             return ""

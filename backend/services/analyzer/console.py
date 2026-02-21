@@ -12,7 +12,7 @@ from backend.services.analyzer.levels import get_default_class_level
 
 def read_data(file_path: str) -> AnalysisPublic:
     """
-    Read JSON data from a file.
+    Read JSON data from a file and validate it.
 
     Args:
         file_path (str): The path to the JSON file.
@@ -36,9 +36,9 @@ def read_data(file_path: str) -> AnalysisPublic:
         return AnalysisPublic.model_validate(data)
 
 
-def display_author_info(repo: RepoPublic) -> None:
+def display_repo_info(repo: RepoPublic) -> None:
     """
-    Display author information in a formatted table.
+    Display repository information in a formatted table.
 
     Args:
         repo (RepoPublic): The repository data containing commit and contributor information.
@@ -71,7 +71,7 @@ def display_author_info(repo: RepoPublic) -> None:
 
     # Table Header
     print("\n|" + "-" * (width - 2) + "|")
-    print("|" + "AUTHOR INFORMATION".center(width - 2, " ") + "|")
+    print("|" + "REPOSITORY INFORMATION".center(width - 2, " ") + "|")
     print("|" + "-" * (width - 2) + "|")
     print(table_str)
     print("|" + "-" * (width - 2) + "|")
@@ -81,7 +81,6 @@ def display_author_info(repo: RepoPublic) -> None:
     total_hours = sum(float(row[2]) for row in table)
     total_loc = sum(row[3] for row in table)
 
-    # Define your labels
     label_commits = "| Total Commits:"
     label_hours = "| Total Estimated hours:"
     label_loc = "| Total LOC:"
@@ -97,20 +96,18 @@ def display_author_info(repo: RepoPublic) -> None:
 
 def display_analysis(analysis: AnalysisPublic) -> None:
     """
-    Display analysis data in a formatted table.
+    Display code analysis data in a formatted table grouped by levels.
 
     Args:
         analysis (AnalysisPublic): The analysis data to display.
-
-        information.
     """
     # Aggregate data across all files
     aggregated: Dict[Tuple[str, int], int] = defaultdict(int)
 
-    # Navegación correcta por los objetos Pydantic
+    # Navigate through the Pydantic objects correctly
     for f_class in analysis.file_classes:
         for cls in f_class.classes:
-            # Acceso directo a atributos del objeto ClassId
+            # Direct access to attributes of the ClassId object
             name = cls.class_id.name
             level = get_default_class_level(cls.class_id)
             aggregated[(name, level)] += cls.instances
@@ -122,7 +119,7 @@ def display_analysis(analysis: AnalysisPublic) -> None:
     table: List[List[Any]] = []
     totals_by_level: Dict[str, int] = defaultdict(int)
 
-    # Ordenamos por Level and then by Name
+    # Sort by Level and then by Name
     sorted_items = sorted(aggregated.items(), key=lambda x: (x[0][1], x[0][0]))
 
     for (name, level), count in sorted_items:
@@ -150,7 +147,7 @@ def display_analysis(analysis: AnalysisPublic) -> None:
 
 def main(file_path: str) -> None:
     """
-    Main function to read data and display tables.
+    Main function to read data and display results.
 
     Args:
         file_path (str): The path to the JSON file.
@@ -165,7 +162,7 @@ def main(file_path: str) -> None:
         display_analysis(data)
 
         if data.repo and (data.repo.commits or data.repo.contributors):
-            display_author_info(data.repo)
+            display_repo_info(data.repo)
 
     except FileNotFoundError as e:
         print(f"Error: {e}")

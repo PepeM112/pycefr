@@ -28,24 +28,38 @@ router = APIRouter(prefix="/analyses", tags=["Analysis"])
 
 @router.get("", response_model=PaginatedResponse[AnalysisSummaryPublic], operation_id="list_analysis")
 def list_analysis(
-    # Pagination and Sorting
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(10, ge=1, description="Number of items per page"),
     sort_column: Annotated[AnalysisSortColumn, Query(description="Column to sort by")] = AnalysisSortColumn.ID,
     sort_direction: Annotated[SortDirection, Query(description="Sort direction (ASC or DESC)")] = SortDirection.DESC,
-    # Filters
-    name: Annotated[List[str] | None, Query(description="Filter by name (partial match, multiple values)")] = None,
-    owner: Annotated[List[str] | None, Query(description="Filter by owner ID (multiple values)")] = None,
+    name: Annotated[List[str] | None, Query(description="Filter by name (partial match)")] = None,
+    owner: Annotated[List[str] | None, Query(description="Filter by owner ID")] = None,
     analysis_status: Annotated[
-        List[AnalysisStatus] | None, Query(alias="status", description="Filter by status (multiple values)")
+        List[AnalysisStatus] | None, Query(alias="status", description="Filter by status")
     ] = None,
-    date_from: Annotated[
-        datetime | None, Query(description="Filter analyses created after this date (ISO format)")
-    ] = None,
-    date_to: Annotated[
-        datetime | None, Query(description="Filter analyses created before this date (ISO format)")
-    ] = None,
+    date_from: Annotated[datetime | None, Query(description="Created after (ISO format)")] = None,
+    date_to: Annotated[datetime | None, Query(description="Created before (ISO format)")] = None,
 ) -> PaginatedResponse[AnalysisSummaryPublic]:
+    """
+    Retrieve a paginated and filtered list of all analyses.
+
+    Args:
+        page: The page number to retrieve.
+        per_page: The number of elements per page.
+        sort_column: The database column to sort by.
+        sort_direction: The direction (ASC/DESC) for sorting.
+        name: List of partial names to filter by.
+        owner: List of repository owner logins to filter by.
+        analysis_status: List of statuses to filter by.
+        date_from: Start date filter.
+        date_to: End date filter.
+
+    Returns:
+        PaginatedResponse: Containing the requested elements and metadata.
+
+    Raises:
+        HTTPException: 503 if the database is offline, 500 for other internal errors.
+    """
     try:
         filters = AnalysisFilters(
             name=name,
@@ -78,6 +92,18 @@ def list_analysis(
 
 @router.get("/{analysis_id}", response_model=AnalysisPublic, operation_id="get_analysis_detail")
 def get_analysis_detail(analysis_id: int) -> AnalysisPublic | None:
+    """
+    Retrieve the full details of a specific analysis by ID.
+
+    Args:
+        analysis_id: The unique ID of the analysis.
+
+    Returns:
+        AnalysisPublic: The complete analysis data.
+
+    Raises:
+        HTTPException: 404 if not found, 503 if DB error, 500 otherwise.
+    """
     try:
         analysis = db_utils.get_analysis_details(analysis_id)
         if not analysis:
@@ -102,8 +128,20 @@ def get_analysis_detail(analysis_id: int) -> AnalysisPublic | None:
 
 @router.post("", response_model=AnalysisPublic, status_code=status.HTTP_201_CREATED, operation_id="create_analysis")
 def create_analysis(analysis_create: AnalysisCreate, background_tasks: BackgroundTasks) -> AnalysisPublic | None:
-    analysis: AnalysisPublic | None = None
+    """
+    Trigger a new repository analysis.
 
+    Creates an 'IN_PROGRESS' record in the database and queues the actual
+    cloning and analysis as a FastAPI BackgroundTask.
+
+    Args:
+        analysis_create: Object containing the repo_url to analyze.
+        background_tasks: FastAPI helper to run logic after the response is sent.
+
+    Returns:
+        AnalysisPublic: The newly created placeholder analysis.
+    """
+    analysis: AnalysisPublic | None = None
     try:
         analysis = db_utils.create_empty_analysis(analysis_create.repo_url)
 
@@ -112,7 +150,6 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating the analysis")
 
         background_tasks.add_task(run_full_analysis_process, analysis.id, analysis_create.repo_url)
-
         return analysis
 
     except Exception as e:
@@ -122,7 +159,6 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
 
         if isinstance(e, HTTPException):
             raise e
-
         if isinstance(e, (sqlite3.OperationalError, ConnectionError)):
             logger.critical(f"Database connection error: {e}")
             raise HTTPException(
@@ -138,6 +174,15 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
 
 @router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT, operation_id="delete_analysis")
 def delete_analysis(analysis_id: int) -> None:
+    """
+    Delete an analysis record (soft-delete).
+
+    Args:
+        analysis_id: The unique ID to delete.
+
+    Raises:
+        HTTPException: 404 if ID doesn't exist.
+    """
     try:
         success = db_utils.delete_analysis(analysis_id)
         if not success:
@@ -163,8 +208,16 @@ def delete_analysis(analysis_id: int) -> None:
 )
 async def upload_analysis(file: Annotated[UploadFile, File()]) -> AnalysisPublic:
     """
-    Receives a JSON file, validates its structure against the AnalysisPublic schema,
-    and inserts it into the database generating new IDs.
+    Import a previously exported analysis from a JSON file.
+
+    Validates the JSON against the AnalysisPublic schema and generates
+    new primary keys in the database to prevent collisions.
+
+    Args:
+        file: The JSON file to upload.
+
+    Returns:
+        AnalysisPublic: The newly created analysis record.
     """
     if file.content_type != "application/json" and file.filename and not file.filename.endswith(".json"):
         raise HTTPException(
@@ -176,7 +229,6 @@ async def upload_analysis(file: Annotated[UploadFile, File()]) -> AnalysisPublic
         json_data = json.loads(content)
 
         analysis_model = AnalysisPublic(**json_data)
-
         imported_analysis = db_utils.upload_analysis_data(analysis_model)
 
         if not imported_analysis:
@@ -202,7 +254,13 @@ async def upload_analysis(file: Annotated[UploadFile, File()]) -> AnalysisPublic
 @router.get("/{analysis_id}/download", operation_id="download_analysis")
 def download_analysis(analysis_id: int) -> JSONResponse:
     """
-    Devuelve el JSON completo de un análisis como archivo adjunto para descargar.
+    Export an analysis's full data as a downloadable JSON file.
+
+    Args:
+        analysis_id: The ID of the analysis to export.
+
+    Returns:
+        JSONResponse: File attachment response with JSON content.
     """
     try:
         analysis = db_utils.get_analysis_details(analysis_id)
@@ -211,9 +269,8 @@ def download_analysis(analysis_id: int) -> JSONResponse:
                 status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
             )
 
-        # Usamos model_dump(mode='json') para que las fechas (datetime) se serialicen a strings ISO automáticamente
+        # Use model_dump(mode='json') to automatically serialize datetime fields to ISO strings
         analysis_dict = analysis.model_dump(mode="json")
-
         filename = f"analysis_{analysis.name}_{analysis.id}.json"
 
         return JSONResponse(
@@ -231,7 +288,16 @@ def download_analysis(analysis_id: int) -> JSONResponse:
 
 
 def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
-    """This function runs outside the HTTP request cycle."""
+    """
+    Execute the core analysis logic outside the request/response cycle.
+
+    This helper handles cloning the repository, running the AST analyzer,
+    fetching GitHub metadata, and updating the database with the results.
+
+    Args:
+        analysis_id: The database ID of the analysis record.
+        repo_url: The URL of the repository to clone and analyze.
+    """
     try:
         gh = GitHubManager(repo_url=repo_url, is_cli=False)
         gh.validate_repo_url()
@@ -241,7 +307,6 @@ def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
         an.analyse_project()
 
         repo_info = gh.get_repo_info()
-
         analysis_result = an.get_results()
 
         analysis_result.repo = repo_info
