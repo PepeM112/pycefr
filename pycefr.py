@@ -34,16 +34,14 @@ def main() -> None:
         description="An utility for analyzing Python level in local and Github repositories."
     )
     parser.add_argument("-d", "--directory", type=str, help="Run in directory mode")
-    parser.add_argument(
-        "-r", "--repo", type=str, help="Run with the specified repository URL"
-    )
-    parser.add_argument(
-        "-u", "--user", type=str, help="Run with the specified user identifier"
-    )
+    parser.add_argument("-r", "--repo", type=str, help="Run with the specified repository URL")
+    parser.add_argument("-u", "--user", type=str, help="Run with the specified user identifier")
     parser.add_argument("-c", "--console", type=str, help="See results in console")
+    parser.add_argument("-l", "--list", action="store_true", help="List available result files")
     parser.add_argument(
-        "-l", "--list", action="store_true", help="List available result files"
+        "--include-repo", action="store_true", help="Include repository metadata analysis (commits, contributors)"
     )
+    parser.add_argument("-p", "--print", action="store_true", help="Print the results to the console after analysis")
 
     args = parser.parse_args()
 
@@ -63,13 +61,13 @@ def main() -> None:
     elif args.console:
         console.main(f"results/{args.console}")
     elif args.directory:
-        run_directory(args.directory)
+        run_directory(args.directory, args.include_repo, args.print)
     elif args.list:
         list_results()
     elif args.repo:
-        request_url(args.repo)
+        request_url(args.repo, args.include_repo, args.print)
     elif args.user:
-        run_user(args.user)
+        run_user(args.user, args.include_repo, args.print)
 
 
 if __name__ == "__main__":

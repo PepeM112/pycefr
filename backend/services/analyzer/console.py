@@ -26,7 +26,7 @@ def read_data(file_path: str) -> Dict[str, Any]:
         return json.load(file)
 
 
-def display_author_info(data: Dict[str, Any]) -> None:
+def display_author_info(repo_data: Dict[str, Any]) -> None:
     """
     Display author information in a formatted table.
 
@@ -39,7 +39,7 @@ def display_author_info(data: Dict[str, Any]) -> None:
     )
 
     # Extract commit information
-    for commit in data["commits"]:
+    for commit in repo_data.get("commits", []):
         github_user = commit["github_user"]
         combined_commits_data[github_user]["commits"] += commit["commits"]
         combined_commits_data[github_user]["estimated_hours"] += commit["estimated_hours"]
@@ -47,7 +47,7 @@ def display_author_info(data: Dict[str, Any]) -> None:
         combined_commits_data[github_user]["total_files_modified"] += commit["total_files_modified"]
 
     # Extract contributor information
-    contributors = data["contributors"]
+    contributors = repo_data.get("contributors", [])
     table: List[List[Any]] = []
     for contributor in contributors:
         # Get commit data for the corresponding GitHub user
@@ -166,10 +166,14 @@ def main(file_path: str) -> None:
     """
     try:
         data = read_data(file_path)
-        display_analysis(data["elements"])
-        print()
-        if not file_path.endswith("_local.json"):
-            display_author_info(data["repoInfo"])
+
+        if "elements" in data:
+            display_analysis(data["elements"])
+            print()
+
+        if data.get("repo"):
+            display_author_info(data["repo"])
+
     except FileNotFoundError as e:
         print(e)
 
