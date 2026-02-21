@@ -36,7 +36,8 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
             analysis_result.repo = repo_info
 
         # Extract name and set metadata
-        repo_name = analysis_result.repo.name or "unknown" if analysis_result.repo else "unknown"
+        url_name_fallback = url.rstrip("/").split("/")[-1]
+        repo_name = analysis_result.repo.name or url_name_fallback if analysis_result.repo else url_name_fallback
         analysis_result.name = repo_name
         analysis_result.status = AnalysisStatus.COMPLETED
         analysis_result.created_at = datetime.now()
@@ -48,7 +49,7 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
             file.write(analysis_result.model_dump_json(indent=4))
 
         if print_results:
-            console.main(f"{repo_name}.json")
+            console.main(str(file_path))
 
     except Exception as e:
         print(f"\nERROR: {e}")
@@ -106,7 +107,7 @@ def run_directory(directory: str, include_repo: bool = False, print_results: boo
             file.write(analysis_result.model_dump_json(indent=4))
 
         if print_results:
-            console.main(f"{repo_name}.json")
+            console.main(str(file_path))
 
     except Exception as e:
         print(f"\nERROR: {e}")
