@@ -28,7 +28,6 @@ def read_data(file_path: str) -> AnalysisPublic:
 
     with open(file_path, "r") as file:
         data = json.load(file)
-        print(data)
 
         # Local analysis do not have id but is required by the model
         if not data.get("id"):
@@ -64,14 +63,36 @@ def display_author_info(repo: RepoPublic) -> None:
     if not table:
         return
 
-    headers = ["Author", "Commits", "Hours", "LOC", "Files Modified"]
+    headers = ["Author", "Commits", "Estimated hours", "LOC", "Files Modified"]
     table_str = tabulate(table, headers, tablefmt="pipe", colalign=("left", "center", "center", "center", "center"))
-    width = len(table_str.split("\n")[0])
 
+    lines = table_str.split("\n")
+    width = len(lines[0]) if lines else 80
+
+    # Table Header
     print("\n|" + "-" * (width - 2) + "|")
     print("|" + "AUTHOR INFORMATION".center(width - 2, " ") + "|")
     print("|" + "-" * (width - 2) + "|")
     print(table_str)
+    print("|" + "-" * (width - 2) + "|")
+
+    # Totals Section
+    total_commits = sum(row[1] for row in table)
+    total_hours = sum(float(row[2]) for row in table)
+    total_loc = sum(row[3] for row in table)
+
+    # Define your labels
+    label_commits = "| Total Commits:"
+    label_hours = "| Total Estimated hours:"
+    label_loc = "| Total LOC:"
+
+    # Calculate values and pad them dynamically
+    # width - len(label) - 2 (for the space and the closing '|')
+    print(f"{label_commits} {str(total_commits).rjust(width - len(label_commits) - 3)} |")
+    print(f"{label_hours} {f'{total_hours:.1f}'.rjust(width - len(label_hours) - 3)} |")
+    print(f"{label_loc} {str(total_loc).rjust(width - len(label_loc) - 3)} |")
+
+    print("|" + "-" * (width - 2) + "|")
 
 
 def display_analysis(analysis: AnalysisPublic) -> None:
@@ -137,10 +158,14 @@ def main(file_path: str) -> None:
     try:
         data = read_data(file_path)
 
-        if data:
-            display_analysis(data)
-        else:
+        if not data:
             print("\nCouldn't read analysis data from the file.")
+            return
+
+        display_analysis(data)
+
+        if data.repo and (data.repo.commits or data.repo.contributors):
+            display_author_info(data.repo)
 
     except FileNotFoundError as e:
         print(f"Error: {e}")
