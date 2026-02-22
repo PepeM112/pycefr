@@ -137,15 +137,15 @@ def get_analyses(
                 name=row["repo_owner_name"],
                 github_user=row["repo_owner_login"] or "Unknown",
                 avatar=row["repo_owner_avatar"] or "",
-                profile_url=row["repo_owner_profile_url"] or "",
+                profile_url=row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}",
             )
 
             repo_summary = RepoSummaryPublic(
                 name=row["repo_name"],
                 url=row["repo_url"],
                 description=row["repo_description"],
-                created_at=datetime.fromisoformat(row["created_at"]),
-                last_updated_at=datetime.fromisoformat(row["created_at"]),
+                created_at=datetime.fromisoformat(row["repo_created_at"]) if row["repo_created_at"] else None,
+                last_updated_at=datetime.fromisoformat(row["repo_last_update"]) if row["repo_last_update"] else None,
                 owner=owner,
             )
 
@@ -233,7 +233,9 @@ def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
                 name=row["repo_owner_name"] or "",
                 github_user=row["repo_owner_login"] or "",
                 avatar=row["repo_owner_avatar"] or "",
-                profile_url=f"https://github.com/{row['repo_owner_login']}" if row["repo_owner_login"] else "",
+                profile_url=row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}"
+                if row["repo_owner_login"]
+                else "",
             ),
             commits=commits,
             contributors=contributors,
@@ -269,7 +271,7 @@ def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        repo_name = repo_url.rstrip("/").split("/")[-1]
+        repo_name = repo_url.rstrip("/").split("/")[-1] or "unknown"
         now_utc = datetime.now(timezone.utc)
         name = f"{now_utc.strftime('%Y%m%d')}_{repo_name}"
 
@@ -283,6 +285,7 @@ def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
         if analysis_id is None:
             raise sqlite3.Error("Failed to retrieve lastrowid after INSERT")
 
+        logger.info(f"Empty analysis record created with ID: {analysis_id} for repo: {repo_url}")
         return AnalysisPublic(
             id=analysis_id,
             name=name,

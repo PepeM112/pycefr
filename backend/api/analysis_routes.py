@@ -154,7 +154,7 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
 
     except Exception as e:
         if analysis and analysis.id:
-            logger.warning(f"Marking analysis {analysis.id} as failed due to request error")
+            logger.warning(f"Marking analysis {analysis.id} as failed due to request error: {e}")
             db_utils.mark_analysis_as_failed(analysis.id, f"Initialization error: {str(e)}")
 
         if isinstance(e, HTTPException):
