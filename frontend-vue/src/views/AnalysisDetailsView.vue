@@ -61,38 +61,32 @@
   </page-view>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
-import Enums from '@/utils/enums';
+import { ClassId, getAnalysisDetail, Level, SortDirection, type AnalysisPublic, type Pagination } from '@/client';
+import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
+import GContainer from '@/components/GContainer.vue';
+import GenericLoader from '@/components/GenericLoader.vue';
+import GTable from '@/components/GTable.vue';
+import PageView from '@/components/PageView.vue';
+import FileTree from '@/components/repo/FileTree.vue';
 import {
   getLevelColor,
-  type TableDataItem,
-  type ChartData,
   type ChartCommitItem,
+  type ChartData,
   type ChartFileItem,
+  type TableDataItem,
 } from '@/components/repo/utils';
-import {
-  type AnalysisPublic,
-  type AnalysisClassPublic,
-  type AnalysisFilePublic,
-  ClassId,
-  Level,
-  SortDirection,
-} from '@/client';
-import { getAnalysisDetail, type Pagination } from '@/client';
-import { useRoute } from 'vue-router';
-import { useClassLabel } from '@/composables/useClassLabel';
-import PageView from '@/components/PageView.vue';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
-import GenericLoader from '@/components/GenericLoader.vue';
-import { LoadingStatus } from '@/types/loading';
-import { useI18n } from 'vue-i18n';
-import GContainer from '@/components/GContainer.vue';
-import GTable from '@/components/GTable.vue';
-import { type TableHeader } from '@/types/table';
+import { useClassLabel } from '@/composables/useClassLabel';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
-import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
+import { LoadingStatus } from '@/types/loading';
+import { type TableHeader } from '@/types/table';
+import type { TreeNode } from '@/types/treeview';
+import Enums from '@/utils/enums';
+import { getExtensionIcon, type FileExtension } from '@/utils/utils';
+import { computed, onMounted, ref, shallowRef } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -105,7 +99,7 @@ const analysisId = Number(route.params.id);
 const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const analysisTitle = ref<string>('');
 const search = ref<string>('');
-const analysisData = ref<AnalysisPublic | undefined>(undefined);
+const analysisData = shallowRef<AnalysisPublic | undefined>(undefined);
 const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
@@ -158,53 +152,55 @@ const chartData = computed<ChartData | null>(() => {
 });
 
 const tableData = computed<TableDataItem[]>(() => {
-  const elements: AnalysisFilePublic[] = analysisData.value?.fileClasses ?? [];
-  if (!elements || elements.length === 0) return [];
+  const elements = analysisData.value?.fileClasses ?? [];
+  if (elements.length === 0) return [];
 
-  const processedElements = elements
-    .filter(it => isFileSelected(it.filename))
-    .flatMap(it => it.classes ?? [])
-    .reduce((acc: TableDataItem[], item: AnalysisClassPublic) => {
-      const classAlreadyAdded = acc.find(i => i.class === item.classId);
-      if (classAlreadyAdded) {
-        classAlreadyAdded.instances = (classAlreadyAdded.instances ?? 0) + item.instances;
+  const groupingMap = new Map<number, TableDataItem & { translatedLabel?: string }>();
+
+  for (const file of elements) {
+    if (!isFileSelected(file.filename)) continue;
+
+    for (const item of file.classes ?? []) {
+      const existing = groupingMap.get(item.classId);
+      if (existing) {
+        existing.instances += item.instances;
       } else {
-        acc.push({
+        groupingMap.set(item.classId, {
           class: item.classId,
           instances: item.instances,
           level: classLabel.getClassLevel(item.classId),
         });
       }
-      return acc;
-    }, [])
-    .filter(item => {
-      if (!selectedLevels.value?.includes(item.level)) return false;
+    }
+  }
 
-      if (!search.value) return true;
-      const className = t(Enums.getLabel(ClassId, item.class)).toString().toLowerCase();
-      return className.includes(search.value.toLowerCase());
-    })
-    .sort((a, b) => {
-      if (sort.value.direction === SortDirection.UNKNOWN || !sort.value.column) return 0;
+  const searchLower = search.value.toLowerCase();
 
-      let comparison = 0;
+  const processedElements = Array.from(groupingMap.values()).filter(item => {
+    if (!selectedLevels.value?.includes(item.level)) return false;
 
-      if (sort.value.column === 'class') {
-        const labelA = t(Enums.getLabel(ClassId, a.class));
-        const labelB = t(Enums.getLabel(ClassId, b.class));
+    item.translatedLabel = t(Enums.getLabel(ClassId, item.class)).toString();
 
-        comparison = labelA.localeCompare(labelB);
-      } else {
-        const column = sort.value.column as keyof TableDataItem;
-        const valA = a[column] ?? 0;
-        const valB = b[column] ?? 0;
+    if (!searchLower) return true;
+    return item.translatedLabel.toLowerCase().includes(searchLower);
+  });
 
-        if (valA < valB) comparison = -1;
-        else if (valA > valB) comparison = 1;
-      }
+  processedElements.sort((a, b) => {
+    if (sort.value.direction === SortDirection.UNKNOWN || !sort.value.column) return 0;
 
-      return sort.value.direction === SortDirection.ASC ? comparison : -comparison;
-    });
+    let comparison = 0;
+    if (sort.value.column === 'class') {
+      comparison = a.translatedLabel!.localeCompare(b.translatedLabel!);
+    } else {
+      const col = sort.value.column as keyof TableDataItem;
+      const valA = a[col] ?? 0;
+      const valB = b[col] ?? 0;
+      comparison = valA < valB ? -1 : valA > valB ? 1 : 0;
+    }
+
+    return sort.value.direction === SortDirection.ASC ? comparison : -comparison;
+  });
+
   pagination.value.total = processedElements.length;
   return processedElements;
 });
@@ -255,11 +251,20 @@ function buildRepoDataTree(data: AnalysisPublic | undefined): TreeNode[] {
     return Object.keys(parentNode).map(key => {
       const child: Record<string, any> = parentNode[key];
       const fullPath = currentPath ? `${currentPath}/${key}` : key;
+      const hasChildren = Object.keys(child).length > 0;
+
+      let icon = 'mdi-file-outline';
+      if (!hasChildren) {
+        const parts = key.split('.');
+        const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
+        icon = getExtensionIcon(extension) || 'mdi-file-outline';
+      }
 
       const node: TreeNode = {
         id: id++,
         title: key,
-        children: Object.keys(child).length > 0 ? fillTree(child, fullPath) : undefined,
+        children: hasChildren ? fillTree(child, fullPath) : undefined,
+        icon: hasChildren ? undefined : icon,
       };
 
       if (!node.children || node.children.length === 0) {
