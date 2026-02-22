@@ -59,38 +59,29 @@
       </div>
     </div>
 
-    <v-treeview
-      class="pa-0 pb-8"
-      v-model:selected="selectedNodes"
-      color="primary-on-surface"
-      density="compact"
+    <g-treeview
       :items="localModelValue"
+      :selected="selectedNodes"
+      @update:selected="val => (selectedNodes = val)"
       :search="searchOptions.searchText"
-      item-value="id"
       :selectable="searchOptions.allowFilterByFiles"
-      :activatable="!searchOptions.allowFilterByFiles"
-      select-strategy="classic"
-      expand-icon="mdi-chevron-down"
-      collapse-icon="mdi-chevron-up"
-      open-all
+      height="800"
+      class="pa-0 pb-8"
     >
-      <template #prepend="{ item, isOpen }">
-        <v-icon v-if="item.children" :icon="isOpen ? 'mdi-folder-open' : 'mdi-folder'" size="small" />
-        <v-icon v-else size="18" :icon="`iconify:${getTreeNodeIcon(item)}`" />
+      <template #item="{ item, expanded }">
+        <v-icon v-if="item.children" :icon="expanded ? 'mdi-folder-open' : 'mdi-folder'" size="small" class="mr-2" />
+        <v-icon v-else size="18" :icon="`iconify:${item.icon}`" class="mr-2" />
+        <span class="node-title">{{ item.title }}</span>
       </template>
-    </v-treeview>
+    </g-treeview>
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { getExtensionIcon, type FileExtension } from '@/utils/utils';
-
-export interface TreeNode {
-  id: number;
-  title: string;
-  children?: TreeNode[];
-}
+import GTreeview from '@/components/GTreeview.vue';
+import type { TreeNode } from '@/types/treeview';
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: TreeNode[]): void;
@@ -130,13 +121,11 @@ function getTreeNodeIcon(node: TreeNode): string {
 
 <style lang="scss" scoped>
 .file-tree-card {
-  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 300px;
   max-height: 900px;
   height: fit-content;
-  overflow: auto;
 }
 
 .file-tree-header {
@@ -144,23 +133,8 @@ function getTreeNodeIcon(node: TreeNode): string {
   padding: 1rem 1rem 0.5rem 0.5rem;
 }
 
-.v-treeview {
-  display: inline-block;
-  min-width: 100%;
-
-  ::v-deep(.v-list-item) {
-    overflow: visible !important;
-  }
-
-  ::v-deep(.v-list-item__content) {
-    overflow: visible !important;
-  }
-
-  ::v-deep(.v-list-item-title) {
-    font-size: 14px !important;
-    white-space: nowrap !important;
-    text-overflow: clip !important;
-    overflow: visible !important;
-  }
+.node-title {
+  font-size: 14px;
+  white-space: nowrap;
 }
 </style>
