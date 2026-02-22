@@ -1,5 +1,5 @@
 import { enumsLabels } from '@/messages';
-import { useI18n, type ComposerTranslation } from 'vue-i18n';
+import { type ComposerTranslation } from 'vue-i18n';
 
 interface BuildListOptions {
   sort?: boolean;
@@ -38,15 +38,16 @@ export default class Enums {
 
   public static buildList<T extends Record<string, any>>(
     enumType: T,
-    options: BuildListOptions = { t: useI18n().t }
+    options?: BuildListOptions
   ): Array<{ value: any; label: string }> {
+    const t = options?.t;
     const values = Enums.getValuesWithoutZero(enumType);
 
     const list = values.map(value => ({
       value,
       label: options?.labelTransform
-        ? options.labelTransform(Enums.getLabel(enumType, value, options?.t))
-        : Enums.getLabel(enumType, value, options?.t),
+        ? options.labelTransform(Enums.getLabel(enumType, value, t))
+        : Enums.getLabel(enumType, value, t),
     }));
 
     if (options?.sort !== false) {

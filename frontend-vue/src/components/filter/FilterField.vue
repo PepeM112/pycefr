@@ -153,11 +153,15 @@ const sortedItems = computed<FilterEntity[]>(() => {
     return localItems.value.sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
   }
 
-  const normalized = localItems.value.map(it => normalizeToFilterEntity(it));
+  const translatedItems = localItems.value.map(it => {
+    const entity = normalizeToFilterEntity(it);
+    return {
+      ...entity,
+      label: t(String(entity.label)),
+    };
+  });
 
-  return normalized.sort((a, b) =>
-    t(String(a.label)).localeCompare(t(String(b.label)), undefined, { sensitivity: 'base' })
-  );
+  return translatedItems.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 });
 
 function trimmedStringFilter(value: string, query: string, _item?: any) {
