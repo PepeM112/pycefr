@@ -1,6 +1,6 @@
 <template>
   <div class="g-tree-view">
-    <v-virtual-scroll :items="flattenedItems" :height="height" item-height="32">
+    <v-virtual-scroll :items="flattenedItems" :height="height" item-height="34">
       <template #default="{ item }">
         <div
           class="g-tree-node"
@@ -24,7 +24,7 @@
             />
           </div>
 
-          <div class="node-content text-truncate">
+          <div class="node-content">
             <slot name="item" :item="item" :expanded="isExpanded(item.id)">
               <v-icon v-if="item.icon" :icon="`iconify:${item.icon}`" size="18" class="mr-2" />
               <span class="node-title">{{ item.title }}</span>
@@ -44,8 +44,8 @@ const emit = defineEmits(['update:selected']);
 
 const props = withDefaults(
   defineProps<{
-    items: TreeNode[] | undefined;
-    selected: number[] | undefined;
+    items: TreeNode[];
+    selected: number[] | 'all';
     selectable?: boolean;
     search?: string;
     height?: string | number;
@@ -70,53 +70,57 @@ function toggleExpand(id: number) {
 }
 
 function getDescendantIds(node: TreeNode): number[] {
-  let ids: number[] = [node.id];
+  let ids = [node.id];
   if (node.children) {
-    node.children.forEach(child => {
+    for (const child of node.children) {
       ids = [...ids, ...getDescendantIds(child)];
-    });
-  }
-  return ids;
-}
-
-function getOnlyChildrenIds(node: TreeNode): number[] {
-  let ids: number[] = [];
-  if (node.children) {
-    node.children.forEach(child => {
-      ids.push(child.id);
-      ids = [...ids, ...getOnlyChildrenIds(child)];
-    });
+    }
   }
   return ids;
 }
 
 function isSelected(node: TreeNode): boolean {
+  if (props.selected === 'all') return true;
+  const selectedIds = props.selected as number[];
+
   if (!node.children || node.children.length === 0) {
-    return props.selected.includes(node.id);
+    return selectedIds.includes(node.id);
   }
-  const childIds = getOnlyChildrenIds(node);
-  return childIds.every(id => props.selected.includes(id));
+
+  return node.children.every(child => isSelected(child));
 }
 
 function isIndeterminate(node: TreeNode): boolean {
+  if (props.selected === 'all') return false;
+
   if (!node.children || node.children.length === 0) return false;
 
-  const childIds = getOnlyChildrenIds(node);
-  const selectedCount = childIds.filter(id => props.selected.includes(id)).length;
+  const fullySelected = isSelected(node);
+  if (fullySelected) return false;
 
-  return selectedCount > 0 && selectedCount < childIds.length;
+  // Indeterminate unless all children are all selected or all unselected
+  return node.children.some(child => isSelected(child) || isIndeterminate(child));
 }
 
 function handleToggleSelect(node: TreeNode) {
-  const idsToToggle = getDescendantIds(node);
-  const currentlySelected = isSelected(node);
+  const idsToBranch = getDescendantIds(node);
+  let currentSelected: number[] = [];
 
-  let newSelected: number[];
-  if (currentlySelected) {
-    newSelected = props.selected.filter(id => !idsToToggle.includes(id));
+  if (props.selected === 'all') {
+    currentSelected = props.items.flatMap(item => getDescendantIds(item));
   } else {
-    newSelected = Array.from(new Set([...props.selected, ...idsToToggle]));
+    currentSelected = [...props.selected];
   }
+
+  const currentlySelected = isSelected(node);
+  let newSelected: number[];
+
+  if (currentlySelected) {
+    newSelected = currentSelected.filter(id => !idsToBranch.includes(id));
+  } else {
+    newSelected = Array.from(new Set([...currentSelected, ...idsToBranch]));
+  }
+
   emit('update:selected', newSelected);
 }
 
@@ -150,6 +154,13 @@ const flattenedItems = computed(() => {
 .g-tree-view {
   width: 100%;
   user-select: none;
+  overflow-x: auto;
+}
+
+:deep(.v-virtual-scroll__container) {
+  min-width: max-content;
+  display: inline-block;
+  width: 100%;
 }
 
 .g-tree-node {
@@ -158,6 +169,7 @@ const flattenedItems = computed(() => {
   height: 34px;
   cursor: pointer;
   white-space: nowrap;
+  padding-right: 16px;
   transition: background-color 0.15s ease;
 
   &:hover {
@@ -184,16 +196,15 @@ const flattenedItems = computed(() => {
   }
 
   .node-content {
-    flex: 1;
+    flex: 1 0 auto;
     display: flex;
     align-items: center;
-    min-width: 0; // Required for text-truncate to work properly
   }
 
   .node-title {
     font-size: 0.875rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 </style>

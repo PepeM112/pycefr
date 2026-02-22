@@ -79,7 +79,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { getExtensionIcon, type FileExtension } from '@/utils/utils';
 import GTreeview from '@/components/GTreeview.vue';
 import type { TreeNode } from '@/types/treeview';
 
