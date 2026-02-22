@@ -88,13 +88,8 @@ const emit = defineEmits<{
   (e: 'update:selected', value: number[] | 'all'): void;
 }>();
 
-defineProps<{
-  modelValue: TreeNode[];
-  selected: number[];
-}>();
-
-const localModelValue = defineModel<TreeNode[]>('modelValue');
-const selectedNodes = defineModel<number[]>('selected');
+const localModelValue = defineModel<TreeNode[]>('modelValue', { required: true, default: () => [] });
+const selectedNodes = defineModel<number[]>('selected', { required: true, default: () => [] });
 
 const searchOptions = ref({
   searchText: '',
@@ -107,15 +102,6 @@ function toggleAllowFilterByFiles() {
   if (!searchOptions.value.allowFilterByFiles) {
     emit('update:selected', 'all');
   }
-}
-
-function getTreeNodeIcon(node: TreeNode): string {
-  // Shouldn't happen
-  if (node.children && node.children.length > 0) return 'mdi-folder';
-
-  const parts = node.title.split('.');
-  const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
-  return getExtensionIcon(extension) || 'mdi-file-outline';
 }
 </script>
 

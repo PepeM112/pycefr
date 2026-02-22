@@ -67,7 +67,7 @@ import GContainer from '@/components/GContainer.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
-import FileTree, { type TreeNode } from '@/components/repo/FileTree.vue';
+import FileTree from '@/components/repo/FileTree.vue';
 import {
   getLevelColor,
   type ChartCommitItem,
@@ -81,6 +81,7 @@ import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
+import type { TreeNode } from '@/types/treeview';
 import Enums from '@/utils/enums';
 import { getExtensionIcon, type FileExtension } from '@/utils/utils';
 import { computed, onMounted, ref, shallowRef } from 'vue';
