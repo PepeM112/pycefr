@@ -1,39 +1,64 @@
 <template>
-  <v-card variant="flat" class="pa-4 border h-100">
+  <v-card variant="flat" class="pa-4 border h-100 d-flex flex-column">
     <div class="d-flex align-center ga-4 mb-4">
       <v-avatar size="48">
         <v-img :src="modelValue?.repo?.owner?.avatar || defaultAvatar" alt="Avatar" />
       </v-avatar>
-      <h3 class="font-weight-bold text-truncate">
-        <router-link v-if="modelValue?.status === 'completed'" :to="`/repo/${modelValue?.id}`" class="analysis-link">
-          {{ modelValue?.name || 'N/A' }}
-        </router-link>
-        <span v-else>
-          {{ modelValue?.name || 'N/A' }}
+      <div class="d-flex flex-column">
+        <h3 class="font-weight-bold text-truncate">
+          <router-link v-if="modelValue?.status === 'completed'" :to="`/repo/${modelValue?.id}`" class="analysis-link">
+            {{ modelValue?.name || 'N/A' }}
+          </router-link>
+          <span v-else>
+            {{ modelValue?.name || 'N/A' }}
+          </span>
+        </h3>
+        <span style="font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), 0.7)">
+          {{ formatDate(modelValue?.createdAt) }}
         </span>
-      </h3>
+      </div>
       <v-spacer />
       <span class="status-badge" :class="`bg-${getStatusColor(modelValue?.status)}`">
         {{ $t(modelValue?.status) }}
       </span>
     </div>
 
-    <p class="description mb-2">
-      {{ modelValue?.repo?.description || 'No description available' }}
-    </p>
-
     <v-divider class="mb-4" />
 
-    <div v-if="modelValue?.repo" class="mb-4" style="font-size: 0.75rem">
-      <div class="d-flex justify-space-between mb-1">
-        <span class="font-weight-bold">{{ $t('creation_date') }}:</span>
-        <span>{{ formatDate(modelValue?.createdAt) }}</span>
-      </div>
-      <div class="d-flex justify-space-between">
-        <span class="font-weight-bold">{{ $t('last_update') }}:</span>
-        <span>{{ formatDate(modelValue?.repo?.lastUpdatedAt) }}</span>
-      </div>
-    </div>
+    <v-sheet v-if="modelValue.status === AnalysisStatus.FAILED" class="bg-background pa-3" rounded="lg">
+      <p style="font-size: 0.875rem">
+        <v-icon class="mr-2" icon="mdi-alert-circle-outline" color="error" />
+        {{ modelValue.errorMessage || $t('error_during_analysis') }}
+      </p>
+    </v-sheet>
+    <v-sheet v-else-if="modelValue?.repo" class="repo-summary pa-3 bg-background" rounded="lg">
+      <p class="mb-4">
+        <v-icon class="mr-2" size="22" icon="iconify:simple-icons:github" />
+        <span v-if="modelValue?.repo?.url">
+          <a :href="modelValue?.repo?.owner?.profileUrl" target="_blank">
+            {{ getProfileNameFromUrl(modelValue?.repo?.owner?.profileUrl || modelValue?.repo?.url) }}
+          </a>
+          /
+          <a :href="modelValue?.repo?.url" target="_blank">{{ modelValue?.repo?.name }}</a>
+        </span>
+        <span v-else>{{ modelValue?.repo?.name }}</span>
+      </p>
+      <dl style="font-size: 0.75rem">
+        <p class="description mb-4">
+          {{ modelValue?.repo?.description || 'No description available' }}
+        </p>
+        <div class="d-flex justify-space-between mb-1">
+          <dt class="font-weight-bold">{{ $t('creation_date') }}:</dt>
+          <dd>{{ formatDate(modelValue?.repo?.createdAt) }}</dd>
+        </div>
+
+        <div class="d-flex justify-space-between">
+          <dt class="font-weight-bold">{{ $t('last_update') }}:</dt>
+          <dd>{{ formatDate(modelValue?.repo?.lastUpdatedAt) }}</dd>
+        </div>
+      </dl>
+    </v-sheet>
+    <v-spacer />
 
     <v-card-actions class="pa-0 align-end">
       <v-spacer />
@@ -41,19 +66,34 @@
         v-if="modelValue?.status === 'completed'"
         color="primary-on-surface"
         variant="flat"
+        density="comfortable"
         rounded="md"
         :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: modelValue.id } }"
       >
         {{ $t('see_more') }}
+      </v-btn>
+      <v-btn
+        v-else-if="modelValue?.status === 'failed'"
+        color="error"
+        variant="flat"
+        density="comfortable"
+        rounded="md"
+        @click="$emit('delete', modelValue?.id ?? 0)"
+      >
+        {{ $t('delete') }}
       </v-btn>
     </v-card-actions>
   </v-card>
 </template>
 <script setup lang="ts">
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
-import type { AnalysisSummaryPublic } from '@/client';
+import { AnalysisStatus, type AnalysisSummaryPublic } from '@/client';
 import { RouteNames } from '@/router/route-names';
 import { formatDate } from '@/utils/utils';
+
+const emit = defineEmits<{
+  (e: 'delete', value: number): void;
+}>();
 
 const props = defineProps<{
   modelValue: AnalysisSummaryPublic;
@@ -71,6 +111,15 @@ function getStatusColor(status: string): string {
       return 'grey';
   }
 }
+
+function getProfileNameFromUrl(url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.pathname.split('/')[1] || 'Unknown';
+  } catch (e) {
+    return 'Unknown';
+  }
+}
 </script>
 <style lang="scss" scoped>
 .status-badge {
@@ -86,12 +135,13 @@ function getStatusColor(status: string): string {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.25;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   height: 2.5em;
   color: rgba(var(--v-theme-on-surface), 0.7);
 }
 
-.analysis-link {
+.analysis-link,
+.repo-summary a {
   text-decoration: none;
   color: inherit;
 

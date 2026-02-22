@@ -277,7 +277,9 @@ class GitHubManager:
                 name=data["owner"].get("name") or data["owner"]["login"],
                 github_user=data["owner"]["login"],
                 avatar=data["owner"]["avatarUrl"],
-                profile_url=f"https://github.com/{data['owner']['login']}",
+                profile_url=data["owner"]["html_url"]
+                if "html_url" in data["owner"]
+                else f"https://github.com/{data['owner']['login']}",
             ),
         )
 
