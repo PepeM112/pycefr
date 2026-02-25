@@ -1,5 +1,3 @@
-from enum import IntEnum
-
 from pydantic import BaseModel
 
 from backend.models.schemas.common import BaseSchema, Level, NamedIntEnum
@@ -122,6 +120,12 @@ class ClassId(NamedIntEnum):
     EXCEPTION_ASSERT = 89
     # --- With ---
     WITH_SIMPLE = 90
+    # --- Async/Await ---
+    ASYNC_AWAIT = 91
+    # --- Pattern Matching ---
+    PATTERN_MATCHING = 92
+    # --- Type Hinting ---
+    TYPE_HINTING = 93
 
 
 class ClassBase(BaseModel):

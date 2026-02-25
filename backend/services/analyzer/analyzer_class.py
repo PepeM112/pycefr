@@ -145,19 +145,14 @@ class Analyzer:
     def _analyse_ast(self, tree: ast.AST) -> List[AnalysisClassPublic]:
         """
         Walk through an AST tree to identify and count Python CEFR classes.
-
-        Args:
-            tree (ast.AST): The parsed AST of a file.
-
-        Returns:
-            List[AnalysisClassPublic]: A list of identified classes and their instance counts.
         """
         counter: defaultdict[ClassId, int] = defaultdict(int)
         for node in ast.walk(tree):
-            class_id = get_class_from_ast_node(node)
+            class_ids = get_class_from_ast_node(node)
 
-            if class_id != ClassId.UNKNOWN:
-                counter[class_id] += 1
+            for class_id in class_ids:
+                if class_id != ClassId.UNKNOWN:
+                    counter[class_id] += 1
 
         elements: List[AnalysisClassPublic] = []
         for class_id, count in counter.items():
