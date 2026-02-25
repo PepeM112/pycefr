@@ -454,9 +454,9 @@ def get_default_class_level(class_id: ClassId) -> int:
         ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY: Level.B2,
         ClassId.FUNCTIONDEF_RECURSIVE: Level.B2,
         ClassId.RETURN_SIMPLE: Level.A2,
-        ClassId.LAMBDA_SIMPLE: Level.B1,
-        ClassId.GENERATORS_FUNCTION: Level.B2,
-        ClassId.GENERATORS_EXPRESSION: Level.B2,
+        ClassId.LAMBDA_SIMPLE: Level.B2,
+        ClassId.GENERATORS_FUNCTION: Level.C1,
+        ClassId.GENERATORS_EXPRESSION: Level.C1,
         ClassId.IMPORT_SIMPLE: Level.A1,
         ClassId.IMPORT_FROM_SIMPLE: Level.A1,
         ClassId.IMPORT_FROM_RELATIVE: Level.B1,
@@ -474,8 +474,8 @@ def get_default_class_level(class_id: ClassId) -> int:
         ClassId.CLASS_DESCRIPTORS: Level.C1,
         ClassId.CLASS_PROPERTIES: Level.B2,
         ClassId.CLASS_PRIVATE: Level.B2,
-        ClassId.STATIC_CLASSMETHOD: Level.B2,
-        ClassId.STATIC_STATICMETHOD: Level.B2,
+        ClassId.STATIC_CLASSMETHOD: Level.C1,
+        ClassId.STATIC_STATICMETHOD: Level.C1,
         ClassId.DECORATORS_FUNCTION: Level.B2,
         ClassId.DECORATORS_CLASS: Level.C1,
         ClassId.METACLASS_NEW: Level.C2,
@@ -494,7 +494,7 @@ def get_default_class_level(class_id: ClassId) -> int:
         ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY: Level.B2,
         ClassId.EXCEPTION_RAISE: Level.B1,
         ClassId.EXCEPTION_ASSERT: Level.B1,
-        ClassId.WITH_SIMPLE: Level.B1,
+        ClassId.WITH_SIMPLE: Level.B2,
     }
 
     return default_levels.get(class_id, Level.UNKNOWN)

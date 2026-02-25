@@ -1,11 +1,4 @@
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/es';
-import localizedFormat from 'dayjs/plugin/localizedFormat';
-
-dayjs.extend(localizedFormat);
-dayjs.extend(relativeTime);
-dayjs.locale('es');
+import { Level } from '@/client';
 
 // File Extensions
 export type FileExtension = 'py' | 'js' | 'ts' | 'vue' | 'html' | 'css' | 'json' | 'md';
@@ -25,56 +18,29 @@ export function getExtensionIcon(extension: FileExtension): string {
   return EXTENSION_ICON_MAP[extension];
 }
 
-/**
- * Formats a date using the browser's local timezone.
- * @param value - Date in Date, String (ISO), or Timestamp format
- * @param format - Format pattern (e.g., 'DD-MM-YYYY')
- */
-export function formatDate(
-  value: Date | string | number | null | undefined,
-  format: string = 'DD-MM-YYYY',
-  relative: boolean = false
-): string {
-  if (!value) return 'N/A';
+const LEVEL_COLOR_MAP: Record<Level, string> = {
+  [Level.UNKNOWN]: 'rgba(201, 203, 207, 1)',
+  [Level.A1]: 'rgba(255, 99, 132, 1)',
+  [Level.A2]: 'rgba(255, 159, 64, 1)',
+  [Level.B1]: 'rgba(255, 206, 86, 1)',
+  [Level.B2]: 'rgba(75, 192, 192, 1)',
+  [Level.C1]: 'rgba(54, 162, 235, 1)',
+  [Level.C2]: 'rgba(153, 102, 255, 1)',
+};
 
-  const date = dayjs(value);
-
-  if (!date.isValid()) {
-    return 'Invalid date';
-  }
-
-  if (relative) {
-    return date.fromNow();
-  }
-
-  return date.format(format);
+export function getLevelColor(level: Level): string {
+  return LEVEL_COLOR_MAP[level];
 }
 
-// Manage dark mode
-export function toggleDarkMode() {
-  const body = document.body;
-
-  const darkModeToggle = document.getElementById('dark-mode-toggle');
-  if (!darkModeToggle) return;
-  const icon = darkModeToggle.querySelector('i');
-  if (!icon) return;
-
-  const isDarkMode = body.classList.contains('dark-mode');
-
-  if (isDarkMode) {
-    body.classList.remove('dark-mode');
-    icon.classList.remove('fa-sun');
-    icon.classList.add('fa-moon');
-    localStorage.setItem('dark-mode', 'false');
-  } else {
-    body.classList.add('dark-mode');
-    icon.classList.remove('fa-moon');
-    icon.classList.add('fa-sun');
-    localStorage.setItem('dark-mode', 'true');
+export function getStatusColor(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'success';
+    case 'in_progress':
+      return 'warning';
+    case 'failed':
+      return 'error';
+    default:
+      return 'grey';
   }
-}
-
-export function checkDarkModeOnLoad() {
-  const darkMode = localStorage.getItem('dark-mode') === 'true';
-  if (darkMode) toggleDarkMode();
 }

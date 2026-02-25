@@ -2,6 +2,7 @@ import { SortDirection } from '@/client';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+// Should be created in backend
 export type Sorting = {
   column: string;
   direction: SortDirection;

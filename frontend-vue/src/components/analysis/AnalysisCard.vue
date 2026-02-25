@@ -89,7 +89,7 @@
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
 import { AnalysisStatus, type AnalysisSummaryPublic } from '@/client';
 import { RouteNames } from '@/router/route-names';
-import { formatDate } from '@/utils/utils';
+import { formatDate } from '@/utils/datetime';
 
 const emit = defineEmits<{
   (e: 'delete', value: number): void;

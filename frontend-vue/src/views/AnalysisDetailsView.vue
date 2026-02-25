@@ -46,7 +46,7 @@
             </div>
             <g-table :model-value="tableData" :headers="headers" :pagination="pagination" v-model:sort="sort">
               <template #item-class="{ item }">
-                {{ $t(`${Enums.getLabel(ClassId, item.class).toLowerCase()}`) }}
+                {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
                 <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
@@ -68,13 +68,8 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
 import FileTree from '@/components/repo/FileTree.vue';
-import {
-  getLevelColor,
-  type ChartCommitItem,
-  type ChartData,
-  type ChartFileItem,
-  type TableDataItem,
-} from '@/components/repo/utils';
+import { getLevelColor } from '@/utils/utils';
+import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useClassLabel } from '@/composables/useClassLabel';
 import { useSortFilter } from '@/composables/useSortFilter';
@@ -151,11 +146,11 @@ const chartData = computed<ChartData | null>(() => {
   };
 });
 
-const tableData = computed<TableDataItem[]>(() => {
+const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
   const elements = analysisData.value?.fileClasses ?? [];
   if (elements.length === 0) return [];
 
-  const groupingMap = new Map<number, TableDataItem & { translatedLabel?: string }>();
+  const groupingMap = new Map<number, AnalysisClassPublicWithLevel & { translatedLabel?: string }>();
 
   for (const file of elements) {
     if (!isFileSelected(file.filename)) continue;
@@ -166,7 +161,7 @@ const tableData = computed<TableDataItem[]>(() => {
         existing.instances += item.instances;
       } else {
         groupingMap.set(item.classId, {
-          class: item.classId,
+          classId: item.classId,
           instances: item.instances,
           level: classLabel.getClassLevel(item.classId),
         });
@@ -179,7 +174,7 @@ const tableData = computed<TableDataItem[]>(() => {
   const processedElements = Array.from(groupingMap.values()).filter(item => {
     if (!selectedLevels.value?.includes(item.level)) return false;
 
-    item.translatedLabel = t(Enums.getLabel(ClassId, item.class)).toString();
+    item.translatedLabel = t(Enums.getLabel(ClassId, item.classId)).toString();
 
     if (!searchLower) return true;
     return item.translatedLabel.toLowerCase().includes(searchLower);
@@ -189,10 +184,10 @@ const tableData = computed<TableDataItem[]>(() => {
     if (sort.value.direction === SortDirection.UNKNOWN || !sort.value.column) return 0;
 
     let comparison = 0;
-    if (sort.value.column === 'class') {
+    if (sort.value.column === 'classId') {
       comparison = a.translatedLabel!.localeCompare(b.translatedLabel!);
     } else {
-      const col = sort.value.column as keyof TableDataItem;
+      const col = sort.value.column as keyof AnalysisClassPublicWithLevel;
       const valA = a[col] ?? 0;
       const valB = b[col] ?? 0;
       comparison = valA < valB ? -1 : valA > valB ? 1 : 0;
@@ -206,7 +201,7 @@ const tableData = computed<TableDataItem[]>(() => {
 });
 
 const headers: TableHeader[] = [
-  { label: 'class', key: 'class', sortColumn: 'class' },
+  { label: 'class', key: 'classId', sortColumn: 'classId' },
   { label: 'level', key: 'level', sortColumn: 'level', width: '1px', align: 'center' },
   { label: 'instances', key: 'instances', sortColumn: 'instances', width: '1px', align: 'center' },
 ];

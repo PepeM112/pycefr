@@ -37,7 +37,7 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { useTheme } from 'vuetify';
 import { type DateFilterValue } from '@/types/filter';
-import { formatDate } from '@/utils/utils';
+import { formatDate } from '@/utils/datetime';
 import dayjs from 'dayjs';
 
 const emit = defineEmits<{

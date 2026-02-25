@@ -40,6 +40,11 @@
 import { computed, ref } from 'vue';
 import type { TreeNode } from '@/types/treeview';
 
+type FlattenedNode = TreeNode & {
+  depth: number;
+  hasChildren: boolean;
+};
+
 const emit = defineEmits(['update:selected']);
 
 const props = withDefaults(
@@ -124,29 +129,30 @@ function handleToggleSelect(node: TreeNode) {
   emit('update:selected', newSelected);
 }
 
-const flattenedItems = computed(() => {
-  const result: any[] = [];
+function nodeMatches(node: TreeNode, search: string): boolean {
+  if (!search) return true;
+  if (node.title.toLowerCase().includes(search)) return true;
+  return node.children?.some(child => nodeMatches(child, search)) || false;
+}
+
+const flattenedItems = computed<FlattenedNode[]>(() => {
   const searchLower = props.search.toLowerCase();
 
-  function nodeMatches(node: TreeNode): boolean {
-    if (!searchLower) return true;
-    if (node.title.toLowerCase().includes(searchLower)) return true;
-    return node.children?.some(child => nodeMatches(child)) || false;
-  }
+  const traverse = (nodes: TreeNode[], depth = 0): FlattenedNode[] => {
+    return nodes.reduce((acc, node) => {
+      if (!nodeMatches(node, searchLower)) return acc;
 
-  function traverse(nodes: TreeNode[], depth = 0) {
-    for (const node of nodes) {
-      if (!nodeMatches(node)) continue;
       const hasChildren = !!(node.children && node.children.length > 0);
-      result.push({ ...node, depth, hasChildren });
-      if (hasChildren && isExpanded(node.id)) {
-        traverse(node.children!, depth + 1);
-      }
-    }
-  }
 
-  traverse(props.items);
-  return result;
+      return [
+        ...acc,
+        { ...node, depth, hasChildren },
+        ...(hasChildren && isExpanded(node.id) ? traverse(node.children!, depth + 1) : []),
+      ];
+    }, [] as FlattenedNode[]);
+  };
+
+  return traverse(props.items);
 });
 </script>
 

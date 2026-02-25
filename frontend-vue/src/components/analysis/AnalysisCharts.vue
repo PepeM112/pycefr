@@ -24,11 +24,33 @@
         </v-card>
       </v-col>
 
-      <v-col cols="6">
+      <v-col cols="12" lg="6">
         <v-card variant="outlined" class="pa-4 h-100">
           <h3 class="text-subtitle-1 font-weight-bold mb-4">{{ t('charts.directory_density_map') }}</h3>
           <div class="chart-container">
             <component :is="Chart" type="treemap" :data="treemapData" :options="treemapOptions" />
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-4">
+      <v-col cols="12">
+        <v-card variant="flat" class="pa-6 insights-box">
+          <div class="d-flex align-center mb-4">
+            <v-icon color="primary" class="mr-2">mdi-lightbulb-outline</v-icon>
+            <h3 class="text-h6 font-weight-bold mb-0">{{ t('charts.analysis_conclusions') }}</h3>
+          </div>
+
+          <div class="insights-content">
+            <p v-for="(insight, index) in conclusions" :key="index" class="text-body-1 mb-3 d-flex align-start">
+              <span class="mr-2 mt-1">•</span>
+              <span>{{ insight }}</span>
+            </p>
+
+            <v-alert v-if="conclusions.length === 0" type="info" variant="tonal" density="compact">
+              {{ t('charts.no_significant_insights') }}
+            </v-alert>
           </div>
         </v-card>
       </v-col>
@@ -41,7 +63,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Enums from '@/utils/enums';
 import { ClassId, Level } from '@/client';
-import { getLevelColor, type ChartData } from '@/components/repo/utils';
+import { getLevelColor } from '@/utils/utils';
+import type { ChartData } from '@/types/analysis';
 import { useThemeStore } from '@/stores/themeStore';
 import {
   Chart as ChartJS,
@@ -80,6 +103,121 @@ const { t } = useI18n();
 const themeStore = useThemeStore();
 
 const props = defineProps<{ data: ChartData }>();
+
+const conclusions = computed(() => {
+  const list: string[] = [];
+  const items = props.data.items;
+  const totalInstances = items.reduce((s, it) => s + it.instances, 0);
+
+  if (totalInstances === 0) return [];
+
+  // --- 1. Complexity & Abstraction Insight ---
+  // Un 1% de C1/C2 ya indica que hay metaprogramación, decoradores o generadores.
+  const advancedCount = items
+    .filter(it => it.level === Level.C1 || it.level === Level.C2)
+    .reduce((s, it) => s + it.instances, 0);
+
+  const advancedRatio = (advancedCount / totalInstances) * 100;
+
+  if (advancedRatio >= 1.5) {
+    list.push(
+      `High Abstraction Layer: Advanced features (C1/C2) represent ${advancedRatio.toFixed(2)}% of the structural code, indicating extensive use of metaprogramming, complex decorators, or generators typical of framework-level architecture.`
+    );
+  } else if (advancedRatio >= 0.5) {
+    list.push(
+      `Professional Codebase: Moderate use of advanced features (${advancedRatio.toFixed(2)}%). The architecture relies on solid OOP and functional patterns without excessive metaprogramming.`
+    );
+  } else {
+    list.push(
+      `Standard Complexity: The codebase is predominantly structural (A1-B2). It favors straightforward execution flow over deep abstractions.`
+    );
+  }
+
+  // --- 2. Pythonic Density Insight ---
+  // Comparamos comprensiones y lambdas directamente contra los bucles FOR tradicionales.
+  const pyCount = items
+    .filter(it =>
+      [ClassId.LISTCOMP_SIMPLE, ClassId.DICTCOMP_SIMPLE, ClassId.WITH_SIMPLE, ClassId.LAMBDA_SIMPLE].includes(
+        it.classId
+      )
+    )
+    .reduce((s, it) => s + it.instances, 0);
+
+  const forLoopsCount = items
+    .filter(it => [ClassId.LOOP_FOR_SIMPLE, ClassId.LOOP_FOR_NESTED].includes(it.classId))
+    .reduce((s, it) => s + it.instances, 0);
+
+  // Evitamos división por cero.
+  const idiomRatio = forLoopsCount > 0 ? pyCount / forLoopsCount : 0;
+
+  if (idiomRatio > 0.8) {
+    list.push(
+      `Highly Idiomatic: Strong preference for Pythonic constructs. For every traditional for-loop, there are nearly as many (or more) comprehensions, context managers, and functional elements.`
+    );
+  } else if (idiomRatio > 0.3) {
+    list.push(
+      `Balanced Idioms: The codebase mixes traditional iterative loops with Pythonic constructs like comprehensions appropriately.`
+    );
+  } else {
+    list.push(
+      `Imperative Style: The code relies heavily on traditional iterative loops and standard assignments rather than Pythonic shorthands.`
+    );
+  }
+
+  // --- 3. Exception Handling Insight ---
+  // Evaluamos la "Densidad de Excepciones": Cuánto control de errores hay respecto a las funciones definidas.
+  const exceptionBlocks = items
+    .filter(it =>
+      [ClassId.EXCEPTION_TRY_EXCEPT, ClassId.EXCEPTION_TRY_FINALLY, ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY].includes(
+        it.classId
+      )
+    )
+    .reduce((s, it) => s + it.instances, 0);
+
+  const functionDefs = items
+    .filter(it => [ClassId.FUNCTIONDEF_SIMPLE, ClassId.FUNCTIONDEF_RECURSIVE].includes(it.classId))
+    .reduce((s, it) => s + it.instances, 0);
+
+  const errorHandlingDensity = functionDefs > 0 ? exceptionBlocks / functionDefs : 0;
+
+  if (errorHandlingDensity > 0.4) {
+    list.push(
+      `Defensive Programming: High density of error handling. Almost half of the functions are protected by explicit try-except blocks.`
+    );
+  } else if (errorHandlingDensity > 0.1) {
+    list.push(
+      `Standard Error Handling: Exceptions are caught at strategic points rather than wrapping every minor operation.`
+    );
+  } else {
+    list.push(
+      `Optimistic Execution: Very sparse explicit error handling. The system likely relies on a global exception handler or middleware to catch unhandled errors.`
+    );
+  }
+
+  // --- 4. Structural Competence (Radar Focus) ---
+  // Vemos cuál es la categoría predominante en el radar
+  const oopCount = items
+    .filter(it =>
+      [ClassId.CLASS_SIMPLE, ClassId.CLASS_INHERITED, ClassId.CLASS_INIT, ClassId.CLASS_PROPERTIES].includes(it.classId)
+    )
+    .reduce((s, it) => s + it.instances, 0);
+
+  const logicCount = items
+    .filter(it => [ClassId.IF_SIMPLE, ClassId.IF_EXPRESSION, ClassId.LOOP_WHILE_SIMPLE].includes(it.classId))
+    .reduce((s, it) => s + it.instances, 0);
+
+  if (oopCount > logicCount * 0.5) {
+    list.push(
+      `Object-Oriented Focus: Heavy reliance on classes, encapsulation, and inheritance to structure the application logic.`
+    );
+  } else {
+    list.push(
+      `Procedural/Logic Focus: The application structure is driven primarily by conditional logic and standalone functions rather than heavy class hierarchies.`
+    );
+  }
+
+  return list;
+});
 
 const themeColors = computed(() => {
   const isDark = themeStore.currentTheme === 'dark';
@@ -195,7 +333,7 @@ const radarData = computed(() => {
       {
         label: t('intensity'),
         data: labels.map(cat =>
-          props.data.items.filter(it => categories[cat].includes(it.class)).reduce((s, it) => s + it.instances, 0)
+          props.data.items.filter(it => categories[cat].includes(it.classId)).reduce((s, it) => s + it.instances, 0)
         ),
         backgroundColor: 'rgba(92, 187, 246, 0.2)',
         borderColor: '#5CBBF6',
@@ -206,27 +344,45 @@ const radarData = computed(() => {
 });
 
 const pythonicData = computed(() => {
-  const py = [ClassId.LISTCOMP_SIMPLE, ClassId.DICTCOMP_SIMPLE, ClassId.LAMBDA_SIMPLE, ClassId.WITH_SIMPLE];
-  const pyCount = props.data.items.filter(it => py.includes(it.class)).reduce((s, it) => s + it.instances, 0);
-  const total = props.data.items.reduce((s, it) => s + it.instances, 0);
+  const pyClasses = [ClassId.LISTCOMP_SIMPLE, ClassId.DICTCOMP_SIMPLE, ClassId.LAMBDA_SIMPLE, ClassId.WITH_SIMPLE];
+  const standardClasses = [ClassId.LOOP_FOR_SIMPLE, ClassId.LOOP_FOR_NESTED, ClassId.IF_SIMPLE, ClassId.FILE_OPEN];
+
+  const pyCount = props.data.items.filter(it => pyClasses.includes(it.classId)).reduce((s, it) => s + it.instances, 0);
+  const stdCount = props.data.items
+    .filter(it => standardClasses.includes(it.classId))
+    .reduce((s, it) => s + it.instances, 0);
+
   return {
     labels: [t('standard'), t('pythonic')],
-    datasets: [{ data: [total - pyCount, pyCount], backgroundColor: ['#9E9E9E', '#4CAF50'] }],
+    datasets: [{ data: [stdCount, pyCount], backgroundColor: ['#9E9E9E', '#4CAF50'] }],
   };
 });
 
 const exceptionData = computed(() => {
-  const basic = [ClassId.EXCEPTION_TRY_EXCEPT, ClassId.EXCEPTION_RAISE];
-  const robust = [ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY, ClassId.EXCEPTION_ASSERT];
+  // Gestión Activa: El código intenta solucionar el problema (Catch)
+  const catching = [
+    ClassId.EXCEPTION_TRY_EXCEPT,
+    ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY,
+    ClassId.EXCEPTION_TRY_FINALLY,
+  ];
+
+  // Gestión de Señalización: El código avisa de un error (Raise/Assert)
+  const signaling = [ClassId.EXCEPTION_RAISE, ClassId.EXCEPTION_ASSERT];
+
+  const catchingCount = props.data.items
+    .filter(it => catching.includes(it.classId))
+    .reduce((s, it) => s + it.instances, 0);
+
+  const signalingCount = props.data.items
+    .filter(it => signaling.includes(it.classId))
+    .reduce((s, it) => s + it.instances, 0);
+
   return {
-    labels: [t('basic_handling'), t('robust_handling')],
+    labels: ['Error Catching (Try)', 'Error Signaling (Raise)'],
     datasets: [
       {
-        data: [
-          props.data.items.filter(it => basic.includes(it.class)).reduce((s, it) => s + it.instances, 0),
-          props.data.items.filter(it => robust.includes(it.class)).reduce((s, it) => s + it.instances, 0),
-        ],
-        backgroundColor: ['#FFC107', '#2196F3'],
+        data: [catchingCount, signalingCount],
+        backgroundColor: ['#2196F3', '#FFC107'],
       },
     ],
   };
@@ -235,7 +391,7 @@ const exceptionData = computed(() => {
 const topClassesData = computed(() => {
   const top = [...props.data.items].sort((a, b) => b.instances - a.instances).slice(0, 10);
   return {
-    labels: top.map(it => t(Enums.getLabel(ClassId, it.class))),
+    labels: top.map(it => t(Enums.getLabel(ClassId, it.classId))),
     datasets: [{ data: top.map(it => it.instances), backgroundColor: '#5CBBF6' }],
   };
 });
@@ -305,5 +461,16 @@ const treemapData = computed<any>(() => {
 .chart-container {
   height: 280px;
   position: relative;
+}
+
+.insights-box {
+  background-color: rgba(var(--v-theme-primary), 0.05) !important;
+  border: 1px dashed rgb(var(--v-theme-primary));
+  border-radius: 12px;
+}
+
+.insights-content {
+  color: rgb(var(--v-theme-on-surface));
+  line-height: 1.6;
 }
 </style>
