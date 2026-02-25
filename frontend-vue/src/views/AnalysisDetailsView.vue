@@ -45,7 +45,7 @@
               </div>
             </div>
             <g-table :model-value="tableData" :headers="headers" :pagination="pagination" v-model:sort="sort">
-              <template #item-class="{ item }">
+              <template #item-classId="{ item }">
                 {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
