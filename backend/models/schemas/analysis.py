@@ -46,6 +46,7 @@ class AnalysisSummaryPublic(BaseSchema):
 
 
 class AnalysisCreate(BaseSchema):
+    name: str | None = None
     repo_url: str
 
 

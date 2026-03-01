@@ -6,6 +6,7 @@ from typing import Any, List, Optional, Tuple
 
 from backend.models.schemas.analysis import (
     AnalysisClassPublic,
+    AnalysisCreate,
     AnalysisFilePublic,
     AnalysisFilters,
     AnalysisPublic,
@@ -258,12 +259,12 @@ def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
 # --- WRITE OPERATIONS ---
 
 
-def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
+def create_empty_analysis(analysis: AnalysisCreate) -> AnalysisPublic | None:
     """
     Create an initial analysis record with status 'IN_PROGRESS'.
 
     Args:
-        repo_url (str): The URL of the repository to be analyzed.
+        analysis (AnalysisCreate): The analysis creation data.
 
     Returns:
         AnalysisPublic | None: The placeholder analysis object, or None if creation fails.
@@ -271,13 +272,13 @@ def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        repo_name = repo_url.rstrip("/").split("/")[-1] or "unknown"
+        repo_name = analysis.repo_url.rstrip("/").split("/")[-1] or "unknown"
         now_utc = datetime.now(timezone.utc)
-        name = f"{now_utc.strftime('%Y%m%d')}_{repo_name}"
+        name = analysis.name or f"{now_utc.strftime('%Y%m%d')}_{repo_name}"
 
         cursor.execute(
             "INSERT INTO analyses (name, status, origin, repo_url, created_at) VALUES (?, ?, ?, ?, ?)",
-            (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value, repo_url, now_utc.isoformat()),
+            (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value, analysis.repo_url, now_utc.isoformat()),
         )
         conn.commit()
         analysis_id = cursor.lastrowid
@@ -285,7 +286,7 @@ def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
         if analysis_id is None:
             raise sqlite3.Error("Failed to retrieve lastrowid after INSERT")
 
-        logger.info(f"Empty analysis record created with ID: {analysis_id} for repo: {repo_url}")
+        logger.info(f"Empty analysis record created with ID: {analysis_id} for repo: {analysis.repo_url}")
         return AnalysisPublic(
             id=analysis_id,
             name=name,
@@ -294,7 +295,7 @@ def create_empty_analysis(repo_url: str) -> AnalysisPublic | None:
             created_at=now_utc,
             file_classes=[],
             repo=RepoPublic(
-                url=repo_url,
+                url=analysis.repo_url,
                 name=repo_name,
                 owner=None,
                 commits=[],

@@ -55,7 +55,7 @@
                     v-bind="tooltipProps"
                     density="comfortable"
                     icon="mdi-reload"
-                    @click="newAnalysis(item.repo?.url)"
+                    @click="newAnalysis({ name: item.name, repoUrl: item.repo?.url })"
                   />
                 </template>
                 <span>{{ $t('retry') }}</span>
@@ -76,14 +76,14 @@
         title="new_analysis"
         width="400"
         :disable-confirm="!isFormValid"
-        @confirm-pre="newAnalysis(newAnalysisForm.url)"
+        @confirm-pre="newAnalysis(newAnalysisForm)"
       >
         <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
           <g-input label="analysis_name">
             <v-text-field v-model="newAnalysisForm.name" />
           </g-input>
           <g-input label="repository_url" required>
-            <v-text-field v-model="newAnalysisForm.url" :rules="[rules.required, rules.url]" />
+            <v-text-field v-model="newAnalysisForm.repoUrl" :rules="[rules.required, rules.url]" />
           </g-input>
         </v-form>
       </g-dialog-card>
@@ -117,6 +117,7 @@
 <script setup lang="ts">
 import {
   type AnalysisSummaryPublic,
+  type AnalysisCreate,
   AnalysisSortColumn,
   AnalysisStatus,
   createAnalysis,
@@ -160,9 +161,9 @@ const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
 const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
-const newAnalysisForm = ref({
+const newAnalysisForm = ref<AnalysisCreate>({
   name: '',
-  url: '',
+  repoUrl: '',
 });
 
 const isFormValid = ref(false);
@@ -298,9 +299,9 @@ async function removeAnalysis(id: number = 0) {
   pagination.value.total -= 1;
 }
 
-async function newAnalysis(url: string) {
+async function newAnalysis(analysis: AnalysisCreate) {
   const { data, error } = await createAnalysis({
-    body: { repoUrl: url },
+    body: analysis,
   });
 
   if (error) {
@@ -320,7 +321,7 @@ async function newAnalysis(url: string) {
     closable: true,
   });
 
-  newAnalysisForm.value = { name: '', url: '' };
+  newAnalysisForm.value = { name: '', repoUrl: '' };
   analysesData.value.unshift(data);
   showNewAnalysisDialog.value = false;
 }
