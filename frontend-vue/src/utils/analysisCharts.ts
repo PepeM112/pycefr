@@ -13,11 +13,27 @@ export function getComplexityAbstractionInsight(items: AnalysisClassPublicWithLe
 
   const advancedRatio = (advancedCount / totalInstances) * 100;
 
-  if (advancedRatio >= 1.5) {
+  /** * HIGH ABSTRACTION THRESHOLD (>= 0.20%)
+   * Found in "meta-frameworks" and tools that extend Python's core behavior.
+   * Benchmarks: FastAPI (0.31%), Six (0.31%), Pydantic (0.21%), SQLAlchemy (0.20%).
+   * Characterized by heavy use of metaclasses, dynamic attribute access, and custom descriptors.
+   */
+  if (advancedRatio >= 0.2) {
     return t('analysis_insight.complexity_abstraction.high', { ratio: advancedRatio.toFixed(2) });
-  } else if (advancedRatio >= 0.5) {
+  } else if (advancedRatio >= 0.05) {
+    /** * PROFESSIONAL CODEBASE THRESHOLD (>= 0.05%)
+     * Found in high-quality libraries and mature backend services.
+     * Benchmark: Loguru (0.06%).
+     * Indicates solid use of advanced patterns like decorators, generators,
+     * and complex type hinting without over-engineering.
+     */
     return t('analysis_insight.complexity_abstraction.professional', { ratio: advancedRatio.toFixed(2) });
   } else {
+    /** * STANDARD STRUCTURAL THRESHOLD (< 0.05%)
+     * Found in most application-level code, business logic, and scripts.
+     * Benchmarks: Django Apps (0.04%), Tenacity, Requests.
+     * Focuses on readability and execution flow over deep structural abstractions.
+     */
     return t('analysis_insight.complexity_abstraction.standard');
   }
 }
@@ -37,11 +53,25 @@ export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[])
 
   const idiomRatio = forLoopsCount > 0 ? pyCount / forLoopsCount : 0;
 
-  if (idiomRatio > 0.8) {
+  /**
+   * HIGHLY IDIOMATIC THRESHOLD (>= 3.5)
+   * There are 3.5x more comprehensions/context managers than standard for-loops.
+   * This indicates a developer/team that actively refactors loops into pythonic structures.
+   */
+  if (idiomRatio >= 3.5) {
     return t('analysis_insight.pythonic_density.highly_idiomatic');
-  } else if (idiomRatio > 0.3) {
+  } else if (idiomRatio >= 1.5) {
+    /**
+     * BALANCED THRESHOLD (>= 1.5)
+     * Roughly equal use of loops and pythonic constructs.
+     * Typical of modern, well-maintained libraries.
+     */
     return t('analysis_insight.pythonic_density.balanced');
   } else {
+    /**
+     * IMPERATIVE THRESHOLD (< 1.5)
+     * Heavy reliance on traditional iteration.
+     */
     return t('analysis_insight.pythonic_density.imperative');
   }
 }
@@ -60,12 +90,25 @@ export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[
     .reduce((s, it) => s + it.instances, 0);
 
   const errorHandlingDensity = functionDefs > 0 ? exceptionBlocks / functionDefs : 0;
-
-  if (errorHandlingDensity > 0.4) {
+  /**
+   * DEFENSIVE THRESHOLD (>= 0.15)
+   * 1.5 try-blocks per 10 functions.
+   * Found in network/I-O heavy libraries (like Requests) that must handle low-level failures constantly.
+   */
+  if (errorHandlingDensity >= 0.15) {
     return t('analysis_insight.exception_handling.defensive');
-  } else if (errorHandlingDensity > 0.1) {
+  } else if (errorHandlingDensity >= 0.05) {
+    /**
+     * STANDARD THRESHOLD (>= 0.05)
+     * 1 try-block per 20 functions.
+     * Normal application logic. Exceptions are caught at strategic boundaries.
+     */
     return t('analysis_insight.exception_handling.standard');
   } else {
+    /**
+     * OPTIMISTIC THRESHOLD (< 0.05)
+     * Relies heavily on framework-level middleware (like Django/FastAPI) or global error handlers.
+     */
     return t('analysis_insight.exception_handling.optimistic');
   }
 }
@@ -77,13 +120,25 @@ export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLev
     )
     .reduce((s, it) => s + it.instances, 0);
 
-  const logicCount = items
-    .filter(it => [ClassId.IF_SIMPLE, ClassId.IF_EXPRESSION, ClassId.LOOP_WHILE_SIMPLE].includes(it.classId))
+  const proceduralCount = items
+    .filter(it => [ClassId.FUNCTIONDEF_SIMPLE].includes(it.classId))
     .reduce((s, it) => s + it.instances, 0);
 
-  if (oopCount > logicCount * 0.5) {
+  // If there are no functions, it's heavily OOP.
+  const structureRatio = proceduralCount > 0 ? oopCount / proceduralCount : 10;
+  /**
+   * OOP FOCUS (>= 0.3)
+   * High ratio of classes/init blocks compared to standalone functions.
+   * Frameworks like Django and FastAPI live here.
+   */
+  if (structureRatio >= 0.3) {
     return t('analysis_insight.structural_competence.oop');
   } else {
+    /**
+     * PROCEDURAL/LOGIC FOCUS (< 0.3)
+     * Heavy reliance on standalone functions and flat architecture.
+     * Libraries like Loguru or specific data-processing scripts live here.
+     */
     return t('analysis_insight.structural_competence.procedural');
   }
 }

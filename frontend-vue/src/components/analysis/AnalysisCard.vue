@@ -25,39 +25,42 @@
 
     <v-divider class="mb-4" />
 
-    <v-sheet v-if="modelValue.status === AnalysisStatus.FAILED" class="bg-background pa-3" rounded="lg">
-      <p style="font-size: 0.875rem">
-        <v-icon class="mr-2" icon="mdi-alert-circle-outline" color="error" />
-        {{ modelValue.errorMessage || $t('error_during_analysis') }}
-      </p>
-    </v-sheet>
-    <v-sheet v-else-if="modelValue?.repo" class="repo-summary pa-3 bg-background" rounded="lg">
-      <p class="mb-4">
-        <v-icon class="mr-2" size="22" icon="iconify:simple-icons:github" />
-        <span v-if="modelValue?.repo?.url">
-          <a :href="modelValue?.repo?.owner?.profileUrl" target="_blank">
-            {{ getProfileNameFromUrl(modelValue?.repo?.owner?.profileUrl || modelValue?.repo?.url) }}
-          </a>
-          /
-          <a :href="modelValue?.repo?.url" target="_blank">{{ modelValue?.repo?.name }}</a>
-        </span>
-        <span v-else>{{ modelValue?.repo?.name }}</span>
-      </p>
-      <dl style="font-size: 0.75rem">
-        <p class="description mb-4">
-          {{ modelValue?.repo?.description || 'No description available' }}
+    <v-sheet class="repo-summary bg-background pa-3 h-100" rounded="lg">
+      <template v-if="modelValue.status === AnalysisStatus.FAILED">
+        <p style="font-size: 0.875rem">
+          <v-icon class="mr-2" icon="mdi-alert-circle-outline" color="error" />
+          {{ modelValue.errorMessage || $t('error_during_analysis') }}
         </p>
-        <div class="d-flex justify-space-between mb-1">
-          <dt class="font-weight-bold">{{ $t('creation_date') }}:</dt>
-          <dd>{{ formatDate(modelValue?.repo?.createdAt) }}</dd>
-        </div>
+      </template>
+      <template v-else-if="modelValue?.repo">
+        <p class="mb-4">
+          <v-icon class="mr-2" size="22" icon="iconify:simple-icons:github" />
+          <span v-if="modelValue?.repo?.url">
+            <a :href="modelValue?.repo?.owner?.profileUrl" target="_blank">
+              {{ getProfileNameFromUrl(modelValue?.repo?.owner?.profileUrl || modelValue?.repo?.url) }}
+            </a>
+            <span style="margin: 0 2px;">/</span>
+            <a :href="modelValue?.repo?.url" target="_blank">{{ modelValue?.repo?.name }}</a>
+          </span>
+          <span v-else>{{ modelValue?.repo?.name }}</span>
+        </p>
+        <dl style="font-size: 0.75rem">
+          <p class="description mb-4">
+            {{ modelValue?.repo?.description || 'No description available' }}
+          </p>
+          <div class="d-flex justify-space-between mb-1">
+            <dt class="font-weight-bold">{{ $t('creation_date') }}:</dt>
+            <dd>{{ formatDate(modelValue?.repo?.createdAt) }}</dd>
+          </div>
 
-        <div class="d-flex justify-space-between">
-          <dt class="font-weight-bold">{{ $t('last_update') }}:</dt>
-          <dd>{{ formatDate(modelValue?.repo?.lastUpdatedAt) }}</dd>
-        </div>
-      </dl>
+          <div class="d-flex justify-space-between">
+            <dt class="font-weight-bold">{{ $t('last_update') }}:</dt>
+            <dd>{{ formatDate(modelValue?.repo?.lastUpdatedAt) }}</dd>
+          </div>
+        </dl>
+      </template>
     </v-sheet>
+
     <v-spacer />
 
     <v-card-actions class="pa-0 align-end">

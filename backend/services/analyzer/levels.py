@@ -528,7 +528,7 @@ def get_default_class_level(class_id: ClassId) -> int:
         ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY: Level.B2,
         ClassId.EXCEPTION_RAISE: Level.B1,
         ClassId.EXCEPTION_ASSERT: Level.B1,
-        ClassId.WITH_SIMPLE: Level.B2,
+        ClassId.WITH_SIMPLE: Level.B1,
         ClassId.ASYNC_AWAIT: Level.C1,
         ClassId.PATTERN_MATCHING: Level.C1,
         ClassId.TYPE_HINTING: Level.B2,

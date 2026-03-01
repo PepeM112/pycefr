@@ -76,14 +76,14 @@
         title="new_analysis"
         width="400"
         :disable-confirm="!isFormValid"
-        @confirm-pre="newAnalysis(newAnalysisUrl)"
+        @confirm-pre="newAnalysis(newAnalysisForm.url)"
       >
         <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
           <g-input label="analysis_name">
-            <v-text-field v-model="newAnalysisName" />
+            <v-text-field v-model="newAnalysisForm.name" />
           </g-input>
           <g-input label="repository_url" required>
-            <v-text-field v-model="newAnalysisUrl" :rules="[rules.required, rules.url]" />
+            <v-text-field v-model="newAnalysisForm.url" :rules="[rules.required, rules.url]" />
           </g-input>
         </v-form>
       </g-dialog-card>
@@ -162,8 +162,11 @@ const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
 const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
-const newAnalysisName = ref<string>('');
-const newAnalysisUrl = ref<string>('');
+const newAnalysisForm = ref({
+  name: '',
+  url: '',
+});
+
 const isFormValid = ref(false);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 
@@ -311,6 +314,8 @@ async function newAnalysis(url: string) {
     icon: 'mdi-check-circle-outline',
     closable: true,
   });
+
+  newAnalysisForm.value = { name: '', url: '' };
   analysesData.value.unshift(data);
   showNewAnalysisDialog.value = false;
 }
