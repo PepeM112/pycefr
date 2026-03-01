@@ -48,7 +48,7 @@
 import { computed } from 'vue';
 import { type Pagination, SortDirection } from '@/client';
 import GPagination from '@/components/GPagination.vue';
-import { type Sorting } from '@/composables/useSortFilter';
+import { type Sorting } from '@/composables/useSorting';
 import { type TableHeader } from '@/types/table';
 
 const emit = defineEmits<{
@@ -75,11 +75,7 @@ const props = withDefaults(
 
 const localModel = computed<T[]>({
   get() {
-    if (!pagination.value) return props.modelValue;
-    return props.modelValue.slice(
-      (pagination.value.page - 1) * pagination.value.perPage,
-      pagination.value.page * pagination.value.perPage
-    );
+    return props.modelValue;
   },
   set(value) {
     emit('update:modelValue', value);

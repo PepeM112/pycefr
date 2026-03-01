@@ -23,7 +23,7 @@
     </div>
     <g-container class="mb-4">
       <generic-loader :model-value="loadingStatus">
-        <g-table :model-value="analysesData" :headers="headers" :pagination="pagination" v-model:sort="sorting">
+        <g-table :model-value="analysesData" :headers="headers" v-model:pagination="pagination" v-model:sort="sorting">
           <template #item-status="{ item }">
             <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
               {{ $t(item.status) }}
@@ -55,7 +55,7 @@
                     v-bind="tooltipProps"
                     density="comfortable"
                     icon="mdi-reload"
-                    @click="newAnalysis(item.repo?.url)"
+                    @click="newAnalysis({ name: item.name, repoUrl: item.repo?.url })"
                   />
                 </template>
                 <span>{{ $t('retry') }}</span>
@@ -76,14 +76,14 @@
         title="new_analysis"
         width="400"
         :disable-confirm="!isFormValid"
-        @confirm-pre="newAnalysis(newAnalysisForm.url)"
+        @confirm-pre="newAnalysis(newAnalysisForm)"
       >
         <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
           <g-input label="analysis_name">
             <v-text-field v-model="newAnalysisForm.name" />
           </g-input>
           <g-input label="repository_url" required>
-            <v-text-field v-model="newAnalysisForm.url" :rules="[rules.required, rules.url]" />
+            <v-text-field v-model="newAnalysisForm.repoUrl" :rules="[rules.required, rules.url]" />
           </g-input>
         </v-form>
       </g-dialog-card>
@@ -117,7 +117,7 @@
 <script setup lang="ts">
 import {
   type AnalysisSummaryPublic,
-  type Pagination,
+  type AnalysisCreate,
   AnalysisSortColumn,
   AnalysisStatus,
   createAnalysis,
@@ -135,36 +135,35 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import GInput from '@/components/GInput.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
-import { getStatusColor } from '@/utils/utils';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
-import { useFilters } from '@/composables/useFilter';
+import { useFilter } from '@/composables/useFilter';
 import { useRules } from '@/composables/useRules';
-import { useSortFilter } from '@/composables/useSortFilter';
+import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { type DateFilterValue, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
+import { type DateFilterValue, type FilterItem, FilterType } from '@/types/filter';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
-import { computed, ref } from 'vue';
+import { getOriginIcon, getStatusColor } from '@/utils/utils';
+import { ref } from 'vue';
+import { usePagination } from '@/composables/usePagination';
+import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 
 const rules = useRules();
-const sorting = useSortFilter();
 const snackbarStore = useSnackbarStore();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
-const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
-const filter = ref<FilterValue>({});
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
 const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
-const newAnalysisForm = ref({
+const newAnalysisForm = ref<AnalysisCreate>({
   name: '',
-  url: '',
+  repoUrl: '',
 });
 
 const isFormValid = ref(false);
@@ -172,7 +171,7 @@ const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 
 const statusList = Enums.buildList(AnalysisStatus);
 
-const filterList = computed<FilterItem[]>(() => [
+const filterList: FilterItem[] = [
   {
     label: 'name',
     type: FilterType.MULTIPLE,
@@ -203,9 +202,16 @@ const filterList = computed<FilterItem[]>(() => [
     key: 'dates',
     query: 'd',
   },
-]);
+];
 
-useFilters(filter, filterList, loadData, { debounceWait: 500 });
+const sorting = useSorting();
+const pagination = usePagination();
+const filter = useFilter(filterList);
+
+useFetchOnQuery(loadData, {
+  immediate: true,
+  debounceWait: 400,
+});
 
 const menuItems: MenuProps[] = [
   {
@@ -293,9 +299,9 @@ async function removeAnalysis(id: number = 0) {
   pagination.value.total -= 1;
 }
 
-async function newAnalysis(url: string) {
+async function newAnalysis(analysis: AnalysisCreate) {
   const { data, error } = await createAnalysis({
-    body: { repoUrl: url },
+    body: analysis,
   });
 
   if (error) {
@@ -315,7 +321,7 @@ async function newAnalysis(url: string) {
     closable: true,
   });
 
-  newAnalysisForm.value = { name: '', url: '' };
+  newAnalysisForm.value = { name: '', repoUrl: '' };
   analysesData.value.unshift(data);
   showNewAnalysisDialog.value = false;
 }
@@ -377,17 +383,6 @@ async function handleDownload(id: number, name: string) {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
-}
-
-function getOriginIcon(origin: Origin): string {
-  switch (origin) {
-    case Origin.GITHUB:
-      return 'iconify:simple-icons:github';
-    case Origin.LOCAL:
-      return 'mdi-laptop';
-    default:
-      return '';
-  }
 }
 </script>
 <style lang="scss" scoped>

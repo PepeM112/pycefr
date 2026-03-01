@@ -1,4 +1,4 @@
-import { Level } from '@/client';
+import { Level, Origin } from '@/client';
 
 // File Extensions
 export type FileExtension = 'py' | 'js' | 'ts' | 'vue' | 'html' | 'css' | 'json' | 'md';
@@ -42,5 +42,16 @@ export function getStatusColor(status: string): string {
       return 'error';
     default:
       return 'grey';
+  }
+}
+
+export function getOriginIcon(origin: Origin): string {
+  switch (origin) {
+    case Origin.GITHUB:
+      return 'iconify:simple-icons:github';
+    case Origin.LOCAL:
+      return 'mdi-laptop';
+    default:
+      return '';
   }
 }

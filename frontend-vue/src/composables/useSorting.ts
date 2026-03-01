@@ -8,7 +8,7 @@ export type Sorting = {
   direction: SortDirection;
 };
 
-export const useSortFilter = (onQueryChange?: () => void) => {
+export const useSorting = (onQueryChange?: () => void) => {
   const route = useRoute();
   const router = useRouter();
 
@@ -37,7 +37,7 @@ export const useSortFilter = (onQueryChange?: () => void) => {
         query.s_d = String(nextDir);
       }
 
-      query.page = '1'; // Reset page to 1 when sorting
+      if (query.p) query.p = '1'; // Reset page to 1 when sorting
 
       router.push({ query });
       if (onQueryChange) {

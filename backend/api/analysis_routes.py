@@ -135,7 +135,7 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
     cloning and analysis as a FastAPI BackgroundTask.
 
     Args:
-        analysis_create: Object containing the repo_url to analyze.
+        analysis_create: Object containing the analysis creation data.
         background_tasks: FastAPI helper to run logic after the response is sent.
 
     Returns:
@@ -143,7 +143,7 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
     """
     analysis: AnalysisPublic | None = None
     try:
-        analysis = db_utils.create_empty_analysis(analysis_create.repo_url)
+        analysis = db_utils.create_empty_analysis(analysis_create)
 
         if analysis is None:
             logger.error(f"Failed to create database entry for: {analysis_create.repo_url}")

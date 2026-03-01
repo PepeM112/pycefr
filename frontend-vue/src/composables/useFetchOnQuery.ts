@@ -1,46 +1,46 @@
-import { watch, type WatchSource } from 'vue';
-import { useRoute, type LocationQuery } from 'vue-router';
+import { watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { useQuery } from './useQuery'; // Import logic inside
 
 interface FetchOptions {
-  /** * Parameters that should NOT trigger a new request on change.
-   */
+  /** Parameters that should NOT trigger a new request on change. */
   ignoreParams?: string[];
-  /** * Wait time (ms) to execute the fetcher after the last change.
-   */
+  /** Wait time (ms) to execute the fetcher after the last change. */
   debounceWait?: number;
-  /** * If true, executes the fetcher immediately on component mount (onMounted).
-   * The first execution skips the debounce to be instant.
-   */
+  /** If true, executes the fetcher immediately on component mount (onMounted).
+   * The first execution skips the debounce to be instant. */
   immediate?: boolean;
 }
 
 /**
  * Synchronizes a data-fetching function with changes in the URL query parameters.
- * * PURPOSE:
- * This composable acts as a bridge between the browser's URL and your API calls.
- * It observes a query source and triggers a fetcher whenever relevant parameters change,
- * supporting debouncing to optimize performance and "ignore lists" to prevent unnecessary calls.
+ *
+ * PURPOSE:
+ * Acts as a bridge between the browser's URL and API calls.
+ * Observes the current route's query and triggers a fetcher whenever relevant
+ * parameters change, supporting debouncing to avoid unnecessary requests.
  *
  * ARCHITECTURAL NOTE:
- * This composable follows a unidirectional flow (URL -> API).
- * 1. Why doesn't it update the URL internally?
- * It prevents infinite loops: UI -> updateQuery -> URL change -> useFetchOnQuery -> updateQuery...
- * 2. Single Responsibility: This hook only reacts to the URL. The responsibility
- * of updating the URL (UI -> URL) lies with the view or a dedicated state manager.
- * 3. Consistency: By forcing all data fetches to go through the URL, we ensure
- * browser history (Back/Forward) and deep-linking work out of the box.
- * * @param querySource - The reactive source of the URL query (usually currentQuery from useQuery).
- * @param path - The specific route path where this fetcher should be active.
- * @param fetcher - The function (usually an API call) to execute when the query changes.
- * @param options - Configuration for debouncing, initial execution, and ignored parameters.
+ * Follows a strict unidirectional flow (URL → fetcher).
+ * 1. No URL updates: this composable only reacts to the URL, never writes to it.
+ *    Writing is the responsibility of the caller (useFilter, usePagination, useSorting).
+ *    This prevents infinite loops: UI → URL change → useFetchOnQuery → URL change → ...
+ * 2. Single Responsibility: decouples the "when to fetch" concern from the "what to fetch"
+ *    logic, which lives in the fetcher function provided by the caller.
+ * 3. Route-scoped: automatically stops reacting if the user navigates away from the
+ *    route where the composable was initialized, preventing stale fetches.
+ * 4. Consistency: by routing all fetches through URL changes, browser history (Back/Forward)
+ *    and deep-linking work out of the box — reloading the page or sharing the URL
+ *    will always reproduce the same fetch.
+ *
+ * @param fetcher - The function to execute when relevant query parameters change.
+ * @param options - Configuration for debouncing, immediate execution, and ignored parameters.
  */
-export function useFetchOnQuery(
-  querySource: WatchSource<LocationQuery>,
-  path: string,
-  fetcher: () => Promise<void> | void,
-  options: FetchOptions = {}
-) {
+export function useFetchOnQuery(fetcher: () => Promise<void> | void, options: FetchOptions = {}) {
   const route = useRoute();
+  const { currentQuery } = useQuery();
+
+  const initialPath = route.path;
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
@@ -48,7 +48,6 @@ export function useFetchOnQuery(
    * @param force - If true, ignores the debounceWait (used for initial mount).
    */
   const executeFetch = (force: boolean = false) => {
-    // Clear any pending execution to reset the debounce timer
     if (timeout) clearTimeout(timeout);
 
     if (force || !options.debounceWait) {
@@ -61,30 +60,21 @@ export function useFetchOnQuery(
     }, options.debounceWait);
   };
 
-  // Watch automatically clears its handlers when the component is unmounted
   watch(
-    querySource,
+    currentQuery,
     (newQ, oldQ) => {
-      // Only trigger the fetcher if the component's route is still active.
-      // Prevents "ghost fetches" during navigation transitions.
-      if (route.path !== path) return;
+      if (route.path !== initialPath) return;
 
-      // Handle immediate execution: if oldQ is undefined, it's the first run.
       if (!oldQ) {
         executeFetch(true);
         return;
       }
 
-      if (options.ignoreParams?.length) {
-        const hasChanged = Object.keys({ ...newQ, ...oldQ }).some(key => {
-          if (options.ignoreParams?.includes(key)) return false;
-          return newQ[key] !== oldQ[key];
-        });
+      // Logic to detect changes in non-ignored parameters
+      const changedKeys = Object.keys({ ...newQ, ...oldQ }).filter(key => newQ[key] !== oldQ[key]);
+      const hasRelevantChanges = changedKeys.some(key => !options.ignoreParams?.includes(key));
 
-        if (!hasChanged) return;
-      }
-
-      executeFetch();
+      if (hasRelevantChanges) executeFetch();
     },
     { deep: true, immediate: options.immediate }
   );

@@ -44,7 +44,7 @@
                 </v-btn>
               </div>
             </div>
-            <g-table :model-value="tableData" :headers="headers" :pagination="pagination" v-model:sort="sort">
+            <g-table :model-value="tableData" :headers="headers" v-model:pagination="pagination" v-model:sort="sort">
               <template #item-classId="{ item }">
                 {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
@@ -61,7 +61,7 @@
   </page-view>
 </template>
 <script setup lang="ts">
-import { ClassId, getAnalysisDetail, Level, SortDirection, type AnalysisPublic, type Pagination } from '@/client';
+import { ClassId, getAnalysisDetail, Level, SortDirection, type AnalysisPublic } from '@/client';
 import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
 import GContainer from '@/components/GContainer.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
@@ -72,20 +72,22 @@ import { getLevelColor } from '@/utils/utils';
 import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useClassLabel } from '@/composables/useClassLabel';
-import { useSortFilter } from '@/composables/useSortFilter';
+import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import type { TreeNode } from '@/types/treeview';
 import Enums from '@/utils/enums';
 import { getExtensionIcon, type FileExtension } from '@/utils/utils';
-import { computed, onMounted, ref, shallowRef } from 'vue';
+import { computed, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { usePagination } from '@/composables/usePagination';
 
 const { t } = useI18n();
 const route = useRoute();
-const sort = useSortFilter();
+const sort = useSorting();
+const pagination = usePagination();
 const classLabel = useClassLabel();
 
 const LEVELS = Enums.buildList(Level);
@@ -95,7 +97,6 @@ const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const analysisTitle = ref<string>('');
 const search = ref<string>('');
 const analysisData = shallowRef<AnalysisPublic | undefined>(undefined);
-const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
 const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
@@ -146,7 +147,7 @@ const chartData = computed<ChartData | null>(() => {
   };
 });
 
-const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
+const processedData = computed<AnalysisClassPublicWithLevel[]>(() => {
   const elements = analysisData.value?.fileClasses ?? [];
   if (elements.length === 0) return [];
 
@@ -154,7 +155,6 @@ const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
 
   for (const file of elements) {
     if (!isFileSelected(file.filename)) continue;
-
     for (const item of file.classes ?? []) {
       const existing = groupingMap.get(item.classId);
       if (existing) {
@@ -171,18 +171,15 @@ const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
 
   const searchLower = search.value.toLowerCase();
 
-  const processedElements = Array.from(groupingMap.values()).filter(item => {
+  const filtered = Array.from(groupingMap.values()).filter(item => {
     if (!selectedLevels.value?.includes(item.level)) return false;
-
     item.translatedLabel = t(Enums.getLabel(ClassId, item.classId)).toString();
-
     if (!searchLower) return true;
     return item.translatedLabel.toLowerCase().includes(searchLower);
   });
 
-  processedElements.sort((a, b) => {
+  filtered.sort((a, b) => {
     if (sort.value.direction === SortDirection.UNKNOWN || !sort.value.column) return 0;
-
     let comparison = 0;
     if (sort.value.column === 'classId') {
       comparison = a.translatedLabel!.localeCompare(b.translatedLabel!);
@@ -192,12 +189,18 @@ const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
       const valB = b[col] ?? 0;
       comparison = valA < valB ? -1 : valA > valB ? 1 : 0;
     }
-
     return sort.value.direction === SortDirection.ASC ? comparison : -comparison;
   });
 
-  pagination.value.total = processedElements.length;
-  return processedElements;
+  return filtered;
+});
+
+/**
+ * Manually apply pagination in the frontend
+ */
+const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
+  const { page, perPage } = pagination.value;
+  return processedData.value.slice((page - 1) * perPage, page * perPage);
 });
 
 const headers: TableHeader[] = [
@@ -301,6 +304,13 @@ async function loadData() {
 function clearIDPathMap() {
   Object.keys(ID_PATH_MAP).forEach(key => delete ID_PATH_MAP[Number(key)]);
 }
+
+watch(
+  () => processedData.value,
+  newValue => {
+    pagination.value = { ...pagination.value, total: newValue.length };
+  }
+);
 
 onMounted(async () => {
   classLabel.fetch();

@@ -374,6 +374,8 @@ class GitHubManager:
             if self.is_cli:
                 self._print_status(f"[ ] Fetching commits: {total_processed}/{total_count}", end="", flush=True)
 
+            logger.info(f"[ ] Fetching commits: {total_processed}/{total_count}")
+
             page_info = history["pageInfo"]
             has_next_page, cursor = page_info["hasNextPage"], page_info["endCursor"]
 
