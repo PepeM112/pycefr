@@ -23,7 +23,7 @@
     </div>
     <g-container class="mb-4">
       <generic-loader :model-value="loadingStatus">
-        <g-table :model-value="analysesData" :headers="headers" :pagination="pagination" v-model:sort="sorting">
+        <g-table :model-value="analysesData" :headers="headers" v-model:pagination="pagination" v-model:sort="sorting">
           <template #item-status="{ item }">
             <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
               {{ $t(item.status) }}
@@ -117,7 +117,6 @@
 <script setup lang="ts">
 import {
   type AnalysisSummaryPublic,
-  type Pagination,
   AnalysisSortColumn,
   AnalysisStatus,
   createAnalysis,
@@ -142,21 +141,20 @@ import { useRules } from '@/composables/useRules';
 import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
-import { type DateFilterValue, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
+import { type DateFilterValue, type FilterItem, FilterType } from '@/types/filter';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
 import { getOriginIcon, getStatusColor } from '@/utils/utils';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
+import { usePagination } from '@/composables/usePagination';
+import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 
 const rules = useRules();
-const sorting = useSorting();
 const snackbarStore = useSnackbarStore();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
-const pagination = ref<Pagination>({ page: 1, perPage: 10, total: 0 });
-const filter = ref<FilterValue>({});
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
@@ -172,7 +170,7 @@ const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 
 const statusList = Enums.buildList(AnalysisStatus);
 
-const filterList = computed<FilterItem[]>(() => [
+const filterList: FilterItem[] = [
   {
     label: 'name',
     type: FilterType.MULTIPLE,
@@ -203,9 +201,16 @@ const filterList = computed<FilterItem[]>(() => [
     key: 'dates',
     query: 'd',
   },
-]);
+];
 
-useFilter(filter, filterList, loadData, { debounceWait: 500 });
+const sorting = useSorting();
+const pagination = usePagination();
+const filter = useFilter(filterList);
+
+useFetchOnQuery(loadData, {
+  immediate: true,
+  debounceWait: 400,
+});
 
 const menuItems: MenuProps[] = [
   {

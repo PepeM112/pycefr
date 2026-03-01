@@ -14,40 +14,20 @@ export const usePagination = (options: PaginationOptions = {}) => {
   // The 'total' does not live in the URL, we keep it in a local reactive state
   const total = ref(0);
 
-  const pagination = computed<Pagination>({
+  return computed<Pagination>({
     get: () => ({
       page: Number(route.query.p) || 1,
       perPage: Number(route.query.pp) || defaultPerPage,
       total: total.value,
     }),
-    set: (value: Pagination) => {
+    set: newVal => {
       const query = { ...route.query };
+      // If perPage changes, reset to page 1
+      query.p = (Number(route.query.pp) || defaultPerPage) !== newVal.perPage ? '1' : String(newVal.page);
+      query.pp = String(newVal.perPage);
 
-      // If perPage changes, we reset page to 1. Otherwise, we keep the current page.
-      const oldPerPage = Number(route.query.pp) || defaultPerPage;
-      const perPageChanged = oldPerPage !== value.perPage;
-      const nextP = perPageChanged ? 1 : value.page;
-
-      // Update 'p'
-      if (nextP <= 1) {
-        delete query.p;
-      } else {
-        query.p = String(nextP);
-      }
-
-      // Update 'pp'
-      if (value.perPage === defaultPerPage) {
-        delete query.pp;
-      } else {
-        query.pp = String(value.perPage);
-      }
-
-      // Update internal total
-      total.value = value.total;
-
+      total.value = newVal.total;
       router.push({ query });
     },
   });
-
-  return pagination;
 };

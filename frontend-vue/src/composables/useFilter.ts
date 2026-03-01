@@ -1,28 +1,17 @@
-import { watch, type Ref, type ComputedRef } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuery } from './useQuery';
-import { useFetchOnQuery } from './useFetchOnQuery';
 import type { FilterItem, FilterValue } from '@/types/filter';
 import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
 
-interface FilterOptions {
-  debounceWait?: number;
-  ignoreParams?: string[];
-  immediate?: boolean;
-}
-
 /**
- * Orchestrates the synchronization between local filter state, the browser URL,
- * and API data fetching.
+ * Orchestrates the synchronization between local filter state and the browser URL.
  */
-export function useFilter(
-  filters: Ref<FilterValue>,
-  filterList: ComputedRef<FilterItem[]>,
-  fetcher: () => Promise<void> | void,
-  options: FilterOptions = {}
-) {
+export function useFilter(filterList: FilterItem[]) {
   const route = useRoute();
-  const { currentQuery, updateQuery } = useQuery();
+  const { updateQuery } = useQuery();
+
+  const filters = ref<FilterValue>({});
 
   /**
    * Updates query using filter values.
@@ -30,12 +19,15 @@ export function useFilter(
    * Maps filter values to their 'query' aliases defined in filterList.
    */
   const syncToUrl = () => {
-    let queryToUpdate: Record<string, any> = {};
+    let queryToUpdate: Record<string, any> = { ...route.query };
 
-    filterList.value.forEach(item => {
+    filterList.forEach(item => {
       const serialized = serializeFilterValue(item, filters.value);
       queryToUpdate = { ...queryToUpdate, ...serialized };
     });
+
+    // Reset to page 1 when filters change
+    queryToUpdate.p = '1';
 
     updateQuery(queryToUpdate);
   };
@@ -48,35 +40,20 @@ export function useFilter(
   const hydrateFromUrl = () => {
     const newFilters: FilterValue = { ...filters.value };
 
-    filterList.value.forEach(item => {
+    filterList.forEach(item => {
       const deserialized = deserializeFilterValue(item, route.query);
-      if (deserialized === undefined) return;
-      newFilters[item.key] = deserialized;
+      if (deserialized !== undefined) newFilters[item.key] = deserialized;
     });
-
     filters.value = newFilters;
   };
 
-  // Keep hydrate before useFetchOnQuery to ensure filters are in sync with URL on initial load
   hydrateFromUrl();
 
-  useFetchOnQuery(currentQuery, route.path, fetcher, {
-    immediate: options.immediate ?? true,
-    debounceWait: options.debounceWait ?? 400,
-    ignoreParams: options.ignoreParams,
-  });
-
   watch(
-    filters,
-    () => {
-      syncToUrl();
-    },
+    () => filters.value,
+    () => syncToUrl(),
     { deep: true }
   );
 
-  return {
-    currentQuery,
-    updateQuery,
-    syncToUrl,
-  };
+  return filters;
 }

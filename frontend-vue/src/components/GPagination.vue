@@ -3,25 +3,28 @@
     <span>{{ $t('show') }}</span>
     <v-select
       class="items-per-page-select"
-      v-model="localModel.perPage"
+      :model-value="modelValue.perPage"
       :items="ITEMS_PER_PAGE_OPTIONS"
       density="compact"
       size="small"
       variant="outlined"
       hide-details
+      @update:model-value="onPerPageChange"
     />
-    <span>{{ $t('of_total', { total: localModel?.total }) }}</span>
+    <span>{{ $t('of_total', { total: modelValue.total }) }}</span>
     <v-pagination
-      v-model="localModel.page"
+      :model-value="modelValue.page"
       :length="totalPages"
       :total-visible="3"
       density="compact"
       style="transform: scale(0.85) translate(0, 0)"
+      @update:model-value="onPageChange"
     />
   </div>
 </template>
+
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import type { Pagination } from '@/client';
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 25, 50, 100];
@@ -34,27 +37,17 @@ const props = defineProps<{
   modelValue: Pagination;
 }>();
 
-const localModel = computed<Pagination>({
-  get() {
-    return props.modelValue;
-  },
-  set(value: Pagination) {
-    emit('update:modelValue', value);
-  },
-});
+const totalPages = computed<number>(() => Math.ceil(props.modelValue.total / props.modelValue.perPage));
 
-const totalPages = computed<number>(() => {
-  return Math.ceil(localModel.value.total / localModel.value.perPage);
-});
+function onPageChange(page: number) {
+  emit('update:modelValue', { ...props.modelValue, page });
+}
 
-watch(
-  () => localModel.value.perPage,
-  () => {
-    if (localModel.value.page > totalPages.value) {
-      localModel.value = { ...localModel.value, page: totalPages.value || 1 };
-    }
-  }
-);
+function onPerPageChange(perPage: number) {
+  const newTotalPages = Math.ceil(props.modelValue.total / perPage);
+  const page = props.modelValue.page > newTotalPages ? newTotalPages || 1 : props.modelValue.page;
+  emit('update:modelValue', { ...props.modelValue, perPage, page });
+}
 </script>
 <style scoped>
 .items-per-page-select {

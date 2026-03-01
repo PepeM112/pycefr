@@ -37,7 +37,7 @@ export const useSorting = (onQueryChange?: () => void) => {
         query.s_d = String(nextDir);
       }
 
-      query.p = '1'; // Reset page to 1 when sorting
+      if (query.p) query.p = '1'; // Reset page to 1 when sorting
 
       router.push({ query });
       if (onQueryChange) {
