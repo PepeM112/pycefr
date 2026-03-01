@@ -1,5 +1,5 @@
 <template>
-  <section :class="{ 'pa-6': !expandable }">
+  <section class="g-container" :class="{ 'pa-6': !expandable }">
     <template v-if="!expandable">
       <div class="d-flex mb-4">
         <h2 v-if="title" class="text-h5 font-weight-bold">{{ $t(title) }}</h2>
@@ -36,8 +36,8 @@ const props = defineProps<{
   expandable?: boolean;
 }>();
 </script>
-<style lang="scss" scoped>
-section {
+<style lang="scss">
+.g-container {
   position: relative;
   background-color: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));

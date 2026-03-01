@@ -1,11 +1,11 @@
 import ast
-from typing import Dict
+from typing import Dict, List
 
 from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import Level
 
 
-def get_class_from_ast_node(node: ast.AST) -> ClassId:
+def get_class_from_ast_node(node: ast.AST) -> List[ClassId]:
     """
     Determine the CEFR ClassId for a given AST node.
 
@@ -16,7 +16,7 @@ def get_class_from_ast_node(node: ast.AST) -> ClassId:
         node (ast.AST): The AST node to evaluate.
 
     Returns:
-        ClassId: The identified CEFR classification, or ClassId.UNKNOWN.
+        List[ClassId]: The identified CEFR classification for the classes found, or ClassId.UNKNOWN.
     """
     if isinstance(node, ast.List):
         return get_level_list(node)
@@ -35,39 +35,49 @@ def get_class_from_ast_node(node: ast.AST) -> ClassId:
     if isinstance(node, ast.If):
         return get_level_if(node)
     if isinstance(node, ast.IfExp):
-        return ClassId.IF_EXPRESSION
+        return [ClassId.IF_EXPRESSION]
     if isinstance(node, ast.For):
         return get_level_for(node)
     if isinstance(node, ast.While):
         return get_level_while(node)
     if isinstance(node, ast.Break):
-        return ClassId.LOOP_BREAK
+        return [ClassId.LOOP_BREAK]
     if isinstance(node, ast.Continue):
-        return ClassId.LOOP_CONTINUE
+        return [ClassId.LOOP_CONTINUE]
     if isinstance(node, ast.Pass):
-        return ClassId.LOOP_PASS
+        return [ClassId.LOOP_PASS]
     if isinstance(node, ast.FunctionDef):
         return get_level_function(node)
     if isinstance(node, ast.ClassDef):
         return get_level_class(node)
     if isinstance(node, ast.Return):
-        return ClassId.RETURN_SIMPLE
+        return [ClassId.RETURN_SIMPLE]
     if isinstance(node, ast.Lambda):
-        return ClassId.LAMBDA_SIMPLE
+        return [ClassId.LAMBDA_SIMPLE]
     if isinstance(node, (ast.Import, ast.ImportFrom)):
         return get_level_import(node)
     if isinstance(node, ast.Try):
         return get_level_try(node)
     if isinstance(node, ast.Raise):
-        return ClassId.EXCEPTION_RAISE
+        return [ClassId.EXCEPTION_RAISE]
     if isinstance(node, ast.Assert):
-        return ClassId.EXCEPTION_ASSERT
+        return [ClassId.EXCEPTION_ASSERT]
     if isinstance(node, ast.With):
-        return ClassId.WITH_SIMPLE
-    return ClassId.UNKNOWN
+        return [ClassId.WITH_SIMPLE]
+    # Direct detection of generators without needing to scan the entire function again
+    if isinstance(node, (ast.Yield, ast.YieldFrom)):
+        return [ClassId.GENERATORS_FUNCTION]
+    if isinstance(node, (ast.AsyncFunctionDef, ast.Await)):
+        return [ClassId.ASYNC_AWAIT] # Necesitarás crear este ClassId
+    if isinstance(node, ast.Match):
+        return [ClassId.PATTERN_MATCHING] # Necesitarás crear este ClassId
+    if isinstance(node, ast.AnnAssign):
+        return [ClassId.TYPE_HINTING]
+
+    return [ClassId.UNKNOWN]
 
 
-def get_level_list(node: ast.List) -> ClassId:
+def get_level_list(node: ast.List) -> List[ClassId]:
     """
     Analyze list literals to determine complexity.
 
@@ -75,18 +85,18 @@ def get_level_list(node: ast.List) -> ClassId:
         node (ast.List): The list node to analyze.
 
     Returns:
-        ClassId: The classification based on nesting or content.
+        List[ClassId]: The classification based on nesting or content.
     """
     has_nested_list = any(isinstance(e, ast.List) for e in node.elts)
     if has_nested_list:
-        return ClassId.LIST_NESTED
+        return [ClassId.LIST_NESTED]
     has_dict = any(isinstance(e, ast.Dict) for e in node.elts)
     if has_dict:
-        return ClassId.LIST_WITH_DICT
-    return ClassId.LIST_SIMPLE
+        return [ClassId.LIST_WITH_DICT]
+    return [ClassId.LIST_SIMPLE]
 
 
-def get_level_list_comp(node: ast.ListComp) -> ClassId:
+def get_level_list_comp(node: ast.ListComp) -> List[ClassId]:
     """
     Analyze list comprehensions for complexity.
 
@@ -94,16 +104,16 @@ def get_level_list_comp(node: ast.ListComp) -> ClassId:
         node (ast.ListComp): The list comprehension node.
 
     Returns:
-        ClassId: The classification based on filters or nesting.
+        List[ClassId]: The classification based on filters or nesting.
     """
     if len(node.generators) > 1:
-        return ClassId.LISTCOMP_NESTED
+        return [ClassId.LISTCOMP_NESTED]
     if any(gen.ifs for gen in node.generators):
-        return ClassId.LISTCOMP_WITH_IF
-    return ClassId.LISTCOMP_SIMPLE
+        return [ClassId.LISTCOMP_WITH_IF]
+    return [ClassId.LISTCOMP_SIMPLE]
 
 
-def get_level_dict(node: ast.Dict) -> ClassId:
+def get_level_dict(node: ast.Dict) -> List[ClassId]:
     """
     Analyze dictionary literals for complexity.
 
@@ -111,21 +121,21 @@ def get_level_dict(node: ast.Dict) -> ClassId:
         node (ast.Dict): The dictionary node.
 
     Returns:
-        ClassId: The classification based on nested structures.
+        List[ClassId]: The classification based on nested structures.
     """
     has_dict_inside = any(isinstance(v, ast.Dict) for v in node.values)
     has_list_inside = any(isinstance(v, ast.List) for v in node.values)
     if has_dict_inside:
         for v in node.values:
             if isinstance(v, ast.Dict) and any(isinstance(inner_v, ast.List) for inner_v in v.values):
-                return ClassId.DICT_WITH_DICT_LIST
-        return ClassId.DICT_NESTED
+                return [ClassId.DICT_WITH_DICT_LIST]
+        return [ClassId.DICT_NESTED]
     if has_list_inside:
-        return ClassId.DICT_WITH_LIST
-    return ClassId.DICT_SIMPLE
+        return [ClassId.DICT_WITH_LIST]
+    return [ClassId.DICT_SIMPLE]
 
 
-def get_level_dict_comp(node: ast.DictComp) -> ClassId:
+def get_level_dict_comp(node: ast.DictComp) -> List[ClassId]:
     """
     Analyze dictionary comprehensions for complexity.
 
@@ -133,18 +143,18 @@ def get_level_dict_comp(node: ast.DictComp) -> ClassId:
         node (ast.DictComp): The dictionary comprehension node.
 
     Returns:
-        ClassId: The classification based on logic inside the comprehension.
+        List[ClassId]: The classification based on logic inside the comprehension.
     """
     if isinstance(node.value, ast.DictComp):
-        return ClassId.DICTCOMP_NESTED
+        return [ClassId.DICTCOMP_NESTED]
     if isinstance(node.value, ast.IfExp):
-        return ClassId.DICTCOMP_WITH_IF_ELSE
+        return [ClassId.DICTCOMP_WITH_IF_ELSE]
     if any(gen.ifs for gen in node.generators):
-        return ClassId.DICTCOMP_WITH_IF
-    return ClassId.DICTCOMP_SIMPLE
+        return [ClassId.DICTCOMP_WITH_IF]
+    return [ClassId.DICTCOMP_SIMPLE]
 
 
-def get_level_tuple(node: ast.Tuple) -> ClassId:
+def get_level_tuple(node: ast.Tuple) -> List[ClassId]:
     """
     Analyze tuple literals for complexity.
 
@@ -152,15 +162,15 @@ def get_level_tuple(node: ast.Tuple) -> ClassId:
         node (ast.Tuple): The tuple node.
 
     Returns:
-        ClassId: Simple or Nested tuple classification.
+        List[ClassId]: Simple or Nested tuple classification.
     """
     has_nested_tuple = any(isinstance(e, ast.Tuple) for e in node.elts)
     if has_nested_tuple:
-        return ClassId.TUPLE_NESTED
-    return ClassId.TUPLE_SIMPLE
+        return [ClassId.TUPLE_NESTED]
+    return [ClassId.TUPLE_SIMPLE]
 
 
-def get_level_call(node: ast.Call) -> ClassId:
+def get_level_call(node: ast.Call) -> List[ClassId]:
     """
     Identify complexity of function calls based on built-ins or attributes.
 
@@ -168,7 +178,7 @@ def get_level_call(node: ast.Call) -> ClassId:
         node (ast.Call): The function call node.
 
     Returns:
-        ClassId: Classification based on the specific function or attribute called.
+        List[ClassId]: Classification based on the specific function or attribute called.
     """
     if isinstance(node.func, ast.Name):
         func_id = node.func.id
@@ -181,7 +191,7 @@ def get_level_call(node: ast.Call) -> ClassId:
             "enumerate": ClassId.LOOP_ENUMERATE,
             "super": ClassId.SUPERFUNCTION_SIMPLE,
         }
-        return mapper.get(func_id, ClassId.UNKNOWN)
+        return [mapper.get(func_id, ClassId.UNKNOWN)]
 
     if isinstance(node.func, ast.Attribute):
         attr_name = node.func.attr
@@ -191,12 +201,12 @@ def get_level_call(node: ast.Call) -> ClassId:
             "readline": ClassId.FILE_READLINE,
             "writelines": ClassId.FILE_WRITELINES,
         }
-        return mapper.get(attr_name, ClassId.UNKNOWN)
+        return [mapper.get(attr_name, ClassId.UNKNOWN)]
 
-    return ClassId.UNKNOWN
+    return [ClassId.UNKNOWN]
 
 
-def get_level_assign(node: ast.AST) -> ClassId:
+def get_level_assign(node: ast.AST) -> List[ClassId]:
     """
     Analyze assignment operations.
 
@@ -207,13 +217,13 @@ def get_level_assign(node: ast.AST) -> ClassId:
         ClassId: Simple, operator-based, or incremental assignment classification.
     """
     if isinstance(node, ast.AugAssign):
-        return ClassId.ASSIGN_INCREMENTS
+        return [ClassId.ASSIGN_INCREMENTS]
     if isinstance(node, ast.Assign) and isinstance(node.value, ast.BinOp):
-        return ClassId.ASSIGN_WITH_OPERATOR
-    return ClassId.ASSIGN_SIMPLE
+        return [ClassId.ASSIGN_WITH_OPERATOR]
+    return [ClassId.ASSIGN_SIMPLE]
 
 
-def get_level_if(node: ast.If) -> ClassId:
+def get_level_if(node: ast.If) -> List[ClassId]:
     """
     Analyze if-statements, specifically checking for the main entry point pattern.
 
@@ -231,11 +241,11 @@ def get_level_if(node: ast.If) -> ClassId:
         and isinstance(node.test.comparators[0], ast.Constant)
         and node.test.comparators[0].value == "__main__"
     ):
-        return ClassId.IF_NAME_MAIN
-    return ClassId.IF_SIMPLE
+        return [ClassId.IF_NAME_MAIN]
+    return [ClassId.IF_SIMPLE]
 
 
-def get_level_for(node: ast.For) -> ClassId:
+def get_level_for(node: ast.For) -> List[ClassId]:
     """
     Analyze for-loops for complexity and iteration style.
 
@@ -245,19 +255,18 @@ def get_level_for(node: ast.For) -> ClassId:
     Returns:
         ClassId: Classification based on nesting and iteration targets.
     """
-    has_nested_for = any(isinstance(e, ast.For) for e in node.body)
-    if has_nested_for:
-        return ClassId.LOOP_FOR_NESTED
+    if any(isinstance(e, ast.For) for e in node.body):
+        return [ClassId.LOOP_FOR_NESTED]
     if isinstance(node.target, ast.Tuple):
-        return ClassId.LOOP_FOR_TUPLE_NAME
+        return [ClassId.LOOP_FOR_TUPLE_NAME]
     if isinstance(node.iter, ast.List):
-        return ClassId.LOOP_FOR_LIST_ITERATE
+        return [ClassId.LOOP_FOR_LIST_ITERATE]
     if isinstance(node.iter, ast.Tuple):
-        return ClassId.LOOP_FOR_TUPLE_ITERATE
-    return ClassId.LOOP_FOR_SIMPLE
+        return [ClassId.LOOP_FOR_TUPLE_ITERATE]
+    return [ClassId.LOOP_FOR_SIMPLE]
 
 
-def get_level_while(node: ast.While) -> ClassId:
+def get_level_while(node: ast.While) -> List[ClassId]:
     """
     Analyze while-loops.
 
@@ -268,11 +277,11 @@ def get_level_while(node: ast.While) -> ClassId:
         ClassId: Simple While or While/Else classification.
     """
     if node.orelse:
-        return ClassId.LOOP_WHILE_ELSE
-    return ClassId.LOOP_WHILE_SIMPLE
+        return [ClassId.LOOP_WHILE_ELSE]
+    return [ClassId.LOOP_WHILE_SIMPLE]
 
 
-def get_level_function(node: ast.FunctionDef) -> ClassId:
+def get_level_function(node: ast.FunctionDef) -> List[ClassId]:
     """
     Analyze function definitions for advanced features like decorators,
     recursion, generators, or complex argument signatures.
@@ -283,34 +292,38 @@ def get_level_function(node: ast.FunctionDef) -> ClassId:
     Returns:
         ClassId: Classification based on the most advanced feature found.
     """
-    for decorator in node.decorator_list:
-        if isinstance(decorator, ast.Name) and decorator.id == "staticmethod":
-            return ClassId.STATIC_CLASSMETHOD
-        if isinstance(decorator, ast.Name) and decorator.id == "classmethod":
-            return ClassId.STATIC_STATICMETHOD
+    features: List[ClassId] = []
 
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Name):
+            if decorator.id == "staticmethod":
+                features.append(ClassId.STATIC_CLASSMETHOD)
+            elif decorator.id == "classmethod":
+                features.append(ClassId.STATIC_STATICMETHOD)
+
+    # Recursion
     for subnode in ast.walk(node):
         if isinstance(subnode, ast.Call) and isinstance(subnode.func, ast.Name) and subnode.func.id == node.name:
-            return ClassId.FUNCTIONDEF_RECURSIVE
+            features.append(ClassId.FUNCTIONDEF_RECURSIVE)
+            break
 
-    for subnode in node.body:
-        for depth_node in ast.walk(subnode):
-            if isinstance(depth_node, (ast.Yield, ast.YieldFrom)):
-                return ClassId.GENERATORS_FUNCTION
-
+    # Arguments
     if node.args.kwonlyargs:
-        return ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY
+        features.append(ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY)
     if node.args.kwarg:
-        return ClassId.FUNCTIONDEF_ARGUM_DBL_STAR
+        features.append(ClassId.FUNCTIONDEF_ARGUM_DBL_STAR)
     if node.args.vararg:
-        return ClassId.FUNCTIONDEF_ARGUM_STAR
+        features.append(ClassId.FUNCTIONDEF_ARGUM_STAR)
     if node.args.defaults:
-        return ClassId.FUNCTIONDEF_ARGUM_DEFAULT
+        features.append(ClassId.FUNCTIONDEF_ARGUM_DEFAULT)
 
-    return ClassId.FUNCTIONDEF_SIMPLE
+    if not features:
+        features.append(ClassId.FUNCTIONDEF_SIMPLE)
+
+    return features
 
 
-def get_level_class(node: ast.ClassDef) -> ClassId:
+def get_level_class(node: ast.ClassDef) -> List[ClassId]:
     """
     Analyze class definitions for OOP features like inheritance,
     private members, or descriptors.
@@ -321,25 +334,46 @@ def get_level_class(node: ast.ClassDef) -> ClassId:
     Returns:
         ClassId: Classification based on found OOP characteristics.
     """
+    features: List[ClassId] = []
+
+    # Inheritance
     if node.bases:
-        return ClassId.CLASS_INHERITED
+        features.append(ClassId.CLASS_INHERITED)
+
+    # Metaclasses (defined in the class keywords)
+    for kw in node.keywords:
+        if kw.arg == "metaclass":
+            features.append(ClassId.METACLASS_METACLASS)
+
+    # Explore class body
     for item in node.body:
         if isinstance(item, ast.FunctionDef):
             if item.name == "__init__":
-                return ClassId.CLASS_INIT
-            if item.name.startswith("__") and not item.name.endswith("__"):
-                return ClassId.CLASS_PRIVATE
-            if item.name in ["__get__", "__set__", "__delete__"]:
-                return ClassId.CLASS_DESCRIPTORS
+                features.append(ClassId.CLASS_INIT)
+            elif item.name.startswith("__") and not item.name.endswith("__"):
+                features.append(ClassId.CLASS_PRIVATE)
+            elif item.name in ["__get__", "__set__", "__delete__"]:
+                features.append(ClassId.CLASS_DESCRIPTORS)
 
+        # Look for "__slots__" attributes
+        if isinstance(item, ast.Assign):
+            for target in item.targets:
+                if isinstance(target, ast.Name) and target.id == "__slots__":
+                    features.append(ClassId.SLOTS_ATTR)
+
+        # Properties
         for decorator in getattr(item, "decorator_list", []):
             if isinstance(decorator, ast.Name) and decorator.id == "property":
-                return ClassId.CLASS_PROPERTIES
+                features.append(ClassId.CLASS_PROPERTIES)
 
-    return ClassId.CLASS_SIMPLE
+    if not features:
+        features.append(ClassId.CLASS_SIMPLE)
+
+    # Remove duplicates if any and return
+    return list(set(features))
 
 
-def get_level_import(node: ast.AST) -> ClassId:
+def get_level_import(node: ast.AST) -> List[ClassId]:
     """
     Analyze import statements.
 
@@ -357,25 +391,25 @@ def get_level_import(node: ast.AST) -> ClassId:
     }
     if isinstance(node, ast.Import):
         if any(alias.asname for alias in node.names):
-            return ClassId.IMPORT_AS_EXTENSION
+            return [ClassId.IMPORT_AS_EXTENSION]
         for alias in node.names:
             if alias.name in modules:
-                return modules[alias.name]
-        return ClassId.IMPORT_SIMPLE
+                return [modules[alias.name]]
+        return [ClassId.IMPORT_SIMPLE]
 
     if isinstance(node, ast.ImportFrom):
         if node.level > 0:
-            return ClassId.IMPORT_FROM_RELATIVE
+            return [ClassId.IMPORT_FROM_RELATIVE]
         if any(alias.name == "*" for alias in node.names):
-            return ClassId.IMPORT_FROM_STAR
+            return [ClassId.IMPORT_FROM_STAR]
         if node.module in modules:
-            return modules[node.module]
-        return ClassId.IMPORT_FROM_SIMPLE
+            return [modules[node.module]]
+        return [ClassId.IMPORT_FROM_SIMPLE]
 
-    return ClassId.UNKNOWN
+    return [ClassId.UNKNOWN]
 
 
-def get_level_try(node: ast.Try) -> ClassId:
+def get_level_try(node: ast.Try) -> List[ClassId]:
     """
     Analyze try-except blocks for error handling complexity.
 
@@ -386,12 +420,12 @@ def get_level_try(node: ast.Try) -> ClassId:
         ClassId: Classification based on else/finally clauses or nesting.
     """
     if node.finalbody:
-        return ClassId.EXCEPTION_TRY_EXCEPT_FINALLY
+        return [ClassId.EXCEPTION_TRY_EXCEPT_FINALLY]
     if node.orelse:
-        return ClassId.EXCEPTION_TRY_ELSE_EXCEPT
+        return [ClassId.EXCEPTION_TRY_ELSE_EXCEPT]
     if any(isinstance(n, ast.Try) for n in node.body):
-        return ClassId.EXCEPTION_TRY_TRY
-    return ClassId.EXCEPTION_TRY_EXCEPT
+        return [ClassId.EXCEPTION_TRY_TRY]
+    return [ClassId.EXCEPTION_TRY_EXCEPT]
 
 
 def get_default_class_level(class_id: ClassId) -> int:
@@ -454,9 +488,9 @@ def get_default_class_level(class_id: ClassId) -> int:
         ClassId.FUNCTIONDEF_ARGUM_KEYWORD_ONLY: Level.B2,
         ClassId.FUNCTIONDEF_RECURSIVE: Level.B2,
         ClassId.RETURN_SIMPLE: Level.A2,
-        ClassId.LAMBDA_SIMPLE: Level.B1,
-        ClassId.GENERATORS_FUNCTION: Level.B2,
-        ClassId.GENERATORS_EXPRESSION: Level.B2,
+        ClassId.LAMBDA_SIMPLE: Level.B2,
+        ClassId.GENERATORS_FUNCTION: Level.C1,
+        ClassId.GENERATORS_EXPRESSION: Level.C1,
         ClassId.IMPORT_SIMPLE: Level.A1,
         ClassId.IMPORT_FROM_SIMPLE: Level.A1,
         ClassId.IMPORT_FROM_RELATIVE: Level.B1,
@@ -495,6 +529,9 @@ def get_default_class_level(class_id: ClassId) -> int:
         ClassId.EXCEPTION_RAISE: Level.B1,
         ClassId.EXCEPTION_ASSERT: Level.B1,
         ClassId.WITH_SIMPLE: Level.B1,
+        ClassId.ASYNC_AWAIT: Level.C1,
+        ClassId.PATTERN_MATCHING: Level.C1,
+        ClassId.TYPE_HINTING: Level.B2,
     }
 
     return default_levels.get(class_id, Level.UNKNOWN)

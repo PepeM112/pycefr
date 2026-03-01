@@ -47,7 +47,7 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
 import { computed } from 'vue';
 import { type Pagination, SortDirection } from '@/client';
-import GPagination from '@/components/repo/GPagination.vue';
+import GPagination from '@/components/GPagination.vue';
 import { type Sorting } from '@/composables/useSortFilter';
 import { type TableHeader } from '@/types/table';
 

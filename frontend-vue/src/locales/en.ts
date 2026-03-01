@@ -1,6 +1,36 @@
 export default {
   actions: 'Actions',
   analyses: 'Analyses',
+  analysis_insight: {
+    complexity_abstraction: {
+      high: 'High Abstraction Layer: Advanced features (C1/C2) represent {ratio}% of the structural code, indicating extensive use of metaprogramming, complex decorators, or generators typical of framework-level architecture.',
+      professional:
+        'Professional Codebase: Moderate use of advanced features ({ratio}%). The architecture relies on solid OOP and functional patterns without excessive metaprogramming.',
+      standard:
+        'Standard Complexity: The codebase is predominantly structural (A1-B2). It favors straightforward execution flow over deep abstractions.',
+    },
+    pythonic_density: {
+      highly_idiomatic:
+        'Highly Idiomatic: Strong preference for Pythonic constructs. For every traditional for-loop, there are nearly as many (or more) comprehensions, context managers, and functional elements.',
+      balanced:
+        'Balanced Idioms: The codebase mixes traditional iterative loops with Pythonic constructs like comprehensions appropriately.',
+      imperative:
+        'Imperative Style: The code relies heavily on traditional iterative loops and standard assignments rather than Pythonic shorthands.',
+    },
+    exception_handling: {
+      defensive:
+        'Defensive Programming: High density of error handling. Almost half of the functions are protected by explicit try-except blocks.',
+      standard:
+        'Standard Error Handling: Exceptions are caught at strategic points rather than wrapping every minor operation.',
+      optimistic:
+        'Optimistic Execution: Very sparse explicit error handling. The system likely relies on a global exception handler or middleware to catch unhandled errors.',
+    },
+    structural_competence: {
+      oop: 'Object-Oriented Focus: Heavy reliance on classes, encapsulation, and inheritance to structure the application logic.',
+      procedural:
+        'Procedural/Logic Focus: The application structure is driven primarily by conditional logic and standalone functions rather than heavy class hierarchies.',
+    },
+  },
   analysis_name: 'Analysis name',
   analysis_rules: {
     list_simple: 'List: Simple',
@@ -70,10 +100,10 @@ export default {
     class_inherited: 'Class: Inheritance',
     class_init: 'Class: Constructor (__init__)',
     class_descriptors: 'Class: Descriptors',
-    class_properties: 'Class: Properties ({\'@\'}property)',
+    class_properties: "Class: Properties ({'@'}property)",
     class_private: 'Class: Private attributes (__attr)',
-    static_classmethod: 'Static: {\'@\'}classmethod',
-    static_staticmethod: 'Static: {\'@\'}staticmethod',
+    static_classmethod: "Static: {'@'}classmethod",
+    static_staticmethod: "Static: {'@'}staticmethod",
     decorators_function: 'Deco: Function decorator',
     decorators_class: 'Deco: Class decorator',
     metaclass_new: 'Meta: __new__ method',
@@ -105,6 +135,7 @@ export default {
     oop: 'OOP',
   },
   charts: {
+    analysis_conclusions: 'Analysis Conclusions',
     competency_radar: 'Competency Radar',
     complexity_index: 'Average Complexity Index',
     complexity_hotspots: 'Complexity Hotspots',
