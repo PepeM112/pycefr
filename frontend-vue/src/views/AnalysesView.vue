@@ -135,10 +135,9 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import GInput from '@/components/GInput.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
-import { getStatusColor } from '@/utils/utils';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
-import { useFilters } from '@/composables/useFilter';
+import { useFilter } from '@/composables/useFilter';
 import { useRules } from '@/composables/useRules';
 import { useSortFilter } from '@/composables/useSortFilter';
 import { RouteNames } from '@/router/route-names';
@@ -147,6 +146,7 @@ import { type DateFilterValue, type FilterItem, type FilterValue, FilterType } f
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
+import { getOriginIcon, getStatusColor } from '@/utils/utils';
 import { computed, ref } from 'vue';
 
 const rules = useRules();
@@ -205,7 +205,7 @@ const filterList = computed<FilterItem[]>(() => [
   },
 ]);
 
-useFilters(filter, filterList, loadData, { debounceWait: 500 });
+useFilter(filter, filterList, loadData, { debounceWait: 500 });
 
 const menuItems: MenuProps[] = [
   {
@@ -377,17 +377,6 @@ async function handleDownload(id: number, name: string) {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
-}
-
-function getOriginIcon(origin: Origin): string {
-  switch (origin) {
-    case Origin.GITHUB:
-      return 'iconify:simple-icons:github';
-    case Origin.LOCAL:
-      return 'mdi-laptop';
-    default:
-      return '';
-  }
 }
 </script>
 <style lang="scss" scoped>

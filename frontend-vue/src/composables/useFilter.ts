@@ -15,7 +15,7 @@ interface FilterOptions {
  * Orchestrates the synchronization between local filter state, the browser URL,
  * and API data fetching.
  */
-export function useFilters(
+export function useFilter(
   filters: Ref<FilterValue>,
   filterList: ComputedRef<FilterItem[]>,
   fetcher: () => Promise<void> | void,
