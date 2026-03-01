@@ -1,6 +1,36 @@
 export default {
   actions: 'Acciones',
   analyses: 'Análisis',
+  analysis_insight: {
+    complexity_abstraction: {
+      high: 'Capa de Abstracción Alta: Las características avanzadas (C1/C2) representan el {ratio}% del código estructural, lo que indica un uso extensivo de metaprogramación, decoradores complejos o generadores típicos de arquitecturas a nivel de framework.',
+      professional:
+        'Base de Código Profesional: Uso moderado de funciones avanzadas ({ratio}%). La arquitectura se apoya en patrones sólidos de POO y funcionales sin caer en un exceso de metaprogramación.',
+      standard:
+        'Complejidad Estándar: La base de código es predominantemente estructural (A1-B2). Favorece un flujo de ejecución directo sobre abstracciones profundas.',
+    },
+    pythonic_density: {
+      highly_idiomatic:
+        "Altamente Idiomático: Fuerte preferencia por constructos de Python. Por cada bucle 'for' tradicional, hay casi tantos (o más) comprensiones, gestores de contexto y elementos funcionales.",
+      balanced:
+        'Estilo Equilibrado: El código mezcla adecuadamente los bucles iterativos tradicionales con constructos idiomáticos de Python como las comprensiones.',
+      imperative:
+        'Estilo Imperativo: El código depende en gran medida de bucles iterativos tradicionales y asignaciones estándar en lugar de las abreviaturas propias de Python (shorthands).',
+    },
+    exception_handling: {
+      defensive:
+        'Programación Defensiva: Alta densidad de gestión de errores. Casi la mitad de las funciones están protegidas por bloques try-except explícitos.',
+      standard:
+        'Gestión de Errores Estándar: Las excepciones se capturan en puntos estratégicos en lugar de envolver cada operación menor.',
+      optimistic:
+        'Ejecución Optimista: Gestión de errores explícita muy escasa. El sistema probablemente confía en un manejador de excepciones global o un middleware para capturar errores no controlados.',
+    },
+    structural_competence: {
+      oop: 'Enfoque Orientado a Objetos: Gran dependencia de clases, encapsulación y herencia para estructurar la lógica de la aplicación.',
+      procedural:
+        'Enfoque Lógico/Procedural: La estructura de la aplicación se rige principalmente por lógica condicional y funciones independientes en lugar de jerarquías de clases complejas.',
+    },
+  },
   analysis_name: 'Nombre del análisis',
   analysis_rules: {
     list_simple: 'Lista simple',
@@ -70,10 +100,10 @@ export default {
     class_inherited: 'Clase: Herencia',
     class_init: 'Clase: Constructor (__init__)',
     class_descriptors: 'Clase: Descriptores',
-    class_properties: 'Clase: Propiedades ({\'@\'}property)',
+    class_properties: "Clase: Propiedades ({'@'}property)",
     class_private: 'Clase: Atributos privados (__attr)',
-    static_classmethod: 'Static: {\'@\'}classmethod',
-    static_staticmethod: 'Static: {\'@\'}staticmethod',
+    static_classmethod: "Static: {'@'}classmethod",
+    static_staticmethod: "Static: {'@'}staticmethod",
     decorators_function: 'Decorador de función',
     decorators_class: 'Decorador de clase',
     metaclass_new: 'Metaclase: Método __new__',
@@ -95,8 +125,8 @@ export default {
     with_simple: 'With: Gestor de contexto',
   },
   apply: 'Aceptar',
-  cancel: 'Cancelar',
   basic_handling: 'Manejo Básico',
+  cancel: 'Cancelar',
   categories: {
     logic: 'Lógica',
     loops: 'Bucles',
@@ -105,6 +135,7 @@ export default {
     functions: 'Funciones',
   },
   charts: {
+    analysis_conclusions: 'Conclusiones del Análisis',
     competency_radar: 'Radar de Competencias',
     complexity_hotspots: 'Puntos Calientes (Hotspots) de Complejidad',
     complexity_index: 'Índice de Complejidad Media',

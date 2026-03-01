@@ -40,32 +40,34 @@
             {{ item.errorMessage }}
           </template>
           <template #actions="{ item }">
-            <template v-if="item.status !== AnalysisStatus.FAILED">
+            <template v-if="item.status !== AnalysisStatus.IN_PROGRESS">
+              <template v-if="item.status === AnalysisStatus.COMPLETED">
+                <v-btn
+                  density="comfortable"
+                  icon="mdi-eye-outline"
+                  :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+                />
+                <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
+              </template>
+              <v-tooltip v-else-if="item.status === AnalysisStatus.FAILED && item.repo?.url">
+                <template #activator="{ props: tooltipProps }">
+                  <v-btn
+                    v-bind="tooltipProps"
+                    density="comfortable"
+                    icon="mdi-reload"
+                    @click="newAnalysis(item.repo?.url)"
+                  />
+                </template>
+                <span>{{ $t('retry') }}</span>
+              </v-tooltip>
               <v-btn
                 density="comfortable"
-                icon="mdi-eye-outline"
-                :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+                icon="mdi-trash-can-outline"
+                color="error"
+                variant="text"
+                @click="analysisBeingDeleted = item.id"
               />
-              <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
             </template>
-            <v-tooltip v-else-if="item.repo?.url">
-              <template #activator="{ props: tooltipProps }">
-                <v-btn
-                  v-bind="tooltipProps"
-                  density="comfortable"
-                  icon="mdi-reload"
-                  @click="newAnalysis(item.repo?.url)"
-                />
-              </template>
-              <span>{{ $t('retry') }}</span>
-            </v-tooltip>
-            <v-btn
-              density="comfortable"
-              icon="mdi-trash-can-outline"
-              color="error"
-              variant="text"
-              @click="analysisBeingDeleted = item.id"
-            />
           </template>
         </g-table>
       </generic-loader>
@@ -133,7 +135,7 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import GInput from '@/components/GInput.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
-import { getStatusColor } from '@/components/repo/utils';
+import { getStatusColor } from '@/utils/utils';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useFilters } from '@/composables/useFilter';

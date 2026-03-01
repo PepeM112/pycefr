@@ -35,6 +35,7 @@ export default createVuetify({
     VCard: {
       class: 'border-thin',
       rounded: 'lg',
+      style: [{ color: 'rgb(var(--v-theme-on-surface))' }],
     },
     VIcon: {
       style: 'opacity: 1',
