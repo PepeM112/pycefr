@@ -139,7 +139,7 @@ import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useFilter } from '@/composables/useFilter';
 import { useRules } from '@/composables/useRules';
-import { useSortFilter } from '@/composables/useSortFilter';
+import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
 import { type DateFilterValue, type FilterItem, type FilterValue, FilterType } from '@/types/filter';
@@ -150,7 +150,7 @@ import { getOriginIcon, getStatusColor } from '@/utils/utils';
 import { computed, ref } from 'vue';
 
 const rules = useRules();
-const sorting = useSortFilter();
+const sorting = useSorting();
 const snackbarStore = useSnackbarStore();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 

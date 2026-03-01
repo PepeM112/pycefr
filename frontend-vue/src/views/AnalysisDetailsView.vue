@@ -72,7 +72,7 @@ import { getLevelColor } from '@/utils/utils';
 import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useClassLabel } from '@/composables/useClassLabel';
-import { useSortFilter } from '@/composables/useSortFilter';
+import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
@@ -85,7 +85,7 @@ import { useRoute } from 'vue-router';
 
 const { t } = useI18n();
 const route = useRoute();
-const sort = useSortFilter();
+const sort = useSorting();
 const classLabel = useClassLabel();
 
 const LEVELS = Enums.buildList(Level);

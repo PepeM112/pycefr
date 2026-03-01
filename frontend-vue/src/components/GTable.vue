@@ -48,7 +48,7 @@
 import { computed } from 'vue';
 import { type Pagination, SortDirection } from '@/client';
 import GPagination from '@/components/GPagination.vue';
-import { type Sorting } from '@/composables/useSortFilter';
+import { type Sorting } from '@/composables/useSorting';
 import { type TableHeader } from '@/types/table';
 
 const emit = defineEmits<{
