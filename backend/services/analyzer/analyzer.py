@@ -7,6 +7,7 @@ from backend.models.schemas.analysis import AnalysisStatus
 from backend.models.schemas.common import Origin
 from backend.services.analyzer import console
 from backend.services.analyzer.analyzer_class import Analyzer
+from backend.services.analyzer.git_local_manager import GitLocalManager
 from backend.services.analyzer.github_manager import GitHubManager
 
 
@@ -32,7 +33,12 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
 
         analysis_result = an.get_results()
         if include_repo:
-            repo_info = gh.get_repo_info()
+            local = GitLocalManager(cloned_repo)
+            repo_info = local.get_repo_info()
+            try:
+                repo_info.description = gh.fetch_repo_description()
+            except Exception:
+                pass
             analysis_result.repo = repo_info
 
         # Extract name and set metadata

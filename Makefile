@@ -1,5 +1,5 @@
 PYTHON_VENV := .venv
-UVICORN_CMD := uvicorn main:app --reload --port 8000
+UVICORN_CMD := uvicorn main:app --reload --reload-exclude backend/tmp --port 8000
 OPENAPI_URL := http://localhost:8000/openapi.json
 FRONTEND_OUTPUT := ./src/client
 VITE_DEV := npm run dev --prefix frontend
