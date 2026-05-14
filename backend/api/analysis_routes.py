@@ -19,6 +19,7 @@ from backend.models.schemas.analysis import (
 )
 from backend.models.schemas.common import PaginatedResponse, Pagination, SortDirection, Sorting
 from backend.services.analyzer.analyzer import Analyzer
+from backend.services.analyzer.git_local_manager import GitLocalManager
 from backend.services.analyzer.github_manager import GitHubManager
 
 logger = logging.getLogger(__name__)
@@ -301,14 +302,21 @@ def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
     try:
         gh = GitHubManager(repo_url=repo_url, is_cli=False)
         gh.validate_repo_url()
-        cloned_repo = gh.clone_repo()
+        cloned_repo = gh.clone_repo(clone_id=analysis_id)
 
         an = Analyzer(cloned_repo, is_cli=False)
         an.analyse_project()
 
-        repo_info = gh.get_repo_info()
-        analysis_result = an.get_results()
+        logger.info("Extracting repository info from local git data")
+        local = GitLocalManager(cloned_repo)
+        repo_info = local.get_repo_info()
+        try:
+            repo_info.description = gh.fetch_repo_description()
+        except Exception as e:
+            logger.warning(f"Analysis {analysis_id}: could not fetch repo description: {e}")
+        logger.info("Repository info extracted successfully")
 
+        analysis_result = an.get_results()
         analysis_result.repo = repo_info
         analysis_result.status = AnalysisStatus.COMPLETED
 
@@ -322,4 +330,4 @@ def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
         logger.error(f"Analysis {analysis_id} crashed: {e}")
         db_utils.mark_analysis_as_failed(analysis_id, f"Internal Error: {e}")
     finally:
-        Analyzer.delete_tmp_files()
+        Analyzer.delete_tmp_files(clone_id=analysis_id)

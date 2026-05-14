@@ -210,14 +210,18 @@ class Analyzer:
         return self.analysis_result
 
     @staticmethod
-    def delete_tmp_files() -> None:
+    def delete_tmp_files(clone_id: str | int | None = None) -> None:
         """
         Remove the temporary directory used during analysis.
+
+        Args:
+            clone_id: When provided, only deletes ``backend/tmp/{clone_id}``
+                instead of the entire ``backend/tmp`` directory.
 
         Note:
             Logs an error if the directory cannot be deleted.
         """
-        tmp_path = Path("backend/tmp")
+        tmp_path = Path("backend/tmp") / str(clone_id) if clone_id is not None else Path("backend/tmp")
         if tmp_path.exists():
             try:
                 shutil.rmtree(tmp_path)
