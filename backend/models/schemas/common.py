@@ -71,8 +71,8 @@ class SortDirection(NamedIntEnum):
     DESC = 2
 
 
-class Sorting(BaseSchema, Generic[T]):
-    column: T
+class Sorting(BaseSchema):
+    column: str
     direction: SortDirection
 
 

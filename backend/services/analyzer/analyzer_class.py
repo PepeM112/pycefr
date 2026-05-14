@@ -197,7 +197,7 @@ class Analyzer:
         count = 0
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if not self._should_ignore(os.path.join(root, d))]
-            count += sum(1 for f in files if f.endswith((".py", ".PY")))
+            count += sum(1 for f in files if f.endswith(".py"))
         return count
 
     def get_results(self) -> AnalysisPublic:

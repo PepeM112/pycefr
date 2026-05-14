@@ -51,7 +51,7 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 def get_analyses(
-    page: int, per_page: int, sorting: Sorting[AnalysisSortColumn] | None = None, filters: AnalysisFilters | None = None
+    page: int, per_page: int, sorting: Sorting | None = None, filters: AnalysisFilters | None = None
 ) -> Tuple[List[AnalysisSummaryPublic], int]:
     """
     Retrieve a paginated list of analysis summaries with filtering and sorting.
@@ -59,7 +59,7 @@ def get_analyses(
     Args:
         page (int): The current page number (starting at 1).
         per_page (int): Number of items per page.
-        sorting (Sorting[AnalysisSortColumn] | None): Sorting configuration.
+        sorting (Sorting | None): Sorting configuration.
         filters (AnalysisFilters | None): Filtering criteria for the query.
 
     Returns:
@@ -234,9 +234,11 @@ def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
                 name=row["repo_owner_name"] or "",
                 github_user=row["repo_owner_login"] or "",
                 avatar=row["repo_owner_avatar"] or "",
-                profile_url=row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}"
-                if row["repo_owner_login"]
-                else "",
+                profile_url=(
+                    (row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}")
+                    if row["repo_owner_login"]
+                    else ""
+                ),
             ),
             commits=commits,
             contributors=contributors,

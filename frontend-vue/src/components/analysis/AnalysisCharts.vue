@@ -224,11 +224,6 @@ const charts = computed(() => [
   },
 ]);
 
-const mainCharts = computed(() => [
-  { title: 'charts.level_distribution', component: Bar, data: levelData.value, options: levelBarOptions.value },
-  { title: 'charts.competency_radar', component: Radar, data: radarData.value, options: radarOptions.value },
-  { title: 'charts.top_patterns', component: Bar, data: topClassesData.value, options: horizontalBarOptions.value },
-]);
 
 const levelData = computed(() => {
   const levels = Enums.buildList(Level);
