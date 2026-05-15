@@ -30,7 +30,6 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "database/pycefr.db")
 
 
 class AnalysisRepository:
-
     @contextmanager
     def _connect(self) -> Generator[sqlite3.Connection, None, None]:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -279,9 +278,7 @@ class AnalysisRepository:
                 ),
             )
 
-    def get_unique_owners(
-        self, search_query: str | None = None, limit: int | None = None
-    ) -> List[EntityLabelString]:
+    def get_unique_owners(self, search_query: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
         with self._connect() as conn:
             cursor = conn.cursor()
             query = """
@@ -325,8 +322,13 @@ class AnalysisRepository:
                 cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO analyses (name, status, origin, repo_url, created_at) VALUES (?, ?, ?, ?, ?)",
-                    (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value,
-                     analysis.repo_url, now_utc.isoformat()),
+                    (
+                        name,
+                        AnalysisStatus.IN_PROGRESS.value,
+                        Origin.GITHUB.value,
+                        analysis.repo_url,
+                        now_utc.isoformat(),
+                    ),
                 )
                 conn.commit()
                 analysis_id = cursor.lastrowid

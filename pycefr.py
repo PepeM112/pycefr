@@ -9,7 +9,7 @@ import argparse
 import os
 
 from backend.services.analyzer import console
-from backend.services.analyzer.analyzer import (
+from backend.services.analyzer.cli import (
     request_url,
     run_directory,
     run_user,
