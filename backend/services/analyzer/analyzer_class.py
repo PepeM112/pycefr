@@ -2,6 +2,7 @@ import ast
 import logging
 import os
 import shutil
+import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -71,7 +72,10 @@ class Analyzer:
         self._analyse_directory(root_path)
 
         if self.is_cli:
-            print("\r[✓] Analysing code\033[K")
+            if sys.stdout.isatty():
+                print("\r[✓] Analysing code\033[K")
+            else:
+                print("[✓] Analysing code")
 
         logger.info(f"Analysis completed for {root_path}")
 
@@ -115,7 +119,10 @@ class Analyzer:
             bar_length = 40
             block = int(round(bar_length * self._processed_files / self._file_count))
             progress = "█" * block + "-" * (bar_length - block)
-            print(f"\r[ ] Analysing code [{progress}] {percent}%\033[K", end="", flush=True)
+            if sys.stdout.isatty():
+                print(f"\r[ ] Analysing code [{progress}] {percent}%\033[K", end="", flush=True)
+            elif self._processed_files % max(1, (self._file_count // 4)) == 0:
+                print(f"[ ] Analysing code [{progress}] {percent}%")
         else:
             if self._processed_files % max(1, (self._file_count // 4)) == 0:
                 logger.info(f"Analysis progress: {percent}%")

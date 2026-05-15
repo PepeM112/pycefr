@@ -3,15 +3,26 @@
     <v-row v-if="props.data?.items?.length > 0">
       <v-col v-for="(chart, index) in charts" :key="index" v-bind="chart.grid">
         <chart-container :title="chart.title">
-          <component
-            :is="chart.component"
-            :data="chart.data"
-            :options="chart.options"
-            v-bind="chart.type ? { type: chart.type } : {}"
-          />
+          <template v-if="chart.hasData">
+            <component
+              :is="chart.component"
+              :data="chart.data"
+              :options="chart.options"
+              v-bind="chart.type ? { type: chart.type } : {}"
+            />
+          </template>
+          <div v-else class="d-flex justify-center align-center flex-column h-100" style="color: #9d9d9d">
+            <v-icon class="mb-1" size="40">mdi-chart-arc</v-icon>
+            <p class="text-grey text-body-2">{{ t('no_data') }}</p>
+          </div>
         </chart-container>
       </v-col>
     </v-row>
+
+    <div v-else class="d-flex justify-center align-center flex-column" style="color: #9d9d9d; margin: 2rem auto">
+      <v-icon class="mb-1" size="60">mdi-chart-box-outline</v-icon>
+      <p class="text-grey">{{ t('no_data') }}</p>
+    </div>
 
     <v-row v-if="conclusions.length > 0" class="mt-4">
       <v-col cols="12">
@@ -179,6 +190,12 @@ const treemapOptions = computed(() => ({
   },
 }));
 
+const hasNumericData = (data: { datasets: Record<string, unknown>[] }) =>
+  data.datasets.some(ds => {
+    const values = (ds.data as number[]) ?? (ds.tree as { v: number }[])?.map(d => d.v);
+    return Array.isArray(values) && values.some(v => v > 0);
+  });
+
 const charts = computed(() => [
   {
     title: 'charts.level_distribution',
@@ -186,6 +203,7 @@ const charts = computed(() => [
     data: levelData.value,
     options: levelBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
+    hasData: hasNumericData(levelData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.competency_radar',
@@ -193,6 +211,7 @@ const charts = computed(() => [
     data: radarData.value,
     options: radarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
+    hasData: hasNumericData(radarData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.top_patterns',
@@ -200,6 +219,7 @@ const charts = computed(() => [
     data: topClassesData.value,
     options: horizontalBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
+    hasData: hasNumericData(topClassesData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.pythonic_ratio',
@@ -207,6 +227,7 @@ const charts = computed(() => [
     data: pythonicData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
+    hasData: hasNumericData(pythonicData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.exception_strategy',
@@ -214,6 +235,7 @@ const charts = computed(() => [
     data: exceptionData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
+    hasData: hasNumericData(exceptionData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.directory_density_map',
@@ -222,6 +244,7 @@ const charts = computed(() => [
     options: treemapOptions.value,
     grid: { cols: 12, lg: 6 },
     type: 'treemap',
+    hasData: hasNumericData(treemapData.value as { datasets: Record<string, unknown>[] }),
   },
 ]);
 

@@ -328,6 +328,6 @@ def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
 
     except Exception as e:
         logger.error(f"Analysis {analysis_id} crashed: {e}")
-        db_utils.mark_analysis_as_failed(analysis_id, f"Internal Error: {e}")
+        db_utils.mark_analysis_as_failed(analysis_id, "An unexpected error occurred. Check server logs for details.")
     finally:
         Analyzer.delete_tmp_files(clone_id=analysis_id)
