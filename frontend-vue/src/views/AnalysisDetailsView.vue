@@ -61,28 +61,30 @@
   </page-view>
 </template>
 <script setup lang="ts">
-import { ClassId, getAnalysisDetail, Level, SortDirection, type AnalysisPublic } from '@/client';
+import { ClassId, getAnalysisDetail, Level, type AnalysisPublic } from '@/client';
 import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
 import GContainer from '@/components/GContainer.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
 import FileTree from '@/components/repo/FileTree.vue';
-import { getLevelColor } from '@/utils/utils';
-import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useClassLabel } from '@/composables/useClassLabel';
+import { usePagination } from '@/composables/usePagination';
 import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import type { TreeNode } from '@/types/treeview';
+import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
+import { buildChartData } from '@/utils/analysisCharts';
+import { filterAndSortClasses, groupClassesBySelection } from '@/utils/analysisTable';
+import { buildFileTree, resolveSelectedPaths } from '@/utils/analysisTree';
 import Enums from '@/utils/enums';
-import { getExtensionIcon, type FileExtension } from '@/utils/utils';
+import { getLevelColor } from '@/utils/utils';
 import { computed, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import { usePagination } from '@/composables/usePagination';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -94,14 +96,12 @@ const LEVELS = Enums.buildList(Level);
 
 const analysisId = Number(route.params.id);
 const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
-const analysisTitle = ref<string>('');
 const search = ref<string>('');
 const analysisData = shallowRef<AnalysisPublic | undefined>(undefined);
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
 const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
-
-const ID_PATH_MAP: Record<number, string> = {};
+const idPathMap = ref<Record<number, string>>({});
 
 const MENU_ITEMS: MenuProps[] = [
   {
@@ -113,108 +113,42 @@ const MENU_ITEMS: MenuProps[] = [
   },
 ];
 
-const chartData = computed<ChartData | null>(() => {
-  if (!analysisData.value) return null;
-
-  const selectedPathsSet = new Set<string>();
-  selectedTreeNodeIds.value.forEach(id => {
-    const path = ID_PATH_MAP[id];
-    if (path) selectedPathsSet.add(path);
-  });
-
-  const hasSelection = selectedPathsSet.size > 0;
-
-  const files: ChartFileItem[] = (analysisData.value.fileClasses || [])
-    .filter(f => (hasSelection ? selectedPathsSet.has(f.filename) : true))
-    .map(f => ({
-      name: f.filename.split('/').pop() || f.filename,
-      fullPath: f.filename,
-      instances: f.classes?.reduce((acc, c) => acc + c.instances, 0) || 0,
-    }))
-    .sort((a, b) => b.instances - a.instances)
-    .slice(0, 10);
-
-  const commits: ChartCommitItem[] = (analysisData.value.repo?.commits || []).map(c => ({
-    hash: c.githubUser || c.username || 'unknown',
-    filesCount: c.totalFilesModified,
-    complexity: c.loc,
-  }));
-
-  return {
-    items: tableData.value,
-    files,
-    commits,
-  };
-});
-
-const processedData = computed<AnalysisClassPublicWithLevel[]>(() => {
-  const elements = analysisData.value?.fileClasses ?? [];
-  if (elements.length === 0) return [];
-
-  const groupingMap = new Map<number, AnalysisClassPublicWithLevel & { translatedLabel?: string }>();
-
-  for (const file of elements) {
-    if (!isFileSelected(file.filename)) continue;
-    for (const item of file.classes ?? []) {
-      const existing = groupingMap.get(item.classId);
-      if (existing) {
-        existing.instances += item.instances;
-      } else {
-        groupingMap.set(item.classId, {
-          classId: item.classId,
-          instances: item.instances,
-          level: classLabel.getClassLevel(item.classId),
-        });
-      }
-    }
-  }
-
-  const searchLower = search.value.toLowerCase();
-
-  const filtered = Array.from(groupingMap.values()).filter(item => {
-    if (!selectedLevels.value?.includes(item.level)) return false;
-    item.translatedLabel = t(Enums.getLabel(ClassId, item.classId)).toString();
-    if (!searchLower) return true;
-    return item.translatedLabel.toLowerCase().includes(searchLower);
-  });
-
-  filtered.sort((a, b) => {
-    if (sort.value.direction === SortDirection.UNKNOWN || !sort.value.column) return 0;
-    let comparison = 0;
-    if (sort.value.column === 'classId') {
-      comparison = a.translatedLabel!.localeCompare(b.translatedLabel!);
-    } else {
-      const col = sort.value.column as keyof AnalysisClassPublicWithLevel;
-      const valA = a[col] ?? 0;
-      const valB = b[col] ?? 0;
-      comparison = valA < valB ? -1 : valA > valB ? 1 : 0;
-    }
-    return sort.value.direction === SortDirection.ASC ? comparison : -comparison;
-  });
-
-  return filtered;
-});
-
-/**
- * Manually apply pagination in the frontend
- */
-const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
-  const { page, perPage } = pagination.value;
-  return processedData.value.slice((page - 1) * perPage, page * perPage);
-});
-
 const headers: TableHeader[] = [
   { label: 'class', key: 'classId', sortColumn: 'classId' },
   { label: 'level', key: 'level', sortColumn: 'level', width: '1px', align: 'center' },
   { label: 'instances', key: 'instances', sortColumn: 'instances', width: '1px', align: 'center' },
 ];
 
-function isFileSelected(filePath: string): boolean {
-  const elements = analysisData.value?.fileClasses;
-  if (!elements || elements.length === 0) return false;
+const selectedPaths = computed(() => resolveSelectedPaths(selectedTreeNodeIds.value, idPathMap.value));
 
-  return selectedTreeNodeIds.value.some(id => ID_PATH_MAP[id] === filePath);
-}
+const processedData = computed<AnalysisClassPublicWithLevel[]>(() => {
+  const fileClasses = analysisData.value?.fileClasses ?? [];
+  if (fileClasses.length === 0) return [];
+
+  const grouped = groupClassesBySelection(fileClasses, selectedPaths.value, classLabel.getClassLevel);
+  return filterAndSortClasses(
+    grouped,
+    selectedLevels.value,
+    search.value,
+    sort.value,
+    classId => t(Enums.getLabel(ClassId, classId))
+  );
+});
+
+const tableData = computed<AnalysisClassPublicWithLevel[]>(() => {
+  const { page, perPage } = pagination.value;
+  return processedData.value.slice((page - 1) * perPage, page * perPage);
+});
+
+const chartData = computed<ChartData | null>(() => {
+  if (!analysisData.value) return null;
+  return buildChartData(
+    analysisData.value.fileClasses || [],
+    analysisData.value.repo?.commits || [],
+    selectedPaths.value,
+    tableData.value
+  );
+});
 
 function toggleLevel(level: Level) {
   if (selectedLevels.value.includes(level)) {
@@ -224,65 +158,9 @@ function toggleLevel(level: Level) {
   }
 }
 
-function buildRepoDataTree(data: AnalysisPublic | undefined): TreeNode[] {
-  if (!data?.fileClasses) return [];
-  const paths = data.fileClasses.map(fc => fc.filename);
-
-  const treeSkeleton: Record<string, any> = {};
-
-  paths.forEach(path => {
-    const parts = path.split('/');
-    let current: Record<string, any> = treeSkeleton;
-    parts.forEach(part => {
-      if (!current[part]) {
-        current[part] = {};
-      }
-      current = current[part];
-    });
-  });
-
-  let id = 1;
-
-  function fillTree(parentNode: Record<string, any>, currentPath: string = ''): TreeNode[] {
-    if (currentPath === '') clearIDPathMap();
-
-    return Object.keys(parentNode).map(key => {
-      const child: Record<string, any> = parentNode[key];
-      const fullPath = currentPath ? `${currentPath}/${key}` : key;
-      const hasChildren = Object.keys(child).length > 0;
-
-      let icon = 'mdi-file-outline';
-      if (!hasChildren) {
-        const parts = key.split('.');
-        const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
-        icon = getExtensionIcon(extension) || 'mdi-file-outline';
-      }
-
-      const node: TreeNode = {
-        id: id++,
-        title: key,
-        children: hasChildren ? fillTree(child, fullPath) : undefined,
-        icon: hasChildren ? undefined : icon,
-      };
-
-      if (!node.children || node.children.length === 0) {
-        ID_PATH_MAP[node.id] = fullPath;
-      }
-
-      selectedTreeNodeIds.value.push(node.id);
-
-      return node;
-    });
-  }
-
-  const tree = fillTree(treeSkeleton);
-
-  return tree;
-}
-
 function onUpdateSelected(value: number[] | 'all') {
   if (value === 'all') {
-    selectedTreeNodeIds.value = Object.keys(ID_PATH_MAP).map(id => parseInt(id));
+    selectedTreeNodeIds.value = Object.keys(idPathMap.value).map(id => parseInt(id));
   } else {
     selectedTreeNodeIds.value = value;
   }
@@ -297,12 +175,17 @@ async function loadData() {
     return;
   }
   analysisData.value = data;
-  analysisTitle.value = analysisData.value?.repo?.name || '';
   loaderStatus.value = LoadingStatus.IDLE;
 }
 
-function clearIDPathMap() {
-  Object.keys(ID_PATH_MAP).forEach(key => delete ID_PATH_MAP[Number(key)]);
+function initializeTree() {
+  const fileClasses = analysisData.value?.fileClasses;
+  if (!fileClasses) return;
+
+  const result = buildFileTree(fileClasses);
+  fileTreeData.value = result.tree;
+  idPathMap.value = result.idPathMap;
+  selectedTreeNodeIds.value = result.selectedIds;
 }
 
 watch(
@@ -315,7 +198,7 @@ watch(
 onMounted(async () => {
   classLabel.fetch();
   await loadData();
-  fileTreeData.value = buildRepoDataTree(analysisData.value);
+  initializeTree();
 });
 </script>
 <style lang="scss" scoped>

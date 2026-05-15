@@ -1,5 +1,5 @@
-import { ClassId, Level } from '@/client';
-import type { AnalysisClassPublicWithLevel, ChartFileItem } from '@/types/analysis';
+import { ClassId, Level, type AnalysisFilePublic, type RepoCommitPublic } from '@/client';
+import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 import i18n from '@/plugins/i18n';
 
 const { t } = i18n.global;
@@ -141,6 +141,46 @@ export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLev
      */
     return t('analysis_insight.structural_competence.procedural');
   }
+}
+
+// --- CHART DATA BUILDERS ---
+
+export function buildChartFiles(
+  fileClasses: AnalysisFilePublic[],
+  selectedFilePaths: Set<string>
+): ChartFileItem[] {
+  const hasSelection = selectedFilePaths.size > 0;
+
+  return fileClasses
+    .filter(f => (hasSelection ? selectedFilePaths.has(f.filename) : true))
+    .map(f => ({
+      name: f.filename.split('/').pop() || f.filename,
+      fullPath: f.filename,
+      instances: f.classes?.reduce((acc, c) => acc + c.instances, 0) || 0,
+    }))
+    .sort((a, b) => b.instances - a.instances)
+    .slice(0, 10);
+}
+
+export function buildChartCommits(commits: RepoCommitPublic[]): ChartCommitItem[] {
+  return commits.map(c => ({
+    hash: c.githubUser || c.username || 'unknown',
+    filesCount: c.totalFilesModified,
+    complexity: c.loc,
+  }));
+}
+
+export function buildChartData(
+  fileClasses: AnalysisFilePublic[],
+  commits: RepoCommitPublic[],
+  selectedFilePaths: Set<string>,
+  tableItems: AnalysisClassPublicWithLevel[]
+): ChartData {
+  return {
+    items: tableItems,
+    files: buildChartFiles(fileClasses, selectedFilePaths),
+    commits: buildChartCommits(commits),
+  };
 }
 
 // --- DATA HELPERS ---

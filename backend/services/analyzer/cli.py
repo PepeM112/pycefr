@@ -96,8 +96,6 @@ def run_directory(directory: str, include_repo: bool = False, print_results: boo
     except Exception as e:
         print(f"\nERROR: {e}")
         sys.exit(1)
-    finally:
-        Analyzer.delete_tmp_files()
 
 
 def run_user(user: str, include_repo: bool = False, print_results: bool = False) -> None:
