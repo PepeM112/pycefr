@@ -1,9 +1,8 @@
 import { AnalysisStatus, ClassId, Origin } from '@/client';
 import { BooleanValue } from '@/types/common';
+import type { Enum } from '@/utils/enums';
 
-type Enum = typeof AnalysisStatus | typeof BooleanValue | typeof ClassId | typeof Origin;
-
-interface EnumsLabelsItem<T extends Record<string | number, string | number> = any> {
+interface EnumsLabelsItem<T extends Enum = Enum> {
   enum: T;
   labels: Record<Exclude<T[keyof T], 0 | 'UNKNOWN'>, string>;
 }

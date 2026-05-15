@@ -1,4 +1,5 @@
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -23,10 +24,11 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
     Raises:
         Exception: If repository validation, cloning, or analysis fails.
     """
+    clone_id = uuid.uuid4().hex[:8]
     try:
         gh = GitHubManager(repo_url=url, is_cli=True)
         gh.validate_repo_url()
-        cloned_repo = gh.clone_repo()
+        cloned_repo = gh.clone_repo(clone_id=clone_id)
 
         an = Analyzer(cloned_repo, is_cli=True)
         an.analyse_project()
@@ -60,6 +62,8 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
     except Exception as e:
         print(f"\nERROR: {e}")
         sys.exit(1)
+    finally:
+        Analyzer.delete_tmp_files(clone_id=clone_id)
 
 
 def run_directory(directory: str, include_repo: bool = False, print_results: bool = False) -> None:

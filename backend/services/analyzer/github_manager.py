@@ -125,6 +125,8 @@ class GitHubManager:
             subprocess.CalledProcessError: If the git clone command fails.
         """
         self._print_status("[ ] Cloning repository", end="")
+        if not self.repo_url.startswith("https://"):
+            raise ValueError("Repository URL must start with https://")
         clone_dir = Path("backend/tmp") / str(clone_id) if clone_id is not None else Path("backend/tmp")
         clone_path = clone_dir / self.repo_name
         if clone_dir.exists():

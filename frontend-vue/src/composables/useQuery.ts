@@ -30,8 +30,8 @@ export function useQuery(): Query {
       // Ignore failure caused by navigating to the exact same URL (common in filtering).
       if (failure.type & NavigationFailureType.duplicated) return;
 
-      const fromPath = (failure.from as any).path || failure.from;
-      const toPath = (failure.to as any).path || failure.to;
+      const fromPath = failure.from.path;
+      const toPath = typeof failure.to === 'object' && 'path' in failure.to ? failure.to.path : String(failure.to);
 
       console.warn(`Failed navigation (${failure.type}): from ${fromPath} to ${toPath}`);
     }

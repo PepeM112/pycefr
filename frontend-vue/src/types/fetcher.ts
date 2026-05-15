@@ -17,5 +17,5 @@ export interface FetcherOptions<T extends Primitive | FilterEntity = Primitive |
 export interface ItemFetcher {
   items: Ref<Primitive[] | FilterEntity[]>;
   loading: Ref<boolean>;
-  fetch: (search?: string, values?: any) => Promise<Primitive[] | FilterEntity[]>;
+  fetch: (search?: string) => Promise<Primitive[] | FilterEntity[]>;
 }

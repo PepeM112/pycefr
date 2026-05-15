@@ -60,7 +60,8 @@ import {
   LineElement,
   Filler,
 } from 'chart.js';
-import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
+import { TreemapController, TreemapElement, type TreemapScriptableContext } from 'chartjs-chart-treemap';
+import type { TooltipItem } from 'chart.js';
 import { Bar, Radar, Doughnut, Pie, Chart } from 'vue-chartjs';
 import * as AnalysisChartsUtils from '@/utils/analysisCharts';
 import ChartContainer from './ChartContainer.vue';
@@ -166,12 +167,12 @@ const treemapOptions = computed(() => ({
     tooltip: {
       displayColors: false,
       callbacks: {
-        title: (items: any) => {
-          const item = items[0].raw;
+        title: (items: TooltipItem<'treemap'>[]) => {
+          const item = items[0].raw as { g: string };
           return item.g;
         },
-        label: (item: any) => {
-          return `${t('charts.instances')}: ${item.raw.v}`;
+        label: (item: TooltipItem<'treemap'>) => {
+          return `${t('charts.instances')}: ${(item.raw as { v: number }).v}`;
         },
       },
     },
@@ -282,7 +283,7 @@ const topClassesData = computed(() => {
   };
 });
 
-const treemapData = computed<any>(() => {
+const treemapData = computed(() => {
   const flatData = AnalysisChartsUtils.getTreemapFlatData(props.data.files);
   const maxVal = Math.max(...flatData.map(d => d.v), 1);
   const getLogRatio = (v: number) => Math.log(v + 1) / Math.log(maxVal + 1);
@@ -291,20 +292,20 @@ const treemapData = computed<any>(() => {
     datasets: [
       {
         tree: flatData,
-        key: 'v',
-        groups: ['g'],
+        key: 'v' as const,
+        groups: ['g' as const],
         spacing: 1,
         borderWidth: 1,
         borderColor: themeStore.currentTheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-        backgroundColor: (ctx: any) => {
+        backgroundColor: (ctx: TreemapScriptableContext) => {
           if (!ctx.raw) return '#CCC';
           return AnalysisChartsUtils.getTreemapBackgroundColor(getLogRatio(ctx.raw.v));
         },
         labels: {
           display: true,
-          color: (ctx: any) => (getLogRatio(ctx.raw?.v || 0) > 0.45 ? '#FFFFFF' : '#333333'),
-          formatter: (ctx: any) => ctx.raw?.g || '',
-          font: { size: 12, weight: 'bold' },
+          color: (ctx: TreemapScriptableContext) => (getLogRatio(ctx.raw?.v || 0) > 0.45 ? '#FFFFFF' : '#333333'),
+          formatter: (ctx: TreemapScriptableContext) => ctx.raw?.g || '',
+          font: { size: 12, weight: 'bold' as const },
         },
       },
     ],

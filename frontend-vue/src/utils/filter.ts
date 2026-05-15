@@ -5,19 +5,21 @@ import type { Primitive } from 'vuetify/lib/util';
 
 // --- TYPE GUARDS ---
 
-export function isDateFilterValue(val: any): val is DateFilterValue {
+export function isDateFilterValue(val: unknown): val is DateFilterValue {
   return !!val && typeof val === 'object' && 'from' in val && 'to' in val;
 }
 
-export function isPrimitiveValue(val: any): val is Primitive {
+export function isPrimitiveValue(val: unknown): val is Primitive {
   if (val === null) return true;
 
   const type = typeof val;
   return ['string', 'number', 'boolean', 'bigint', 'symbol'].includes(type);
 }
 
-export function isFilterEntity(val: any): val is FilterEntity {
-  return !!val && typeof val === 'object' && typeof val.label === 'string' && isPrimitiveValue(val.value);
+export function isFilterEntity(val: unknown): val is FilterEntity {
+  return (
+    !!val && typeof val === 'object' && 'label' in val && typeof val.label === 'string' && 'value' in val && isPrimitiveValue(val.value)
+  );
 }
 
 // --- MAIN FUNCTIONS ---
@@ -26,7 +28,7 @@ export function isFilterEntity(val: any): val is FilterEntity {
  * Normalizes any object into a FilterEntity based on provided options.
  */
 export function normalizeToFilterEntity(
-  item: Primitive | Record<string, any>,
+  item: Primitive | Record<string, Primitive>,
   itemTitle: string = 'label',
   itemValue: string = 'value'
 ): FilterEntity {
@@ -42,7 +44,7 @@ export function normalizeToFilterEntity(
 /**
  * Converts a specific filter value into a dictionary of URL parameters.
  */
-export const serializeFilterValue = (filterItem: FilterItem, filterValue: FilterValue): Record<string, any> => {
+export const serializeFilterValue = (filterItem: FilterItem, filterValue: FilterValue): Record<string, Primitive | Primitive[] | number | undefined> => {
   const value = filterValue[filterItem.key];
 
   if (value === undefined || value === null || value === '') return {};
@@ -178,7 +180,10 @@ function deserializeDateFilterValue(query: LocationQuery, key: string): DateFilt
  * | "pepe"      | SELECT           | { returnObject: true }| [{l:'A', v:1}]      | "pepe"               | Mismatch -> Fallback to Raw  |
  * | null        | Any              | {}                   | Any                 | undefined            | Filter ignored               |
  */
-function deserializeStandardValue(queryValue: LocationQueryValue | LocationQueryValue[], item: FilterItem): any {
+function deserializeStandardValue(
+  queryValue: LocationQueryValue | LocationQueryValue[],
+  item: FilterItem
+): Primitive | Primitive[] | FilterEntity | FilterEntity[] | undefined {
   const { type, options = {} } = item;
   const isMultiple = [FilterType.MULTIPLE, FilterType.MULTIPLE_SELECT].includes(type);
 
