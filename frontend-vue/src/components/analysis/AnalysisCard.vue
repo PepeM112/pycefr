@@ -14,7 +14,7 @@
           </span>
         </h3>
         <span style="font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), 0.7)">
-          {{ formatDate(modelValue?.createdAt) }}
+          <g-date :date="modelValue?.createdAt" />
         </span>
       </div>
       <v-spacer />
@@ -50,12 +50,12 @@
           </p>
           <div class="d-flex justify-space-between mb-1">
             <dt class="font-weight-bold">{{ $t('creation_date') }}:</dt>
-            <dd>{{ formatDate(modelValue?.repo?.createdAt) }}</dd>
+            <dd><g-date :date="modelValue?.repo?.createdAt" /></dd>
           </div>
 
           <div class="d-flex justify-space-between">
             <dt class="font-weight-bold">{{ $t('last_update') }}:</dt>
-            <dd>{{ formatDate(modelValue?.repo?.lastUpdatedAt) }}</dd>
+            <dd><g-date :date="modelValue?.repo?.lastUpdatedAt" /></dd>
           </div>
         </dl>
       </template>
@@ -91,8 +91,9 @@
 <script setup lang="ts">
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
 import { AnalysisStatus, type AnalysisSummaryPublic } from '@/client';
+import GDate from '@/components/GDate.vue';
 import { RouteNames } from '@/router/route-names';
-import { formatDate } from '@/utils/datetime';
+import { getStatusColor } from '@/utils/utils';
 
 const emit = defineEmits<{
   (e: 'delete', value: number): void;
@@ -101,19 +102,6 @@ const emit = defineEmits<{
 const props = defineProps<{
   modelValue: AnalysisSummaryPublic;
 }>();
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'success';
-    case 'in_progress':
-      return 'warning';
-    case 'failed':
-      return 'error';
-    default:
-      return 'grey';
-  }
-}
 
 function getProfileNameFromUrl(url: string): string {
   try {

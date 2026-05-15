@@ -3,15 +3,26 @@
     <v-row v-if="props.data?.items?.length > 0">
       <v-col v-for="(chart, index) in charts" :key="index" v-bind="chart.grid">
         <chart-container :title="chart.title">
-          <component
-            :is="chart.component"
-            :data="chart.data"
-            :options="chart.options"
-            v-bind="chart.type ? { type: chart.type } : {}"
-          />
+          <template v-if="chart.hasData">
+            <component
+              :is="chart.component"
+              :data="chart.data"
+              :options="chart.options"
+              v-bind="chart.type ? { type: chart.type } : {}"
+            />
+          </template>
+          <div v-else class="d-flex justify-center align-center flex-column h-100" style="color: #9d9d9d">
+            <v-icon class="mb-1" size="40">mdi-chart-arc</v-icon>
+            <p class="text-grey text-body-2">{{ t('no_data') }}</p>
+          </div>
         </chart-container>
       </v-col>
     </v-row>
+
+    <div v-else class="d-flex justify-center align-center flex-column" style="color: #9d9d9d; margin: 2rem auto">
+      <v-icon class="mb-1" size="60">mdi-chart-box-outline</v-icon>
+      <p class="text-grey">{{ t('no_data') }}</p>
+    </div>
 
     <v-row v-if="conclusions.length > 0" class="mt-4">
       <v-col cols="12">
@@ -60,7 +71,8 @@ import {
   LineElement,
   Filler,
 } from 'chart.js';
-import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
+import { TreemapController, TreemapElement, type TreemapScriptableContext } from 'chartjs-chart-treemap';
+import type { TooltipItem } from 'chart.js';
 import { Bar, Radar, Doughnut, Pie, Chart } from 'vue-chartjs';
 import * as AnalysisChartsUtils from '@/utils/analysisCharts';
 import ChartContainer from './ChartContainer.vue';
@@ -166,17 +178,23 @@ const treemapOptions = computed(() => ({
     tooltip: {
       displayColors: false,
       callbacks: {
-        title: (items: any) => {
-          const item = items[0].raw;
+        title: (items: TooltipItem<'treemap'>[]) => {
+          const item = items[0].raw as { g: string };
           return item.g;
         },
-        label: (item: any) => {
-          return `${t('charts.instances')}: ${item.raw.v}`;
+        label: (item: TooltipItem<'treemap'>) => {
+          return `${t('charts.instances')}: ${(item.raw as { v: number }).v}`;
         },
       },
     },
   },
 }));
+
+const hasNumericData = (data: { datasets: Record<string, unknown>[] }) =>
+  data.datasets.some(ds => {
+    const values = (ds.data as number[]) ?? (ds.tree as { v: number }[])?.map(d => d.v);
+    return Array.isArray(values) && values.some(v => v > 0);
+  });
 
 const charts = computed(() => [
   {
@@ -185,6 +203,7 @@ const charts = computed(() => [
     data: levelData.value,
     options: levelBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
+    hasData: hasNumericData(levelData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.competency_radar',
@@ -192,6 +211,7 @@ const charts = computed(() => [
     data: radarData.value,
     options: radarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
+    hasData: hasNumericData(radarData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.top_patterns',
@@ -199,6 +219,7 @@ const charts = computed(() => [
     data: topClassesData.value,
     options: horizontalBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
+    hasData: hasNumericData(topClassesData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.pythonic_ratio',
@@ -206,6 +227,7 @@ const charts = computed(() => [
     data: pythonicData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
+    hasData: hasNumericData(pythonicData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.exception_strategy',
@@ -213,6 +235,7 @@ const charts = computed(() => [
     data: exceptionData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
+    hasData: hasNumericData(exceptionData.value as { datasets: Record<string, unknown>[] }),
   },
   {
     title: 'charts.directory_density_map',
@@ -221,14 +244,10 @@ const charts = computed(() => [
     options: treemapOptions.value,
     grid: { cols: 12, lg: 6 },
     type: 'treemap',
+    hasData: hasNumericData(treemapData.value as { datasets: Record<string, unknown>[] }),
   },
 ]);
 
-const mainCharts = computed(() => [
-  { title: 'charts.level_distribution', component: Bar, data: levelData.value, options: levelBarOptions.value },
-  { title: 'charts.competency_radar', component: Radar, data: radarData.value, options: radarOptions.value },
-  { title: 'charts.top_patterns', component: Bar, data: topClassesData.value, options: horizontalBarOptions.value },
-]);
 
 const levelData = computed(() => {
   const levels = Enums.buildList(Level);
@@ -287,7 +306,7 @@ const topClassesData = computed(() => {
   };
 });
 
-const treemapData = computed<any>(() => {
+const treemapData = computed(() => {
   const flatData = AnalysisChartsUtils.getTreemapFlatData(props.data.files);
   const maxVal = Math.max(...flatData.map(d => d.v), 1);
   const getLogRatio = (v: number) => Math.log(v + 1) / Math.log(maxVal + 1);
@@ -296,20 +315,20 @@ const treemapData = computed<any>(() => {
     datasets: [
       {
         tree: flatData,
-        key: 'v',
-        groups: ['g'],
+        key: 'v' as const,
+        groups: ['g' as const],
         spacing: 1,
         borderWidth: 1,
         borderColor: themeStore.currentTheme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-        backgroundColor: (ctx: any) => {
+        backgroundColor: (ctx: TreemapScriptableContext) => {
           if (!ctx.raw) return '#CCC';
           return AnalysisChartsUtils.getTreemapBackgroundColor(getLogRatio(ctx.raw.v));
         },
         labels: {
           display: true,
-          color: (ctx: any) => (getLogRatio(ctx.raw?.v || 0) > 0.45 ? '#FFFFFF' : '#333333'),
-          formatter: (ctx: any) => ctx.raw?.g || '',
-          font: { size: 12, weight: 'bold' },
+          color: (ctx: TreemapScriptableContext) => (getLogRatio(ctx.raw?.v || 0) > 0.45 ? '#FFFFFF' : '#333333'),
+          formatter: (ctx: TreemapScriptableContext) => ctx.raw?.g || '',
+          font: { size: 12, weight: 'bold' as const },
         },
       },
     ],

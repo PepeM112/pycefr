@@ -25,8 +25,8 @@ export type FilterItem = {
     type: K;
     query?: string;
     options?: FilterOptions;
-    serializer?: (value: any) => Record<string, any>;
-    deserializer?: (query: LocationQuery) => any;
+    serializer?: (value: FilterValue) => Record<string, Primitive | Primitive[]>;
+    deserializer?: (query: LocationQuery) => FilterMapping[K] | undefined;
   };
 }[FilterType];
 

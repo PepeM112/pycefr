@@ -1,189 +1,272 @@
+import ast
+import logging
+import os
+import shutil
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List, Union
 
-from backend.models.schemas.analysis import AnalysisStatus
+from backend.config.settings import settings
+from backend.models.schemas.analysis import AnalysisClassPublic, AnalysisFilePublic, AnalysisPublic, AnalysisStatus
+from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import Origin
-from backend.services.analyzer import console
-from backend.services.analyzer.analyzer_class import Analyzer
-from backend.services.analyzer.git_local_manager import GitLocalManager
-from backend.services.analyzer.github_manager import GitHubManager
+from backend.services.analyzer.levels import get_class_from_ast_node
+
+logger = logging.getLogger(__name__)
 
 
-def request_url(url: str, include_repo: bool = False, print_results: bool = False) -> None:
+class Analyzer:
     """
-    Process a remote GitHub repository analysis via its URL.
+    Core engine for analyzing Python source code files within a project.
 
-    Args:
-        url (str): The GitHub repository URL.
-        include_repo (bool): Whether to include repository metadata (commits, contributors).
-        print_results (bool): Whether to display the results in the console after analysis.
-
-    Raises:
-        Exception: If repository validation, cloning, or analysis fails.
+    Attributes:
+        root_path (str): The base directory path to analyze.
+        is_cli (bool): Flag to enable console-specific output like progress bars.
+        analysis_result (AnalysisPublic): The object storing gathered analysis data.
     """
-    try:
-        gh = GitHubManager(repo_url=url, is_cli=True)
-        gh.validate_repo_url()
-        cloned_repo = gh.clone_repo()
 
-        an = Analyzer(cloned_repo, is_cli=True)
-        an.analyse_project()
+    def __init__(self, root_path: str, is_cli: bool = True) -> None:
+        """
+        Initialize the Analyzer with a path and display settings.
 
-        analysis_result = an.get_results()
-        if include_repo:
-            local = GitLocalManager(cloned_repo)
-            repo_info = local.get_repo_info()
-            try:
-                repo_info.description = gh.fetch_repo_description()
-            except Exception:
-                pass
-            analysis_result.repo = repo_info
+        Args:
+            root_path (str): The directory path to be scanned.
+            is_cli (bool): If True, progress will be printed to stdout.
+        """
+        self.root_path = root_path
+        self.is_cli = is_cli
+        self.analysis_result = AnalysisPublic(
+            id=0,
+            name="",
+            origin=Origin.LOCAL,
+            status=AnalysisStatus.IN_PROGRESS,
+            created_at=datetime.now(),
+            file_classes=[],
+        )
+        self._file_count = 0
+        self._processed_files = 0
 
-        # Extract name and set metadata
-        url_name_fallback = url.rstrip("/").split("/")[-1]
-        repo_name = analysis_result.repo.name or url_name_fallback if analysis_result.repo else url_name_fallback
-        analysis_result.name = repo_name
-        analysis_result.status = AnalysisStatus.COMPLETED
-        analysis_result.created_at = datetime.now()
+    def analyse_project(self) -> None:
+        """
+        Walk through the project directory and perform AST analysis on all Python files.
 
-        file_path = Path(f"results/{repo_name}.json")
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        Raises:
+            FileNotFoundError: If the root_path does not exist.
+            ValueError: If the root_path is not a directory.
+        """
+        if self.is_cli:
+            print("[ ] Analysing code", end=" ", flush=True)
 
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write(analysis_result.model_dump_json(indent=4))
+        root_path = os.path.abspath(self.root_path)
 
-        if print_results:
-            console.main(str(file_path))
+        if not os.path.exists(root_path):
+            raise FileNotFoundError(f"Path {root_path} does not exist")
+        if not os.path.isdir(root_path):
+            raise ValueError(f"Path {root_path} is not a directory")
 
-    except Exception as e:
-        print(f"\nERROR: {e}")
-        sys.exit(1)
+        self._file_count = self._count_python_files(root_path)
+        self._processed_files = 0
 
+        self._analyse_directory(root_path)
 
-def run_directory(directory: str, include_repo: bool = False, print_results: bool = False) -> None:
-    """
-    Perform a local analysis of a specific directory.
-
-    Args:
-        directory (str): The local path to the project directory.
-        include_repo (bool): Whether to include git repository info if detected.
-        print_results (bool): Whether to display the results in the console after analysis.
-
-    Raises:
-        Exception: If the directory analysis or file writing fails.
-    """
-    git_url = GitHubManager.get_git_repo_url(directory)
-
-    if git_url:
-        while True:
-            repo_input = (
-                input(
-                    "A valid Git configuration has been detected. Would you like to analyse the origin repository? "
-                    "(Y/n) "
-                )
-                .strip()
-                .lower()
-            )
-            if repo_input == "y":
-                request_url(git_url, include_repo, print_results)
-                return
-            elif repo_input == "n":
-                break
+        if self.is_cli:
+            if sys.stdout.isatty():
+                print("\r[✓] Analysing code\033[K")
             else:
-                print("Invalid input. Please enter Y or n.")
+                print("[✓] Analysing code")
 
-    try:
-        an = Analyzer(directory, is_cli=True)
-        an.analyse_project()
-        analysis_result = an.get_results()
+        logger.info(f"Analysis completed for {root_path}")
 
-        repo_name = Path(directory).resolve().name
+    def _analyse_directory(self, path: str) -> None:
+        """
+        Recursively scan a directory for Python files to analyze.
 
-        analysis_result.name = repo_name
-        analysis_result.status = AnalysisStatus.COMPLETED
-        analysis_result.created_at = datetime.now()
-        analysis_result.origin = Origin.LOCAL
+        Args:
+            path (str): The current directory path being scanned.
+        """
+        try:
+            items = os.listdir(path)
+            for item in items:
+                item_path = os.path.join(path, item)
 
-        file_path = Path(f"results/{repo_name}.json")
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+                if os.path.isfile(item_path) and item.endswith(".py") and item != "__init__.py":
+                    self._update_progress()
+                    self._analyse_file(item_path)
+                    self._processed_files += 1
 
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write(analysis_result.model_dump_json(indent=4))
+                elif os.path.isdir(item_path):
+                    if self._should_ignore(item_path):
+                        continue
+                    self._analyse_directory(item_path)
 
-        if print_results:
-            console.main(str(file_path))
+        except PermissionError:
+            logger.error(f"Permission denied: {path}")
+        except Exception as e:
+            logger.error(f"Error reading directory {path}: {e}")
 
-    except Exception as e:
-        print(f"\nERROR: {e}")
-        sys.exit(1)
-    finally:
-        Analyzer.delete_tmp_files()
+    def _update_progress(self) -> None:
+        """
+        Update and display the analysis progress bar or log message.
+        """
+        if self._file_count == 0:
+            return
 
+        percent = int((self._processed_files / self._file_count) * 100)
 
-def run_user(user: str, include_repo: bool = False, print_results: bool = False) -> None:
-    """
-    Search for a GitHub user's repositories and allow choosing one for analysis.
-
-    Args:
-        user (str): The GitHub username.
-        include_repo (bool): Whether to include repository metadata in the analysis.
-        print_results (bool): Whether to display the results in the console after analysis.
-
-    Raises:
-        Exception: If fetching the user or their repositories fails.
-    """
-    try:
-        gh = GitHubManager(user=user, is_cli=True)
-        gh.fetch_user()
-        repos = gh.fetch_user_repos()
-        repo_url = _choose_repo_cli(repos)
-        if repo_url:
-            request_url(repo_url, include_repo, print_results)
-
-    except Exception as e:
-        print(f"\nERROR: {e}")
-        sys.exit(1)
-
-
-def _choose_repo_cli(repos: List[Dict[str, Any]]) -> str:
-    """
-    Provide a command-line interface to select a repository from a list.
-
-    Args:
-        repos (List[Dict[str, Any]]): A list of dictionaries containing repository information.
-
-    Returns:
-        str: The URL of the selected repository.
-
-    Raises:
-        SystemExit: If the user chooses to exit (enters '0').
-    """
-    print("Repositories found:")
-    for idx, repo in enumerate(repos, start=1):
-        print(f"\t[{idx}] {repo.get('name')}")
-
-    while True:
-        repo_input = input("\nSelect which one you want to analyze (Enter [0] to exit): ")
-        if repo_input == "0":
-            sys.exit(0)
-        elif repo_input.isdigit():
-            repo_pos = int(repo_input) - 1
-            if 0 <= repo_pos < len(repos):
-                selected_repo = repos[repo_pos]
-            else:
-                print("Invalid number. Please try again.")
-                continue
+        if self.is_cli:
+            bar_length = 40
+            block = int(round(bar_length * self._processed_files / self._file_count))
+            progress = "█" * block + "-" * (bar_length - block)
+            if sys.stdout.isatty():
+                print(f"\r[ ] Analysing code [{progress}] {percent}%\033[K", end="", flush=True)
+            elif self._processed_files % max(1, (self._file_count // 4)) == 0:
+                print(f"[ ] Analysing code [{progress}] {percent}%")
         else:
-            matching_repos = [repo for repo in repos if repo.get("name") == repo_input]
-            if not matching_repos:
-                print("Repository name not found. Please try again (Enter [0] to exit).")
-                continue
-            selected_repo = matching_repos[0]
+            if self._processed_files % max(1, (self._file_count // 4)) == 0:
+                logger.info(f"Analysis progress: {percent}%")
 
-        confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (Y/n) ")
-        if confirm_input.lower() == "y":
-            return str(selected_repo.get("html_url"))
-        elif confirm_input.lower() != "n":
-            print("Not valid. Please enter 'y' or 'n'.")
+    def _analyse_file(self, file_path: str) -> None:
+        """
+        Read a file, parse its AST, and append the results to the analysis.
+
+        Args:
+            file_path (str): The absolute path of the Python file to analyze.
+        """
+        try:
+            with open(file_path, encoding="utf-8") as fp:
+                my_code = fp.read()
+                relative_path = os.path.relpath(file_path, start=self.root_path)
+
+                tree = ast.parse(my_code)
+                file_classes = self._analyse_ast(tree)
+                self.analysis_result.file_classes.append(
+                    AnalysisFilePublic(filename=relative_path, classes=file_classes)
+                )
+        except SyntaxError as e:
+            logger.warning(f"Syntax error in {file_path}: {e}")
+        except Exception as e:
+            logger.error(f"Could not analyse file {file_path}: {e}")
+
+    def _analyse_ast(self, tree: ast.AST) -> List[AnalysisClassPublic]:
+        """
+        Walk through an AST tree to identify and count Python CEFR classes.
+        """
+        counter: defaultdict[ClassId, int] = defaultdict(int)
+        for node in ast.walk(tree):
+            class_ids = get_class_from_ast_node(node)
+
+            for class_id in class_ids:
+                if class_id != ClassId.UNKNOWN:
+                    counter[class_id] += 1
+
+        elements: List[AnalysisClassPublic] = []
+        for class_id, count in counter.items():
+            elements.append(
+                AnalysisClassPublic(
+                    class_id=class_id,
+                    instances=count,
+                )
+            )
+        elements.sort(key=lambda x: x.class_id.value)
+        return elements
+
+    def _should_ignore(self, path: str) -> bool:
+        """
+        Determine if a path should be ignored based on settings.
+
+        Args:
+            path (str): The path to check.
+
+        Returns:
+            bool: True if the path should be ignored, False otherwise.
+        """
+        ignore_folders = settings.ignore_folders
+        path_norm = path.replace("\\", "/")
+
+        for folder in ignore_folders:
+            folder = folder.rstrip("/\\")
+            if f"/{folder}/" in f"/{path_norm}/":
+                return True
+        return False
+
+    def _count_python_files(self, directory: str) -> int:
+        """
+        Count total number of Python files in a directory for progress tracking.
+
+        Args:
+            directory (str): The root directory to start counting from.
+
+        Returns:
+            int: The total count of .py files.
+        """
+        count = 0
+        for root, dirs, files in os.walk(directory):
+            dirs[:] = [d for d in dirs if not self._should_ignore(os.path.join(root, d))]
+            count += sum(1 for f in files if f.endswith(".py"))
+        return count
+
+    def get_results(self) -> AnalysisPublic:
+        """
+        Get the final analysis results.
+
+        Returns:
+            AnalysisPublic: The completed analysis data object.
+        """
+        return self.analysis_result
+
+    @staticmethod
+    def delete_tmp_files(clone_id: str | int | None = None) -> None:
+        """
+        Remove the temporary directory used during analysis.
+
+        Args:
+            clone_id: When provided, only deletes ``backend/tmp/{clone_id}``
+                instead of the entire ``backend/tmp`` directory.
+
+        Note:
+            Logs an error if the directory cannot be deleted.
+        """
+        tmp_path = Path("backend/tmp") / str(clone_id) if clone_id is not None else Path("backend/tmp")
+        if tmp_path.exists():
+            try:
+                shutil.rmtree(tmp_path)
+            except Exception as e:
+                logger.error(f"Could not delete temporary directory {tmp_path}: {e}")
+
+
+def clone_and_analyse(
+    repo_url: str,
+    clone_id: Union[int, str],
+    is_cli: bool = False,
+    include_repo: bool = True,
+) -> AnalysisPublic:
+    """Clone a GitHub repository, run AST analysis, and gather git metadata.
+
+    Shared core used by both the CLI and the web background task.
+    Callers are responsible for cleanup (Analyzer.delete_tmp_files) and for
+    persisting the result (to file or database).
+    """
+    from backend.services.analyzer.git_local_manager import GitLocalManager
+    from backend.services.analyzer.github_manager import GitHubManager
+
+    gh = GitHubManager(repo_url=repo_url, is_cli=is_cli)
+    gh.validate_repo_url()
+    cloned_repo = gh.clone_repo(clone_id=clone_id)
+
+    an = Analyzer(cloned_repo, is_cli=is_cli)
+    an.analyse_project()
+
+    result = an.get_results()
+
+    if include_repo:
+        local = GitLocalManager(cloned_repo)
+        repo_info = local.get_repo_info()
+        try:
+            repo_info.description = gh.fetch_repo_description()
+        except Exception as e:
+            logger.warning(f"Could not fetch repo description for {repo_url}: {e}")
+        result.repo = repo_info
+
+    return result

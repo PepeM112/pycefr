@@ -297,9 +297,9 @@ def get_level_function(node: ast.FunctionDef) -> List[ClassId]:
     for decorator in node.decorator_list:
         if isinstance(decorator, ast.Name):
             if decorator.id == "staticmethod":
-                features.append(ClassId.STATIC_CLASSMETHOD)
-            elif decorator.id == "classmethod":
                 features.append(ClassId.STATIC_STATICMETHOD)
+            elif decorator.id == "classmethod":
+                features.append(ClassId.STATIC_CLASSMETHOD)
 
     # Recursion
     for subnode in ast.walk(node):

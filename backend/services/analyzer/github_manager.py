@@ -1,6 +1,4 @@
-import configparser
 import logging
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -11,6 +9,7 @@ import requests
 
 from backend.config.settings import settings
 from backend.models.schemas.repo import GitHubUserPublic
+from backend.services.analyzer.git_utils import get_remote_origin_url
 
 logger = logging.getLogger(__name__)
 python_threshold_percentage = settings.python_threshold_percentage
@@ -125,6 +124,8 @@ class GitHubManager:
             subprocess.CalledProcessError: If the git clone command fails.
         """
         self._print_status("[ ] Cloning repository", end="")
+        if not self.repo_url.startswith("https://"):
+            raise ValueError("Repository URL must start with https://")
         clone_dir = Path("backend/tmp") / str(clone_id) if clone_id is not None else Path("backend/tmp")
         clone_path = clone_dir / self.repo_name
         if clone_dir.exists():
@@ -202,31 +203,14 @@ class GitHubManager:
         return cast(List[Dict[str, Any]], response.json())
 
     @staticmethod
-    def get_git_repo_url(dir: str = ".") -> str:
+    def get_git_repo_url(directory: str = ".") -> str:
         """
         Extract the GitHub remote origin URL from a local .git directory.
 
         Args:
-            dir (str): The local directory to check.
+            directory (str): The local directory to check.
 
         Returns:
             str: The HTTPS URL of the remote origin, or empty string if not found.
         """
-        git_dir = os.path.join(dir, ".git")
-        if not os.path.isdir(git_dir):
-            return ""
-        config_file = os.path.join(git_dir, "config")
-        if not os.path.isfile(config_file):
-            return ""
-        config = configparser.ConfigParser()
-        config.read(config_file)
-        if 'remote "origin"' not in config:
-            return ""
-        url = config['remote "origin"'].get("url")
-        if not url:
-            return ""
-        if url.startswith("git@"):
-            url_part = url[4:]
-            http_url = url_part.replace(":", "/", 1).replace(".git", "")
-            return f"https://{http_url}"
-        return url
+        return get_remote_origin_url(directory)

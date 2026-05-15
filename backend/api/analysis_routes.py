@@ -18,9 +18,7 @@ from backend.models.schemas.analysis import (
     AnalysisSummaryPublic,
 )
 from backend.models.schemas.common import PaginatedResponse, Pagination, SortDirection, Sorting
-from backend.services.analyzer.analyzer import Analyzer
-from backend.services.analyzer.git_local_manager import GitLocalManager
-from backend.services.analyzer.github_manager import GitHubManager
+from backend.services.analyzer.analyzer import Analyzer, clone_and_analyse
 
 logger = logging.getLogger(__name__)
 
@@ -289,38 +287,10 @@ def download_analysis(analysis_id: int) -> JSONResponse:
 
 
 def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
-    """
-    Execute the core analysis logic outside the request/response cycle.
-
-    This helper handles cloning the repository, running the AST analyzer,
-    fetching GitHub metadata, and updating the database with the results.
-
-    Args:
-        analysis_id: The database ID of the analysis record.
-        repo_url: The URL of the repository to clone and analyze.
-    """
     try:
-        gh = GitHubManager(repo_url=repo_url, is_cli=False)
-        gh.validate_repo_url()
-        cloned_repo = gh.clone_repo(clone_id=analysis_id)
-
-        an = Analyzer(cloned_repo, is_cli=False)
-        an.analyse_project()
-
-        logger.info("Extracting repository info from local git data")
-        local = GitLocalManager(cloned_repo)
-        repo_info = local.get_repo_info()
-        try:
-            repo_info.description = gh.fetch_repo_description()
-        except Exception as e:
-            logger.warning(f"Analysis {analysis_id}: could not fetch repo description: {e}")
-        logger.info("Repository info extracted successfully")
-
-        analysis_result = an.get_results()
-        analysis_result.repo = repo_info
-        analysis_result.status = AnalysisStatus.COMPLETED
-
-        db_utils.update_analysis_results(analysis_id, analysis_result)
+        result = clone_and_analyse(repo_url=repo_url, clone_id=analysis_id, is_cli=False)
+        result.status = AnalysisStatus.COMPLETED
+        db_utils.update_analysis_results(analysis_id, result)
 
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Analysis {analysis_id} validation failed: {e}")
@@ -328,6 +298,6 @@ def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
 
     except Exception as e:
         logger.error(f"Analysis {analysis_id} crashed: {e}")
-        db_utils.mark_analysis_as_failed(analysis_id, f"Internal Error: {e}")
+        db_utils.mark_analysis_as_failed(analysis_id, "An unexpected error occurred. Check server logs for details.")
     finally:
         Analyzer.delete_tmp_files(clone_id=analysis_id)

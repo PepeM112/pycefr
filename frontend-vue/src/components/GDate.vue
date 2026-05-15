@@ -22,7 +22,7 @@ const props = withDefaults(
     relative?: boolean;
   }>(),
   {
-    relative: true,
+    relative: false,
   }
 );
 

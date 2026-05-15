@@ -1,8 +1,9 @@
 import logging
 import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Tuple
+from typing import Any, Generator, List, Optional, Tuple
 
 from backend.models.schemas.analysis import (
     AnalysisClassPublic,
@@ -28,48 +29,118 @@ logger = logging.getLogger(__name__)
 DATABASE_PATH = os.getenv("DATABASE_PATH", "database/pycefr.db")
 
 
-def get_db_connection() -> sqlite3.Connection:
-    """
-    Establish a connection to the SQLite database.
-
-    Returns:
-        sqlite3.Connection: A connection object with Row factory enabled.
-
-    Raises:
-        sqlite3.OperationalError: If the database connection fails.
-    """
-    try:
+class AnalysisRepository:
+    @contextmanager
+    def _connect(self) -> Generator[sqlite3.Connection, None, None]:
         conn = sqlite3.connect(DATABASE_PATH)
         conn.row_factory = sqlite3.Row
-        return conn
-    except sqlite3.OperationalError as e:
-        logger.critical(f"Failed to connect to database: {e}")
-        raise
+        try:
+            yield conn
+        finally:
+            conn.close()
 
+    # ------------------------------------------------------------------
+    # Row → Model mappers
+    # ------------------------------------------------------------------
 
-# --- READ OPERATIONS ---
+    @staticmethod
+    def _map_owner(row: sqlite3.Row) -> GitHubUserPublic:
+        return GitHubUserPublic(
+            name=row["repo_owner_name"] or "",
+            github_user=row["repo_owner_login"] or "Unknown",
+            avatar=row["repo_owner_avatar"] or "",
+            profile_url=(
+                (row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}")
+                if row["repo_owner_login"]
+                else ""
+            ),
+        )
 
+    @staticmethod
+    def _map_commit(row: sqlite3.Row) -> RepoCommitPublic:
+        return RepoCommitPublic(
+            username=row["username"],
+            github_user=row["github_user"],
+            loc=row["loc"],
+            commits=row["commits"],
+            estimated_hours=row["estimated_hours"],
+            total_files_modified=row["total_files_modified"],
+        )
 
-def get_analyses(
-    page: int, per_page: int, sorting: Sorting[AnalysisSortColumn] | None = None, filters: AnalysisFilters | None = None
-) -> Tuple[List[AnalysisSummaryPublic], int]:
-    """
-    Retrieve a paginated list of analysis summaries with filtering and sorting.
+    @staticmethod
+    def _map_contributor(row: sqlite3.Row) -> GitHubContributorPublic:
+        return GitHubContributorPublic(
+            name=row["name"],
+            github_user=row["github_user"],
+            avatar=row["avatar"],
+            profile_url=row["profile_url"],
+            contributions=row["contributions"],
+        )
 
-    Args:
-        page (int): The current page number (starting at 1).
-        per_page (int): Number of items per page.
-        sorting (Sorting[AnalysisSortColumn] | None): Sorting configuration.
-        filters (AnalysisFilters | None): Filtering criteria for the query.
+    @staticmethod
+    def _parse_dt(value: str | None) -> datetime | None:
+        return datetime.fromisoformat(value) if value else None
 
-    Returns:
-        Tuple[List[AnalysisSummaryPublic], int]: A list of summaries and the
-            total count of records matching the filters.
-    """
-    offset = (page - 1) * per_page
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
+    # ------------------------------------------------------------------
+    # Shared write helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _insert_files(cursor: sqlite3.Cursor, analysis_id: int, files: List[AnalysisFilePublic]) -> None:
+        for file in files:
+            cursor.execute(
+                "INSERT INTO analysis_files (analysis_id, filename) VALUES (?, ?)", (analysis_id, file.filename)
+            )
+            file_id = cursor.lastrowid
+            if file.classes:
+                cursor.executemany(
+                    "INSERT INTO analysis_file_classes (file_id, class_id, instances) VALUES (?, ?, ?)",
+                    [(file_id, cls.class_id.value, cls.instances) for cls in file.classes],
+                )
+
+    @staticmethod
+    def _insert_commits(cursor: sqlite3.Cursor, analysis_id: int, commits: List[RepoCommitPublic]) -> None:
+        if not commits:
+            return
+        cursor.executemany(
+            """
+            INSERT INTO repo_commits
+            (analysis_id, username, github_user, loc, commits, estimated_hours, total_files_modified)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (analysis_id, c.username, c.github_user, c.loc, c.commits, c.estimated_hours, c.total_files_modified)
+                for c in commits
+            ],
+        )
+
+    @staticmethod
+    def _insert_contributors(
+        cursor: sqlite3.Cursor, analysis_id: int, contributors: List[GitHubContributorPublic]
+    ) -> None:
+        if not contributors:
+            return
+        cursor.executemany(
+            """
+            INSERT INTO repo_contributors
+            (analysis_id, name, github_user, avatar, profile_url, contributions)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [(analysis_id, c.name, c.github_user, c.avatar, c.profile_url, c.contributions) for c in contributors],
+        )
+
+    # ------------------------------------------------------------------
+    # Read operations
+    # ------------------------------------------------------------------
+
+    def get_analyses(
+        self,
+        page: int,
+        per_page: int,
+        sorting: Sorting | None = None,
+        filters: AnalysisFilters | None = None,
+    ) -> Tuple[List[AnalysisSummaryPublic], int]:
+        offset = (page - 1) * per_page
 
         column_map = {
             AnalysisSortColumn.ID: "id",
@@ -118,39 +189,16 @@ def get_analyses(
 
         where_sql = " AND ".join(where_clauses)
 
-        query = f"""
-            SELECT * FROM analyses
-            WHERE {where_sql}
-            ORDER BY {sort_column} {sort_dir}
-            LIMIT ? OFFSET ?
-        """
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            rows = cursor.execute(
+                f"SELECT * FROM analyses WHERE {where_sql} ORDER BY {sort_column} {sort_dir} LIMIT ? OFFSET ?",
+                params + [per_page, offset],
+            ).fetchall()
 
-        query_params = params + [per_page, offset]
-        rows = cursor.execute(query, query_params).fetchall()
+            total = cursor.execute(f"SELECT COUNT(*) FROM analyses WHERE {where_sql}", params).fetchone()[0]
 
-        count_query = f"SELECT COUNT(*) FROM analyses WHERE {where_sql}"
-        total = cursor.execute(count_query, params).fetchone()[0]
-
-        analyses: List[AnalysisSummaryPublic] = []
-
-        for row in rows:
-            owner = GitHubUserPublic(
-                name=row["repo_owner_name"],
-                github_user=row["repo_owner_login"] or "Unknown",
-                avatar=row["repo_owner_avatar"] or "",
-                profile_url=row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}",
-            )
-
-            repo_summary = RepoSummaryPublic(
-                name=row["repo_name"],
-                url=row["repo_url"],
-                description=row["repo_description"],
-                created_at=datetime.fromisoformat(row["repo_created_at"]) if row["repo_created_at"] else None,
-                last_updated_at=datetime.fromisoformat(row["repo_last_update"]) if row["repo_last_update"] else None,
-                owner=owner,
-            )
-
-            analyses.append(
+            return [
                 AnalysisSummaryPublic(
                     id=row["id"],
                     name=row["name"],
@@ -158,503 +206,313 @@ def get_analyses(
                     error_message=row["error_message"],
                     origin=Origin(row["origin"]),
                     created_at=datetime.fromisoformat(row["created_at"]),
-                    repo=repo_summary,
+                    repo=RepoSummaryPublic(
+                        name=row["repo_name"],
+                        url=row["repo_url"],
+                        description=row["repo_description"],
+                        created_at=self._parse_dt(row["repo_created_at"]),
+                        last_updated_at=self._parse_dt(row["repo_last_update"]),
+                        owner=self._map_owner(row),
+                    ),
                 )
-            )
-        return analyses, total
-    finally:
-        conn.close()
+                for row in rows
+            ], total
 
+    def get_analysis_details(self, analysis_id: int) -> Optional[AnalysisPublic]:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            row = cursor.execute("SELECT * FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
+            if not row:
+                return None
 
-def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
-    """
-    Fetch full details of a specific analysis, including files, commits, and contributors.
+            file_rows = cursor.execute(
+                """
+                SELECT f.filename, c.class_id, c.instances
+                FROM analysis_files f
+                LEFT JOIN analysis_file_classes c ON f.id = c.file_id
+                WHERE f.analysis_id = ?
+                """,
+                (analysis_id,),
+            ).fetchall()
 
-    Args:
-        analysis_id (int): The unique identifier of the analysis.
-
-    Returns:
-        Optional[AnalysisPublic]: The full analysis object if found, else None.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        row = cursor.execute("SELECT * FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
-        if not row:
-            return None
-
-        file_rows = cursor.execute(
-            """
-            SELECT f.filename, c.class_id, c.instances
-            FROM analysis_files f
-            LEFT JOIN analysis_file_classes c ON f.id = c.file_id
-            WHERE f.analysis_id = ?
-            """,
-            (analysis_id,),
-        ).fetchall()
-
-        files_list: List[AnalysisFilePublic] = []
-        current_file = None
-
-        for r in file_rows:
-            if current_file is None or current_file.filename != r["filename"]:
-                current_file = next((f for f in files_list if f.filename == r["filename"]), None)
-
-                if not current_file:
-                    current_file = AnalysisFilePublic(filename=r["filename"], classes=[])
-                    files_list.append(current_file)
-
-            if r["class_id"]:
-                current_file.classes.append(
-                    AnalysisClassPublic(
-                        class_id=ClassId(r["class_id"]),
-                        instances=r["instances"],
+            files_map: dict[str, AnalysisFilePublic] = {}
+            for r in file_rows:
+                fname = r["filename"]
+                if fname not in files_map:
+                    files_map[fname] = AnalysisFilePublic(filename=fname, classes=[])
+                if r["class_id"]:
+                    files_map[fname].classes.append(
+                        AnalysisClassPublic(class_id=ClassId(r["class_id"]), instances=r["instances"])
                     )
-                )
 
-        commits = [
-            _map_row_to_repo_commit(r)
-            for r in cursor.execute("SELECT * FROM repo_commits WHERE analysis_id = ?", (analysis_id,)).fetchall()
-        ]
+            commits = [
+                self._map_commit(r)
+                for r in cursor.execute("SELECT * FROM repo_commits WHERE analysis_id = ?", (analysis_id,)).fetchall()
+            ]
+            contributors = [
+                self._map_contributor(r)
+                for r in cursor.execute(
+                    "SELECT * FROM repo_contributors WHERE analysis_id = ?", (analysis_id,)
+                ).fetchall()
+            ]
 
-        contributors = [
-            _map_row_to_repo_contributor(r)
-            for r in cursor.execute("SELECT * FROM repo_contributors WHERE analysis_id = ?", (analysis_id,)).fetchall()
-        ]
+            owner = self._map_owner(row)
 
-        repo = RepoPublic(
-            name=row["repo_name"],
-            url=row["repo_url"],
-            description=row["repo_description"],
-            created_at=datetime.fromisoformat(row["repo_created_at"]) if row["repo_created_at"] else datetime.now(),
-            last_updated_at=datetime.fromisoformat(row["repo_last_update"])
-            if row["repo_last_update"]
-            else datetime.now(),
-            owner=GitHubUserPublic(
-                name=row["repo_owner_name"] or "",
-                github_user=row["repo_owner_login"] or "",
-                avatar=row["repo_owner_avatar"] or "",
-                profile_url=row["repo_owner_profile_url"] or f"https://github.com/{row['repo_owner_login']}"
-                if row["repo_owner_login"]
-                else "",
-            ),
-            commits=commits,
-            contributors=contributors,
-        )
+            return AnalysisPublic(
+                id=row["id"],
+                name=row["name"],
+                origin=Origin(row["origin"]),
+                status=AnalysisStatus(row["status"]),
+                error_message=row["error_message"],
+                created_at=datetime.fromisoformat(row["created_at"]),
+                file_classes=list(files_map.values()),
+                repo=RepoPublic(
+                    name=row["repo_name"],
+                    url=row["repo_url"],
+                    description=row["repo_description"],
+                    created_at=self._parse_dt(row["repo_created_at"]) or datetime.now(),
+                    last_updated_at=self._parse_dt(row["repo_last_update"]) or datetime.now(),
+                    owner=owner,
+                    commits=commits,
+                    contributors=contributors,
+                ),
+            )
 
-        return AnalysisPublic(
-            id=row["id"],
-            name=row["name"],
-            origin=Origin(row["origin"]),
-            status=AnalysisStatus(row["status"]),
-            error_message=row["error_message"],
-            created_at=datetime.fromisoformat(row["created_at"]),
-            file_classes=files_list,
-            repo=repo,
-        )
-    finally:
-        conn.close()
+    def get_unique_owners(self, search_query: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT DISTINCT
+                repo_owner_login AS id,
+                COALESCE(repo_owner_name, repo_owner_login) AS label
+                FROM analyses
+                WHERE repo_owner_login IS NOT NULL
+            """
+            params: List[str] = []
 
+            if search_query:
+                query += " AND (repo_owner_login LIKE ? OR repo_owner_name LIKE ?)"
+                search_param = f"%{search_query}%"
+                params.extend([search_param, search_param])
 
-# --- WRITE OPERATIONS ---
+            query += " ORDER BY label"
 
+            if limit is not None:
+                query += " LIMIT ?"
+                params.append(str(limit))
 
-def create_empty_analysis(analysis: AnalysisCreate) -> AnalysisPublic | None:
-    """
-    Create an initial analysis record with status 'IN_PROGRESS'.
+            try:
+                rows = cursor.execute(query, params).fetchall()
+                return [EntityLabelString(id=row["id"], label=row["label"]) for row in rows]
+            except sqlite3.Error as e:
+                logger.error(f"Database error while fetching unique owners: {e}")
+                return []
 
-    Args:
-        analysis (AnalysisCreate): The analysis creation data.
+    # ------------------------------------------------------------------
+    # Write operations
+    # ------------------------------------------------------------------
 
-    Returns:
-        AnalysisPublic | None: The placeholder analysis object, or None if creation fails.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
+    def create_empty_analysis(self, analysis: AnalysisCreate) -> AnalysisPublic | None:
         repo_name = analysis.repo_url.rstrip("/").split("/")[-1] or "unknown"
         now_utc = datetime.now(timezone.utc)
         name = analysis.name or f"{now_utc.strftime('%Y%m%d')}_{repo_name}"
 
-        cursor.execute(
-            "INSERT INTO analyses (name, status, origin, repo_url, created_at) VALUES (?, ?, ?, ?, ?)",
-            (name, AnalysisStatus.IN_PROGRESS.value, Origin.GITHUB.value, analysis.repo_url, now_utc.isoformat()),
-        )
-        conn.commit()
-        analysis_id = cursor.lastrowid
+        try:
+            with self._connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO analyses (name, status, origin, repo_url, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        name,
+                        AnalysisStatus.IN_PROGRESS.value,
+                        Origin.GITHUB.value,
+                        analysis.repo_url,
+                        now_utc.isoformat(),
+                    ),
+                )
+                conn.commit()
+                analysis_id = cursor.lastrowid
 
-        if analysis_id is None:
-            raise sqlite3.Error("Failed to retrieve lastrowid after INSERT")
+                if analysis_id is None:
+                    raise sqlite3.Error("Failed to retrieve lastrowid after INSERT")
 
-        logger.info(f"Empty analysis record created with ID: {analysis_id} for repo: {analysis.repo_url}")
-        return AnalysisPublic(
-            id=analysis_id,
-            name=name,
-            status=AnalysisStatus.IN_PROGRESS,
-            origin=Origin.GITHUB,
-            created_at=now_utc,
-            file_classes=[],
-            repo=RepoPublic(
-                url=analysis.repo_url,
-                name=repo_name,
-                owner=None,
-                commits=[],
-                contributors=[],
-            ),
-        )
-    except sqlite3.Error as e:
-        logger.error(f"Database error while creating empty analysis: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error creating initial analysis: {e}")
-        return None
-    finally:
-        conn.close()
+                logger.info(f"Empty analysis record created with ID: {analysis_id} for repo: {analysis.repo_url}")
+                return AnalysisPublic(
+                    id=analysis_id,
+                    name=name,
+                    status=AnalysisStatus.IN_PROGRESS,
+                    origin=Origin.GITHUB,
+                    created_at=now_utc,
+                    file_classes=[],
+                    repo=RepoPublic(url=analysis.repo_url, name=repo_name, owner=None, commits=[], contributors=[]),
+                )
+        except sqlite3.Error as e:
+            logger.error(f"Database error while creating empty analysis: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error creating initial analysis: {e}")
+            return None
+
+    def update_analysis_results(self, analysis_id: int, analysis_data: AnalysisPublic) -> None:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            try:
+                if analysis_data.repo is None:
+                    raise ValueError("Cannot update analysis results: repo data is None")
+
+                cursor.execute(
+                    """
+                    UPDATE analyses SET
+                        status = ?, repo_name = ?, repo_description = ?,
+                        repo_owner_name = ?, repo_owner_login = ?,
+                        repo_owner_avatar = ?, repo_created_at = ?,
+                        repo_last_update = ?, estimated_hours = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        analysis_data.status.value,
+                        analysis_data.repo.name,
+                        analysis_data.repo.description,
+                        analysis_data.repo.owner.name if analysis_data.repo.owner else None,
+                        analysis_data.repo.owner.github_user if analysis_data.repo.owner else None,
+                        analysis_data.repo.owner.avatar if analysis_data.repo.owner else None,
+                        analysis_data.repo.created_at.isoformat() if analysis_data.repo.created_at else None,
+                        analysis_data.repo.last_updated_at.isoformat() if analysis_data.repo.last_updated_at else None,
+                        sum(c.estimated_hours for c in analysis_data.repo.commits),
+                        analysis_id,
+                    ),
+                )
+
+                self._insert_files(cursor, analysis_id, analysis_data.file_classes or [])
+                self._insert_commits(cursor, analysis_id, analysis_data.repo.commits)
+                self._insert_contributors(cursor, analysis_id, analysis_data.repo.contributors)
+
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                self.mark_analysis_as_failed(analysis_id, f"Database update error: {str(e)}")
+                raise
+
+    def delete_analysis(self, analysis_id: int) -> bool:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE analyses SET status = 'deleted' WHERE id = ?", (analysis_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def mark_analysis_as_failed(self, analysis_id: int, error_message: str = "") -> None:
+        try:
+            with self._connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE analyses SET status = ?, error_message = ? WHERE id = ?",
+                    (AnalysisStatus.FAILED.value, error_message, analysis_id),
+                )
+                conn.commit()
+                logger.info(f"Analysis {analysis_id} marked as FAILED. Reason: {error_message}")
+        except sqlite3.Error as e:
+            logger.error(f"Database error while marking analysis {analysis_id} as failed: {e}")
+
+    def upload_analysis_data(self, analysis_data: AnalysisPublic) -> AnalysisPublic | None:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            try:
+                status_to_save = analysis_data.status
+                if status_to_save == AnalysisStatus.DELETED:
+                    status_to_save = AnalysisStatus.COMPLETED
+
+                repo = analysis_data.repo
+                cursor.execute(
+                    """
+                    INSERT INTO analyses (
+                        name, status, origin, repo_url, repo_name, repo_description,
+                        repo_owner_name, repo_owner_login, repo_owner_avatar, repo_owner_profile_url,
+                        repo_created_at, repo_last_update, estimated_hours, error_message, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        analysis_data.name,
+                        status_to_save.value,
+                        Origin.LOCAL.value,
+                        repo.url if repo else None,
+                        repo.name if repo else None,
+                        repo.description if repo else None,
+                        repo.owner.name if repo and repo.owner else None,
+                        repo.owner.github_user if repo and repo.owner else None,
+                        repo.owner.avatar if repo and repo.owner else None,
+                        repo.owner.profile_url if repo and repo.owner else None,
+                        repo.created_at.isoformat() if repo and repo.created_at else None,
+                        repo.last_updated_at.isoformat() if repo and repo.last_updated_at else None,
+                        sum(c.estimated_hours for c in repo.commits) if repo else 0,
+                        analysis_data.error_message,
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
+                )
+                new_analysis_id = cursor.lastrowid
+
+                if not new_analysis_id:
+                    raise sqlite3.Error("Failed to get new ID for imported analysis")
+
+                if analysis_data.file_classes:
+                    self._insert_files(cursor, new_analysis_id, analysis_data.file_classes)
+
+                if repo:
+                    self._insert_commits(cursor, new_analysis_id, repo.commits)
+                    self._insert_contributors(cursor, new_analysis_id, repo.contributors)
+
+                conn.commit()
+                analysis_data.id = new_analysis_id
+                analysis_data.origin = Origin.LOCAL
+                return analysis_data
+
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Error uploading analysis: {e}")
+                raise
+
+
+# ---------------------------------------------------------------------------
+# Module-level API (delegates to a default repository instance)
+# ---------------------------------------------------------------------------
+
+_repo = AnalysisRepository()
+
+
+def get_db_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def get_analyses(
+    page: int, per_page: int, sorting: Sorting | None = None, filters: AnalysisFilters | None = None
+) -> Tuple[List[AnalysisSummaryPublic], int]:
+    return _repo.get_analyses(page, per_page, sorting, filters)
+
+
+def get_analysis_details(analysis_id: int) -> Optional[AnalysisPublic]:
+    return _repo.get_analysis_details(analysis_id)
+
+
+def create_empty_analysis(analysis: AnalysisCreate) -> AnalysisPublic | None:
+    return _repo.create_empty_analysis(analysis)
 
 
 def update_analysis_results(analysis_id: int, analysis_data: AnalysisPublic) -> None:
-    """
-    Update an existing analysis record with final results.
-
-    Args:
-        analysis_id (int): The ID of the analysis to update.
-        analysis_data (AnalysisPublic): The gathered results to save.
-
-    Raises:
-        ValueError: If repository data is missing.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        if analysis_data.repo is None:
-            raise ValueError("Cannot update analysis results: repo data is None")
-
-        cursor.execute(
-            """
-            UPDATE analyses SET
-                status = ?, repo_name = ?, repo_description = ?,
-                repo_owner_name = ?, repo_owner_login = ?,
-                repo_owner_avatar = ?, repo_created_at = ?,
-                repo_last_update = ?, estimated_hours = ?
-            WHERE id = ?
-            """,
-            (
-                analysis_data.status.value,
-                analysis_data.repo.name,
-                analysis_data.repo.description,
-                analysis_data.repo.owner.name if analysis_data.repo.owner else None,
-                analysis_data.repo.owner.github_user if analysis_data.repo.owner else None,
-                analysis_data.repo.owner.avatar if analysis_data.repo.owner else None,
-                analysis_data.repo.created_at.isoformat() if analysis_data.repo.created_at else None,
-                analysis_data.repo.last_updated_at.isoformat() if analysis_data.repo.last_updated_at else None,
-                sum(c.estimated_hours for c in analysis_data.repo.commits),
-                analysis_id,
-            ),
-        )
-
-        for file in analysis_data.file_classes or []:
-            cursor.execute(
-                "INSERT INTO analysis_files (analysis_id, filename) VALUES (?, ?)", (analysis_id, file.filename)
-            )
-            file_id = cursor.lastrowid
-
-            for cls in file.classes:
-                cursor.execute(
-                    "INSERT INTO analysis_file_classes (file_id, class_id, instances) VALUES (?, ?, ?)",
-                    (file_id, cls.class_id.value, cls.instances),
-                )
-
-        # Insert commits
-        cursor.executemany(
-            """
-            INSERT INTO repo_commits
-            (analysis_id, username, github_user, loc, commits, estimated_hours, total_files_modified)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            [
-                (
-                    analysis_id,
-                    commit.username,
-                    commit.github_user,
-                    commit.loc,
-                    commit.commits,
-                    commit.estimated_hours,
-                    commit.total_files_modified,
-                )
-                for commit in analysis_data.repo.commits
-            ],
-        )
-
-        # Insert contributors
-        cursor.executemany(
-            """
-            INSERT INTO repo_contributors
-            (analysis_id, name, github_user, avatar, profile_url, contributions)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            [
-                (
-                    analysis_id,
-                    contributor.name,
-                    contributor.github_user,
-                    contributor.avatar,
-                    contributor.profile_url,
-                    contributor.contributions,
-                )
-                for contributor in analysis_data.repo.contributors
-            ],
-        )
-
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        mark_analysis_as_failed(analysis_id, f"Database update error: {str(e)}")
-        raise
-    finally:
-        conn.close()
+    _repo.update_analysis_results(analysis_id, analysis_data)
 
 
 def delete_analysis(analysis_id: int) -> bool:
-    """
-    Soft-delete an analysis by updating its status to 'deleted'.
-
-    Args:
-        analysis_id (int): The ID of the analysis.
-
-    Returns:
-        bool: True if the update affected a row, False otherwise.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE analyses SET status = 'deleted' WHERE id = ?", (analysis_id,))
-        conn.commit()
-        return cursor.rowcount > 0
-    finally:
-        conn.close()
+    return _repo.delete_analysis(analysis_id)
 
 
 def mark_analysis_as_failed(analysis_id: int, error_message: str = "") -> None:
-    """
-    Update analysis status to 'FAILED' and record the error reason.
-
-    Args:
-        analysis_id (int): The ID of the analysis.
-        error_message (str): Description of why the analysis failed.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE analyses SET status = ?, error_message = ? WHERE id = ?",
-            (AnalysisStatus.FAILED.value, error_message, analysis_id),
-        )
-        conn.commit()
-        logger.info(f"Analysis {analysis_id} marked as FAILED. Reason: {error_message}")
-    except sqlite3.Error as e:
-        logger.error(f"Database error while marking analysis {analysis_id} as failed: {e}")
-    finally:
-        conn.close()
+    _repo.mark_analysis_as_failed(analysis_id, error_message)
 
 
 def get_unique_owners(search_query: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
-    """
-    Fetch a list of unique repository owners from existing analyses.
-
-    Args:
-        search_query (str | None): Optional string to filter owner logins or names.
-        limit (int | None): Maximum number of records to return.
-
-    Returns:
-        List[EntityLabelString]: A list of objects containing owner ID and label.
-    """
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-
-        # We use login as fallback, since name is optional
-        query = """
-            SELECT DISTINCT
-            repo_owner_login AS id,
-            COALESCE(repo_owner_name, repo_owner_login) AS label
-            FROM analyses
-            WHERE repo_owner_login IS NOT NULL
-        """
-        params: List[str] = []
-
-        if search_query:
-            query += " AND (repo_owner_login LIKE ? OR repo_owner_name LIKE ?)"
-            search_param = f"%{search_query}%"
-            params.extend([search_param, search_param])
-
-        query += " ORDER BY label"
-
-        if limit is not None:
-            query += " LIMIT ?"
-            params.append(str(limit))
-
-        rows = cursor.execute(query, params).fetchall()
-        return [EntityLabelString(id=row["id"], label=row["label"]) for row in rows]
-    except sqlite3.Error as e:
-        logger.error(f"Database error while fetching unique owners: {e}")
-        return []
-    finally:
-        conn.close()
+    return _repo.get_unique_owners(search_query, limit)
 
 
 def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None:
-    """
-    Import a full analysis object into the database.
-
-    Generates a new ID and sets origin to LOCAL to avoid collisions.
-
-    Args:
-        analysis_data (AnalysisPublic): The full analysis data to import.
-
-    Returns:
-        AnalysisPublic | None: The imported analysis object with its new ID.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        status_to_save = analysis_data.status
-        if status_to_save == AnalysisStatus.DELETED:
-            status_to_save = AnalysisStatus.COMPLETED
-
-        cursor.execute(
-            """
-            INSERT INTO analyses (
-                name, status, origin, repo_url, repo_name, repo_description,
-                repo_owner_name, repo_owner_login, repo_owner_avatar, repo_owner_profile_url,
-                repo_created_at, repo_last_update, estimated_hours, error_message, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                analysis_data.name,
-                status_to_save.value,
-                Origin.LOCAL.value,
-                analysis_data.repo.url if analysis_data.repo else None,
-                analysis_data.repo.name if analysis_data.repo else None,
-                analysis_data.repo.description if analysis_data.repo else None,
-                analysis_data.repo.owner.name if analysis_data.repo and analysis_data.repo.owner else None,
-                analysis_data.repo.owner.github_user if analysis_data.repo and analysis_data.repo.owner else None,
-                analysis_data.repo.owner.avatar if analysis_data.repo and analysis_data.repo.owner else None,
-                analysis_data.repo.owner.profile_url if analysis_data.repo and analysis_data.repo.owner else None,
-                analysis_data.repo.created_at.isoformat()
-                if analysis_data.repo and analysis_data.repo.created_at
-                else None,
-                analysis_data.repo.last_updated_at.isoformat()
-                if analysis_data.repo and analysis_data.repo.last_updated_at
-                else None,
-                sum(c.estimated_hours for c in analysis_data.repo.commits) if analysis_data.repo else 0,
-                analysis_data.error_message,
-                datetime.now(timezone.utc).isoformat(),
-            ),
-        )
-        new_analysis_id = cursor.lastrowid
-
-        if not new_analysis_id:
-            raise sqlite3.Error("Failed to get new ID for imported analysis")
-
-        if analysis_data.file_classes:
-            for file in analysis_data.file_classes:
-                cursor.execute(
-                    "INSERT INTO analysis_files (analysis_id, filename) VALUES (?, ?)", (new_analysis_id, file.filename)
-                )
-                new_file_id = cursor.lastrowid
-
-                if file.classes:
-                    file_class_data = [(new_file_id, cls.class_id.value, cls.instances) for cls in file.classes]
-                    cursor.executemany(
-                        "INSERT INTO analysis_file_classes (file_id, class_id, instances) VALUES (?, ?, ?)",
-                        file_class_data,
-                    )
-
-        if analysis_data.repo:
-            if analysis_data.repo.commits:
-                cursor.executemany(
-                    """
-                    INSERT INTO repo_commits
-                    (analysis_id, username, github_user, loc, commits, estimated_hours, total_files_modified)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [
-                        (
-                            new_analysis_id,
-                            c.username,
-                            c.github_user,
-                            c.loc,
-                            c.commits,
-                            c.estimated_hours,
-                            c.total_files_modified,
-                        )
-                        for c in analysis_data.repo.commits
-                    ],
-                )
-
-            if analysis_data.repo.contributors:
-                cursor.executemany(
-                    """
-                    INSERT INTO repo_contributors
-                    (analysis_id, name, github_user, avatar, profile_url, contributions)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    [
-                        (new_analysis_id, c.name, c.github_user, c.avatar, c.profile_url, c.contributions)
-                        for c in analysis_data.repo.contributors
-                    ],
-                )
-
-        conn.commit()
-        analysis_data.id = new_analysis_id
-        analysis_data.origin = Origin.LOCAL
-        return analysis_data
-
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error uploading analysis: {e}")
-        raise e
-    finally:
-        conn.close()
-
-
-# --- HELPERS ---
-
-
-def _map_row_to_repo_commit(row: sqlite3.Row) -> RepoCommitPublic:
-    """
-    Map a database row to a RepoCommitPublic schema.
-
-    Args:
-        row (sqlite3.Row): The source database row.
-
-    Returns:
-        RepoCommitPublic: The validated schema object.
-    """
-    return RepoCommitPublic(
-        username=row["username"],
-        github_user=row["github_user"],
-        loc=row["loc"],
-        commits=row["commits"],
-        estimated_hours=row["estimated_hours"],
-        total_files_modified=row["total_files_modified"],
-    )
-
-
-def _map_row_to_repo_contributor(row: sqlite3.Row) -> GitHubContributorPublic:
-    """
-    Map a database row to a GitHubContributorPublic schema.
-
-    Args:
-        row (sqlite3.Row): The source database row.
-
-    Returns:
-        GitHubContributorPublic: The validated schema object.
-    """
-    return GitHubContributorPublic(
-        name=row["name"],
-        github_user=row["github_user"],
-        avatar=row["avatar"],
-        profile_url=row["profile_url"],
-        contributions=row["contributions"],
-    )
+    return _repo.upload_analysis_data(analysis_data)

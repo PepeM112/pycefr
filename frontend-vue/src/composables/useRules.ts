@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n';
 export const useRules = () => {
   const { t } = useI18n();
 
-  const required = (v: any) => !!v || t('field_required');
+  const required = (v: unknown) => !!v || t('field_required');
 
   const url = (v: string) => {
     if (!v) return true;
@@ -11,7 +11,7 @@ export const useRules = () => {
     return pattern.test(v) || t('invalid_url_format');
   };
 
-  const number = (v: any) => {
+  const number = (v: unknown) => {
     if (v === null || v === undefined || v === '') return true;
     return !isNaN(Number(v)) || t('must_be_number');
   };

@@ -34,7 +34,7 @@
             {{ $t(Enums.getLabel(Origin, item.origin)) }}
           </template>
           <template #item-created_at="{ item }">
-            <g-date :date="item.createdAt" />
+            <g-date :date="item.createdAt" relative />
           </template>
           <template #item-error_message="{ item }">
             {{ item.errorMessage }}

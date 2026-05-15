@@ -1,4 +1,3 @@
-import configparser
 import logging
 import subprocess
 from collections import defaultdict
@@ -13,6 +12,7 @@ from backend.models.schemas.repo import (
     RepoCommitPublic,
     RepoPublic,
 )
+from backend.services.analyzer.git_utils import get_remote_origin_url
 
 logger = logging.getLogger(__name__)
 
@@ -77,20 +77,7 @@ class GitLocalManager:
 
     def get_remote_url(self) -> str:
         """Read the remote origin URL from .git/config."""
-        git_config = self.repo_path / ".git" / "config"
-        if not git_config.is_file():
-            return ""
-        config = configparser.ConfigParser()
-        config.read(git_config)
-        if 'remote "origin"' not in config:
-            return ""
-        url = config['remote "origin"'].get("url", "")
-        if not url:
-            return ""
-        if url.startswith("git@"):
-            url_part = url[4:]
-            return "https://" + url_part.replace(":", "/", 1).removesuffix(".git")
-        return url.removesuffix(".git")
+        return get_remote_origin_url(self.repo_path)
 
     def parse_url(self, url: str) -> Tuple[str, str]:
         """

@@ -1,0 +1,165 @@
+import sys
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+from backend.models.schemas.analysis import AnalysisStatus
+from backend.models.schemas.common import Origin
+from backend.services.analyzer import console
+from backend.services.analyzer.analyzer import Analyzer, clone_and_analyse
+from backend.services.analyzer.github_manager import GitHubManager
+
+
+def request_url(url: str, include_repo: bool = False, print_results: bool = False) -> None:
+    clone_id = uuid.uuid4().hex[:8]
+    try:
+        analysis_result = clone_and_analyse(
+            repo_url=url, clone_id=clone_id, is_cli=True, include_repo=include_repo
+        )
+
+        url_name_fallback = url.rstrip("/").split("/")[-1]
+        repo_name = analysis_result.repo.name or url_name_fallback if analysis_result.repo else url_name_fallback
+        analysis_result.name = repo_name
+        analysis_result.status = AnalysisStatus.COMPLETED
+        analysis_result.created_at = datetime.now()
+
+        file_path = Path(f"results/{repo_name}.json")
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(analysis_result.model_dump_json(indent=4))
+
+        if print_results:
+            console.main(str(file_path))
+
+    except Exception as e:
+        print(f"\nERROR: {e}")
+        sys.exit(1)
+    finally:
+        Analyzer.delete_tmp_files(clone_id=clone_id)
+
+
+def run_directory(directory: str, include_repo: bool = False, print_results: bool = False) -> None:
+    """
+    Perform a local analysis of a specific directory.
+
+    Args:
+        directory (str): The local path to the project directory.
+        include_repo (bool): Whether to include git repository info if detected.
+        print_results (bool): Whether to display the results in the console after analysis.
+
+    Raises:
+        Exception: If the directory analysis or file writing fails.
+    """
+    git_url = GitHubManager.get_git_repo_url(directory)
+
+    if git_url:
+        while True:
+            repo_input = (
+                input(
+                    "A valid Git configuration has been detected. Would you like to analyse the origin repository? "
+                    "(Y/n) "
+                )
+                .strip()
+                .lower()
+            )
+            if repo_input == "y":
+                request_url(git_url, include_repo, print_results)
+                return
+            elif repo_input == "n":
+                break
+            else:
+                print("Invalid input. Please enter Y or n.")
+
+    try:
+        an = Analyzer(directory, is_cli=True)
+        an.analyse_project()
+        analysis_result = an.get_results()
+
+        repo_name = Path(directory).resolve().name
+
+        analysis_result.name = repo_name
+        analysis_result.status = AnalysisStatus.COMPLETED
+        analysis_result.created_at = datetime.now()
+        analysis_result.origin = Origin.LOCAL
+
+        file_path = Path(f"results/{repo_name}.json")
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(analysis_result.model_dump_json(indent=4))
+
+        if print_results:
+            console.main(str(file_path))
+
+    except Exception as e:
+        print(f"\nERROR: {e}")
+        sys.exit(1)
+
+
+def run_user(user: str, include_repo: bool = False, print_results: bool = False) -> None:
+    """
+    Search for a GitHub user's repositories and allow choosing one for analysis.
+
+    Args:
+        user (str): The GitHub username.
+        include_repo (bool): Whether to include repository metadata in the analysis.
+        print_results (bool): Whether to display the results in the console after analysis.
+
+    Raises:
+        Exception: If fetching the user or their repositories fails.
+    """
+    try:
+        gh = GitHubManager(user=user, is_cli=True)
+        gh.fetch_user()
+        repos = gh.fetch_user_repos()
+        repo_url = _choose_repo_cli(repos)
+        if repo_url:
+            request_url(repo_url, include_repo, print_results)
+
+    except Exception as e:
+        print(f"\nERROR: {e}")
+        sys.exit(1)
+
+
+def _choose_repo_cli(repos: List[Dict[str, Any]]) -> str:
+    """
+    Provide a command-line interface to select a repository from a list.
+
+    Args:
+        repos (List[Dict[str, Any]]): A list of dictionaries containing repository information.
+
+    Returns:
+        str: The URL of the selected repository.
+
+    Raises:
+        SystemExit: If the user chooses to exit (enters '0').
+    """
+    print("Repositories found:")
+    for idx, repo in enumerate(repos, start=1):
+        print(f"\t[{idx}] {repo.get('name')}")
+
+    while True:
+        repo_input = input("\nSelect which one you want to analyze (Enter [0] to exit): ")
+        if repo_input == "0":
+            sys.exit(0)
+        elif repo_input.isdigit():
+            repo_pos = int(repo_input) - 1
+            if 0 <= repo_pos < len(repos):
+                selected_repo = repos[repo_pos]
+            else:
+                print("Invalid number. Please try again.")
+                continue
+        else:
+            matching_repos = [repo for repo in repos if repo.get("name") == repo_input]
+            if not matching_repos:
+                print("Repository name not found. Please try again (Enter [0] to exit).")
+                continue
+            selected_repo = matching_repos[0]
+
+        confirm_input = input(f"Analyze [{selected_repo.get('name')}]? (Y/n) ")
+        if confirm_input.lower() == "y":
+            return str(selected_repo.get("html_url"))
+        elif confirm_input.lower() != "n":
+            print("Not valid. Please enter 'y' or 'n'.")
