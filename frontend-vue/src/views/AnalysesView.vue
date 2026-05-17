@@ -40,6 +40,12 @@
             {{ item.errorMessage }}
           </template>
           <template #actions="{ item }">
+            <v-btn
+              v-if="item.status === AnalysisStatus.IN_PROGRESS"
+              density="comfortable"
+              icon="mdi-progress-clock"
+              @click="handleOpenProgress(item)"
+            />
             <template v-if="item.status !== AnalysisStatus.IN_PROGRESS">
               <template v-if="item.status === AnalysisStatus.COMPLETED">
                 <v-btn
@@ -55,7 +61,7 @@
                     v-bind="tooltipProps"
                     density="comfortable"
                     icon="mdi-reload"
-                    @click="newAnalysis({ name: item.name, repoUrl: item.repo?.url })"
+                    @click="() => (showNewAnalysisDialog = true)"
                   />
                 </template>
                 <span>{{ $t('retry') }}</span>
@@ -71,22 +77,14 @@
           </template>
         </g-table>
       </generic-loader>
-      <g-dialog-card
+      <new-analysis-dialog
         v-model="showNewAnalysisDialog"
-        title="new_analysis"
-        width="400"
-        :disable-confirm="!isFormValid"
-        @confirm-pre="newAnalysis(newAnalysisForm)"
-      >
-        <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
-          <g-input label="analysis_name">
-            <v-text-field v-model="newAnalysisForm.name" />
-          </g-input>
-          <g-input label="repository_url" required>
-            <v-text-field v-model="newAnalysisForm.repoUrl" :rules="[rules.required, rules.url]" />
-          </g-input>
-        </v-form>
-      </g-dialog-card>
+        :reconnect-analysis-id="reconnectAnalysisId"
+        :reconnect-analysis-name="reconnectAnalysisName"
+        @created="handleAnalysisCreated"
+        @completed="handleAnalysisCompleted"
+        @update:model-value="val => { if (!val) { reconnectAnalysisId = null; reconnectAnalysisName = undefined; } }"
+      />
       <g-dialog-card
         v-model="showUploadDialog"
         title="upload_analysis"
@@ -117,10 +115,8 @@
 <script setup lang="ts">
 import {
   type AnalysisSummaryPublic,
-  type AnalysisCreate,
   AnalysisSortColumn,
   AnalysisStatus,
-  createAnalysis,
   deleteAnalysis,
   downloadAnalysis,
   listAnalysis,
@@ -132,13 +128,12 @@ import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
 import GDialogCard from '@/components/GDialogCard.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
-import GInput from '@/components/GInput.vue';
 import GTable from '@/components/GTable.vue';
+import NewAnalysisDialog from '@/components/analysis/NewAnalysisDialog.vue';
 import PageView from '@/components/PageView.vue';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useFilter } from '@/composables/useFilter';
-import { useRules } from '@/composables/useRules';
 import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { useSnackbarStore } from '@/stores/snackbarStore';
@@ -151,7 +146,6 @@ import { ref } from 'vue';
 import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 
-const rules = useRules();
 const snackbarStore = useSnackbarStore();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
@@ -161,12 +155,8 @@ const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
 const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
-const newAnalysisForm = ref<AnalysisCreate>({
-  name: '',
-  repoUrl: '',
-});
-
-const isFormValid = ref(false);
+const reconnectAnalysisId = ref<number | null>(null);
+const reconnectAnalysisName = ref<string | undefined>(undefined);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 
 const statusList = Enums.buildList(AnalysisStatus);
@@ -299,31 +289,19 @@ async function removeAnalysis(id: number = 0) {
   pagination.value.total -= 1;
 }
 
-async function newAnalysis(analysis: AnalysisCreate) {
-  const { data, error } = await createAnalysis({
-    body: analysis,
-  });
+function handleAnalysisCreated(analysis: AnalysisSummaryPublic) {
+  analysesData.value.unshift(analysis);
+  pagination.value.total += 1;
+}
 
-  if (error) {
-    console.error('error.creating.analysis:', error);
-    snackbarStore.add({
-      text: 'error.creating.analysis',
-      color: 'error',
-      icon: 'mdi-alert-circle-outline',
-      closable: true,
-    });
-    return;
-  }
-  snackbarStore.add({
-    text: 'success.creating.analysis',
-    color: 'success',
-    icon: 'mdi-check-circle-outline',
-    closable: true,
-  });
+function handleAnalysisCompleted() {
+  loadData();
+}
 
-  newAnalysisForm.value = { name: '', repoUrl: '' };
-  analysesData.value.unshift(data);
-  showNewAnalysisDialog.value = false;
+function handleOpenProgress(item: AnalysisSummaryPublic) {
+  reconnectAnalysisId.value = item.id;
+  reconnectAnalysisName.value = item.name;
+  showNewAnalysisDialog.value = true;
 }
 
 async function handleUpload() {

@@ -1,11 +1,13 @@
+import asyncio
 import json
 import logging
 import sqlite3
 from datetime import datetime
-from typing import Annotated, List
+from queue import Empty
+from typing import Annotated, AsyncGenerator, List
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ValidationError
 
 from backend.db import db_utils
@@ -19,6 +21,7 @@ from backend.models.schemas.analysis import (
 )
 from backend.models.schemas.common import PaginatedResponse, Pagination, SortDirection, Sorting
 from backend.services.analyzer.analyzer import Analyzer, clone_and_analyse
+from backend.services.analyzer.progress import create_store, get_store, schedule_store_removal
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +151,9 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
             logger.error(f"Failed to create database entry for: {analysis_create.repo_url}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating the analysis")
 
-        background_tasks.add_task(run_full_analysis_process, analysis.id, analysis_create.repo_url)
+        background_tasks.add_task(
+            run_full_analysis_process, analysis.id, analysis_create.repo_url, analysis_create.include_git
+        )
         return analysis
 
     except Exception as e:
@@ -286,18 +291,78 @@ def download_analysis(analysis_id: int) -> JSONResponse:
         ) from e
 
 
-def run_full_analysis_process(analysis_id: int, repo_url: str) -> None:
+def run_full_analysis_process(analysis_id: int, repo_url: str, include_git: bool = True) -> None:
+    store = create_store(analysis_id)
     try:
-        result = clone_and_analyse(repo_url=repo_url, clone_id=analysis_id, is_cli=False)
+        result = clone_and_analyse(
+            repo_url=repo_url,
+            clone_id=analysis_id,
+            is_cli=False,
+            include_git=include_git,
+            on_progress=store.emit,
+        )
+        if include_git and result.repo is None:
+            raise ValueError("Git analysis was requested but repo data is None")
         result.status = AnalysisStatus.COMPLETED
         db_utils.update_analysis_results(analysis_id, result)
+        store.emit("COMPLETED", analysis_id=analysis_id)
 
     except (ValueError, FileNotFoundError, PermissionError) as e:
         logger.error(f"Analysis {analysis_id} validation failed: {e}")
         db_utils.mark_analysis_as_failed(analysis_id, str(e))
+        store.emit("FAILED", error=str(e))
 
     except Exception as e:
         logger.error(f"Analysis {analysis_id} crashed: {e}")
-        db_utils.mark_analysis_as_failed(analysis_id, "An unexpected error occurred. Check server logs for details.")
+        error_msg = "An unexpected error occurred. Check server logs for details."
+        db_utils.mark_analysis_as_failed(analysis_id, error_msg)
+        store.emit("FAILED", error=error_msg)
     finally:
+        store.close()
+        schedule_store_removal(analysis_id)
         Analyzer.delete_tmp_files(clone_id=analysis_id)
+
+
+@router.get("/{analysis_id}/progress", operation_id="stream_analysis_progress")
+async def stream_analysis_progress(analysis_id: int) -> StreamingResponse:
+    store = get_store(analysis_id)
+
+    if not store:
+        analysis = db_utils.get_analysis_details(analysis_id)
+        if not analysis:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis {analysis_id} not found")
+
+        async def finished_generator() -> AsyncGenerator[str, None]:
+            if analysis.status == AnalysisStatus.COMPLETED:
+                yield f"data: {json.dumps({'step': 'COMPLETED', 'analysisId': analysis_id})}\n\n"
+            elif analysis.status == AnalysisStatus.FAILED:
+                yield f"data: {json.dumps({'step': 'FAILED', 'error': analysis.error_message or 'Unknown error'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'step': 'UNKNOWN'})}\n\n"
+
+        return StreamingResponse(finished_generator(), media_type="text/event-stream")
+
+    past_events, queue = store.subscribe()
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            for event in past_events:
+                yield f"data: {json.dumps(event)}\n\n"
+
+            while True:
+                try:
+                    event = await asyncio.get_event_loop().run_in_executor(None, queue.get, True, 30)
+                except Empty:
+                    yield ": keepalive\n\n"
+                    continue
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event)}\n\n"
+        finally:
+            store.unsubscribe(queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

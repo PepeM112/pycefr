@@ -6,7 +6,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import Callable, List, Union
 
 from backend.config.settings import settings
 from backend.models.schemas.analysis import AnalysisClassPublic, AnalysisFilePublic, AnalysisPublic, AnalysisStatus
@@ -27,16 +27,16 @@ class Analyzer:
         analysis_result (AnalysisPublic): The object storing gathered analysis data.
     """
 
-    def __init__(self, root_path: str, is_cli: bool = True) -> None:
-        """
-        Initialize the Analyzer with a path and display settings.
-
-        Args:
-            root_path (str): The directory path to be scanned.
-            is_cli (bool): If True, progress will be printed to stdout.
-        """
+    def __init__(
+        self,
+        root_path: str,
+        is_cli: bool = True,
+        on_progress: Callable[..., None] | None = None,
+    ) -> None:
         self.root_path = root_path
         self.is_cli = is_cli
+        self._on_progress = on_progress
+        self._last_emitted_percent = -1
         self.analysis_result = AnalysisPublic(
             id=0,
             name="",
@@ -107,9 +107,6 @@ class Analyzer:
             logger.error(f"Error reading directory {path}: {e}")
 
     def _update_progress(self) -> None:
-        """
-        Update and display the analysis progress bar or log message.
-        """
         if self._file_count == 0:
             return
 
@@ -124,7 +121,11 @@ class Analyzer:
             elif self._processed_files % max(1, (self._file_count // 4)) == 0:
                 print(f"[ ] Analysing code [{progress}] {percent}%")
         else:
-            if self._processed_files % max(1, (self._file_count // 4)) == 0:
+            if self._on_progress:
+                if percent != self._last_emitted_percent:
+                    self._last_emitted_percent = percent
+                    self._on_progress("ANALYSING", current=self._processed_files, total=self._file_count)
+            elif self._processed_files % max(1, (self._file_count // 4)) == 0:
                 logger.info(f"Analysis progress: {percent}%")
 
     def _analyse_file(self, file_path: str) -> None:
@@ -241,6 +242,8 @@ def clone_and_analyse(
     clone_id: Union[int, str],
     is_cli: bool = False,
     include_repo: bool = True,
+    include_git: bool = True,
+    on_progress: Callable[..., None] | None = None,
 ) -> AnalysisPublic:
     """Clone a GitHub repository, run AST analysis, and gather git metadata.
 
@@ -251,16 +254,29 @@ def clone_and_analyse(
     from backend.services.analyzer.git_local_manager import GitLocalManager
     from backend.services.analyzer.github_manager import GitHubManager
 
+    if on_progress:
+        on_progress("VALIDATING")
+
     gh = GitHubManager(repo_url=repo_url, is_cli=is_cli)
     gh.validate_repo_url()
+
+    if on_progress:
+        on_progress("CLONING")
+
     cloned_repo = gh.clone_repo(clone_id=clone_id)
 
-    an = Analyzer(cloned_repo, is_cli=is_cli)
+    if on_progress:
+        on_progress("ANALYSING", current=0, total=0)
+
+    an = Analyzer(cloned_repo, is_cli=is_cli, on_progress=on_progress)
     an.analyse_project()
 
     result = an.get_results()
 
-    if include_repo:
+    if include_repo and include_git:
+        if on_progress:
+            on_progress("GIT_ANALYSIS")
+
         local = GitLocalManager(cloned_repo)
         repo_info = local.get_repo_info()
         try:
@@ -268,5 +284,8 @@ def clone_and_analyse(
         except Exception as e:
             logger.warning(f"Could not fetch repo description for {repo_url}: {e}")
         result.repo = repo_info
+
+    if on_progress:
+        on_progress("SAVING")
 
     return result

@@ -31,6 +31,9 @@ export default {
         'Enfoque Lógico/Procedural: La estructura de la aplicación se rige principalmente por lógica condicional y funciones independientes en lugar de jerarquías de clases complejas.',
     },
   },
+  analysis_completed: 'Análisis Completado',
+  analysis_failed: 'Análisis Fallido',
+  analysis_in_progress: 'Análisis En Progreso',
   analysis_name: 'Nombre del análisis',
   analysis_rules: {
     list_simple: 'Lista simple',
@@ -130,6 +133,7 @@ export default {
   apply: 'Aceptar',
   basic_handling: 'Manejo Básico',
   cancel: 'Cancelar',
+  close: 'Cerrar',
   categories: {
     logic: 'Lógica',
     loops: 'Bucles',
@@ -204,6 +208,7 @@ export default {
   invalid_url_format: 'Formato de URL inválido',
   instances: 'Instancias',
   github: 'GitHub',
+  include_git_analysis: 'Incluir análisis del historial git',
   last_update: 'Última actualización',
   level: 'Nivel',
   local: 'Local',
@@ -227,6 +232,11 @@ export default {
   spanish: 'Español',
   standard: 'Estándar',
   status: 'Estado',
+  step_analysing: 'Analizando código',
+  step_cloning: 'Clonando repositorio',
+  step_git_analysis: 'Analizando historial git',
+  step_saving: 'Guardando resultados',
+  step_validating: 'Validando repositorio',
   success: {
     creating: {
       analysis: 'Análisis creado con éxito.',
@@ -238,4 +248,5 @@ export default {
   summary: 'Resumen',
   upload: 'Subir',
   upload_analysis: 'Subir Análisis',
+  view_results: 'Ver Resultados',
 };
