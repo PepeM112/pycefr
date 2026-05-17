@@ -5,7 +5,8 @@
         <th class="text-left" scope="row" style="width: 1px">{{ $t(filterItem.label) }}</th>
         <td class="bg-background px-0" style="width: 100%">
           <filter-field
-            v-model="(filter[filterItem.key] as any)"
+            :model-value="filter[filterItem.key]"
+            @update:model-value="val => filter[filterItem.key] = val"
             :type="filterItem.type"
             :options="filterItem.options"
           />
@@ -33,7 +34,7 @@ th,
 td {
   height: 46px !important;
 }
-::v-deep(.v-field__field input) {
+:deep(.v-field__field input) {
   padding: 0;
 }
 </style>

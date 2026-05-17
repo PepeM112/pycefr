@@ -61,14 +61,15 @@
 
 <script setup lang="ts">
 import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
-import type { DateFilterValue, FilterEntity, FilterMapping, FilterOptions } from '@/types/filter';
-import { FilterType } from '@/types/filter';
+import { FilterType, type DateFilterValue, type FilterEntity, type FilterMapping, type FilterOptions } from '@/types/filter';
 import { isDateFilterValue, isFilterEntity, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Primitive } from 'vuetify/lib/util';
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+  'update:modelValue': [value: FilterMapping[FilterType] | undefined];
+}>();
 
 const { t } = useI18n();
 
@@ -164,7 +165,7 @@ const sortedItems = computed<FilterEntity[]>(() => {
   return translatedItems.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 });
 
-function trimmedStringFilter(value: string, query: string, _item?: any) {
+function trimmedStringFilter(value: string, query: string, _item?: unknown) {
   return value.toLowerCase().includes(query.trim().toLowerCase());
 }
 

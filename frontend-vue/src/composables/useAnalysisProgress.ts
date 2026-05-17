@@ -1,4 +1,5 @@
 import { ref, onUnmounted, readonly } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { client } from '@/client/client.gen';
 
 export type AnalysisStep = 'VALIDATING' | 'CLONING' | 'ANALYSING' | 'GIT_ANALYSIS' | 'SAVING' | 'COMPLETED' | 'FAILED';
@@ -19,6 +20,7 @@ export function useAnalysisProgress() {
   const isTerminal = ref(false);
   const completedAnalysisId = ref<number | null>(null);
 
+  const { t } = useI18n();
   let eventSource: EventSource | null = null;
 
   function connect(analysisId: number) {
@@ -57,7 +59,7 @@ export function useAnalysisProgress() {
 
     eventSource.onerror = () => {
       if (!isTerminal.value) {
-        errorMessage.value = 'Connection to server lost.';
+        errorMessage.value = t('connection_lost');
         currentStep.value = 'FAILED';
         isTerminal.value = true;
       }

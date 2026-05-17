@@ -31,6 +31,7 @@ export default {
         'Enfoque Lógico/Procedural: La estructura de la aplicación se rige principalmente por lógica condicional y funciones independientes en lugar de jerarquías de clases complejas.',
     },
   },
+  analysis: 'Análisis',
   analysis_completed: 'Análisis Completado',
   analysis_failed: 'Análisis Fallido',
   analysis_in_progress: 'Análisis En Progreso',
@@ -161,6 +162,7 @@ export default {
   clear: 'Borrar',
   commits: 'Commits',
   completed: 'Completado',
+  connection_lost: 'Se perdió la conexión con el servidor.',
   confirm_delete_analysis: '¿Está seguro de que desea eliminar este análisis?',
   created_before: 'Antes de',
   created_after: 'Después de',
@@ -255,9 +257,13 @@ export default {
     deleting: {
       analysis: 'Análisis eliminado con éxito.',
     },
+    uploading: {
+      analysis: 'Análisis subido con éxito.',
+    },
   },
   summary: 'Resumen',
   upload: 'Subir',
   upload_analysis: 'Subir Análisis',
+  user: 'Usuario',
   view_results: 'Ver Resultados',
 };

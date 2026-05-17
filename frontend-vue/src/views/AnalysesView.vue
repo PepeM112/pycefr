@@ -114,6 +114,7 @@
 </template>
 <script setup lang="ts">
 import {
+  type AnalysisPublic,
   type AnalysisSummaryPublic,
   AnalysisSortColumn,
   AnalysisStatus,
@@ -150,7 +151,7 @@ import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 const snackbarStore = useSnackbarStore();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
-const analysesData = ref<AnalysisSummaryPublic[]>([]);
+const analysesData = ref<(AnalysisSummaryPublic | AnalysisPublic)[]>([]);
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
@@ -290,7 +291,7 @@ async function removeAnalysis(id: number = 0) {
   pagination.value.total -= 1;
 }
 
-function handleAnalysisCreated(analysis: AnalysisSummaryPublic) {
+function handleAnalysisCreated(analysis: AnalysisSummaryPublic | AnalysisPublic) {
   analysesData.value.unshift(analysis);
   pagination.value.total += 1;
 }
@@ -318,7 +319,7 @@ async function handleRetry(item: AnalysisSummaryPublic) {
     return;
   }
 
-  handleAnalysisCreated(data as unknown as AnalysisSummaryPublic);
+  handleAnalysisCreated(data);
   reconnectAnalysisId.value = data.id;
   reconnectAnalysisName.value = data.name;
   showNewAnalysisDialog.value = true;

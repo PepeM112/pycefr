@@ -2,11 +2,6 @@
   --border-radius: 0.5rem;
 }
 
-.v-theme--dark {
-  --v-border-color: 255, 0, 0; /* Formato RGB */
-  --v-border-opacity: 1;
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

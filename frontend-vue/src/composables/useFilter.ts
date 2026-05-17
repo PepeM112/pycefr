@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import type { LocationQuery } from 'vue-router';
 import { useQuery } from './useQuery';
 import type { FilterItem, FilterValue } from '@/types/filter';
 import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
@@ -19,11 +20,19 @@ export function useFilter(filterList: FilterItem[]) {
    * Maps filter values to their 'query' aliases defined in filterList.
    */
   const syncToUrl = () => {
-    let queryToUpdate: Record<string, any> = { ...route.query };
+    const queryToUpdate: LocationQuery = { ...route.query };
 
     filterList.forEach(item => {
       const serialized = serializeFilterValue(item, filters.value);
-      queryToUpdate = { ...queryToUpdate, ...serialized };
+      Object.entries(serialized).forEach(([key, val]) => {
+        if (val === undefined) {
+          delete queryToUpdate[key];
+        } else if (Array.isArray(val)) {
+          queryToUpdate[key] = val.map(String);
+        } else {
+          queryToUpdate[key] = String(val);
+        }
+      });
     });
 
     // Reset to page 1 when filters change

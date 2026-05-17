@@ -31,6 +31,7 @@ export default {
         'Procedural/Logic Focus: The application structure is driven primarily by conditional logic and standalone functions rather than heavy class hierarchies.',
     },
   },
+  analysis: 'Analysis',
   analysis_completed: 'Analysis Completed',
   analysis_failed: 'Analysis Failed',
   analysis_in_progress: 'Analysis In Progress',
@@ -161,6 +162,7 @@ export default {
   clear: 'Clear',
   commits: 'Commits',
   completed: 'Completed',
+  connection_lost: 'Connection to server lost.',
   confirm_delete_analysis: 'Are you sure you want to delete this analysis?',
   created_after: 'Created after',
   created_before: 'Created before',
@@ -255,9 +257,13 @@ export default {
     deleting: {
       analysis: 'Analysis deleted successfully.',
     },
+    uploading: {
+      analysis: 'Analysis uploaded successfully.',
+    },
   },
   summary: 'Summary',
   upload: 'Upload',
   upload_analysis: 'Upload Analysis',
+  user: 'User',
   view_results: 'View Results',
 };

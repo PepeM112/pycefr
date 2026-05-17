@@ -63,7 +63,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { type AnalysisSummaryPublic, createAnalysis } from '@/client';
+import { type AnalysisPublic, createAnalysis } from '@/client';
 import GInput from '@/components/GInput.vue';
 import AnalysisStepRow from '@/components/analysis/AnalysisStepRow.vue';
 import { type AnalysisStep, useAnalysisProgress } from '@/composables/useAnalysisProgress';
@@ -97,7 +97,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  created: [analysis: AnalysisSummaryPublic];
+  created: [analysis: AnalysisPublic];
   completed: [];
 }>();
 
@@ -217,7 +217,7 @@ async function handleSubmit() {
 
   activeAnalysisId.value = data.id;
   isRunning.value = true;
-  emit('created', data as unknown as AnalysisSummaryPublic);
+  emit('created', data);
   connect(data.id);
 }
 
