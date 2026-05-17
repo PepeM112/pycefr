@@ -31,6 +31,9 @@ export default {
         'Procedural/Logic Focus: The application structure is driven primarily by conditional logic and standalone functions rather than heavy class hierarchies.',
     },
   },
+  analysis_completed: 'Analysis Completed',
+  analysis_failed: 'Analysis Failed',
+  analysis_in_progress: 'Analysis In Progress',
   analysis_name: 'Analysis name',
   analysis_rules: {
     list_simple: 'List: Simple',
@@ -130,6 +133,7 @@ export default {
   apply: 'Apply',
   basic_handling: 'Basic Handling',
   cancel: 'Cancel',
+  close: 'Close',
   categories: {
     data_structs: 'Data Structs',
     functions: 'Functions',
@@ -204,6 +208,7 @@ export default {
   invalid_url_format: 'Invalid URL format',
   instances: 'Instances',
   github: 'GitHub',
+  include_git_analysis: 'Include git history analysis',
   last_update: 'Last update',
   level: 'Level',
   local: 'Local',
@@ -227,6 +232,11 @@ export default {
   spanish: 'Spanish',
   standard: 'Standard',
   status: 'Status',
+  step_analysing: 'Analysing code',
+  step_cloning: 'Cloning repository',
+  step_git_analysis: 'Analysing git history',
+  step_saving: 'Saving results',
+  step_validating: 'Validating repository',
   success: {
     creating: {
       analysis: 'Analysis created successfully.',
@@ -238,4 +248,5 @@ export default {
   summary: 'Summary',
   upload: 'Upload',
   upload_analysis: 'Upload Analysis',
+  view_results: 'View Results',
 };

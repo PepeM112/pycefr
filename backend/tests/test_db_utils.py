@@ -471,12 +471,18 @@ class TestUpdateAnalysisResults:
         assert result.repo is not None
         assert len(result.repo.contributors) == 2
 
-    def test_repo_none_raises_value_error(self, db: Path) -> None:
+    def test_repo_none_saves_code_only_analysis(self, db: Path) -> None:
         aid = self._create_stub()
         data = make_analysis_public(analysis_id=aid)
         data.repo = None
-        with pytest.raises(ValueError, match="repo data is None"):
-            update_analysis_results(aid, data)
+        update_analysis_results(aid, data)
+
+        conn = sqlite3.connect(str(db))
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT status, repo_name FROM analyses WHERE id = ?", (aid,)).fetchone()
+        conn.close()
+        assert row["status"] == AnalysisStatus.COMPLETED.value
+        assert row["repo_name"] is None
 
     def test_on_error_analysis_marked_failed(self, db: Path) -> None:
         aid = self._create_stub()

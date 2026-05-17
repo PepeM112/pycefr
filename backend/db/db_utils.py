@@ -357,8 +357,7 @@ class AnalysisRepository:
         with self._connect() as conn:
             cursor = conn.cursor()
             try:
-                if analysis_data.repo is None:
-                    raise ValueError("Cannot update analysis results: repo data is None")
+                repo = analysis_data.repo
 
                 cursor.execute(
                     """
@@ -371,21 +370,22 @@ class AnalysisRepository:
                     """,
                     (
                         analysis_data.status.value,
-                        analysis_data.repo.name,
-                        analysis_data.repo.description,
-                        analysis_data.repo.owner.name if analysis_data.repo.owner else None,
-                        analysis_data.repo.owner.github_user if analysis_data.repo.owner else None,
-                        analysis_data.repo.owner.avatar if analysis_data.repo.owner else None,
-                        analysis_data.repo.created_at.isoformat() if analysis_data.repo.created_at else None,
-                        analysis_data.repo.last_updated_at.isoformat() if analysis_data.repo.last_updated_at else None,
-                        sum(c.estimated_hours for c in analysis_data.repo.commits),
+                        repo.name if repo else None,
+                        repo.description if repo else None,
+                        repo.owner.name if repo and repo.owner else None,
+                        repo.owner.github_user if repo and repo.owner else None,
+                        repo.owner.avatar if repo and repo.owner else None,
+                        repo.created_at.isoformat() if repo and repo.created_at else None,
+                        repo.last_updated_at.isoformat() if repo and repo.last_updated_at else None,
+                        sum(c.estimated_hours for c in repo.commits) if repo else None,
                         analysis_id,
                     ),
                 )
 
                 self._insert_files(cursor, analysis_id, analysis_data.file_classes or [])
-                self._insert_commits(cursor, analysis_id, analysis_data.repo.commits)
-                self._insert_contributors(cursor, analysis_id, analysis_data.repo.contributors)
+                if repo:
+                    self._insert_commits(cursor, analysis_id, repo.commits)
+                    self._insert_contributors(cursor, analysis_id, repo.contributors)
 
                 conn.commit()
             except Exception as e:
