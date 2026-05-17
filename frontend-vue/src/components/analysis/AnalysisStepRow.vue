@@ -88,7 +88,7 @@ const connectorClass = computed(() => ({
 
 .step-connector {
   width: 2px;
-  min-height: 4px;
+  min-height: 8px;
   background-color: rgba(var(--v-border-color), var(--v-border-opacity));
   transition:
     background-color 0.3s ease,
@@ -96,11 +96,11 @@ const connectorClass = computed(() => ({
 }
 
 .step-row--expanded .step-connector {
-  min-height: 16px;
+  min-height: 20px;
 }
 
 .step-row--compact .step-connector {
-  min-height: 4px;
+  min-height: 8px;
 }
 
 .step-connector--success {

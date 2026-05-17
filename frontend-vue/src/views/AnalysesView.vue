@@ -61,7 +61,7 @@
                     v-bind="tooltipProps"
                     density="comfortable"
                     icon="mdi-reload"
-                    @click="() => (showNewAnalysisDialog = true)"
+                    @click="handleRetry(item)"
                   />
                 </template>
                 <span>{{ $t('retry') }}</span>
@@ -117,6 +117,7 @@ import {
   type AnalysisSummaryPublic,
   AnalysisSortColumn,
   AnalysisStatus,
+  createAnalysis,
   deleteAnalysis,
   downloadAnalysis,
   listAnalysis,
@@ -296,6 +297,31 @@ function handleAnalysisCreated(analysis: AnalysisSummaryPublic) {
 
 function handleAnalysisCompleted() {
   loadData();
+}
+
+async function handleRetry(item: AnalysisSummaryPublic) {
+  const { data, error } = await createAnalysis({
+    body: {
+      name: item.name || undefined,
+      repoUrl: item.repo?.url ?? '',
+      includeGit: true, // retry button only shows when item.repo?.url exists, which implies the original had git enabled
+    },
+  });
+
+  if (error || !data) {
+    snackbarStore.add({
+      text: 'error.creating.analysis',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
+    return;
+  }
+
+  handleAnalysisCreated(data as unknown as AnalysisSummaryPublic);
+  reconnectAnalysisId.value = data.id;
+  reconnectAnalysisName.value = data.name;
+  showNewAnalysisDialog.value = true;
 }
 
 function handleOpenProgress(item: AnalysisSummaryPublic) {

@@ -207,6 +207,7 @@ export default {
   invalid_email: 'Formato de email inválido',
   invalid_url_format: 'Formato de URL inválido',
   instances: 'Instancias',
+  git_analysis_not_included: 'El análisis git no fue incluido.',
   github: 'GitHub',
   include_git_analysis: 'Incluir análisis del historial git',
   last_update: 'Última actualización',
