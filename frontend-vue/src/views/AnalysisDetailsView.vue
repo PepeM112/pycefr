@@ -7,6 +7,9 @@
       <g-container class="mb-8" title="insights" expandable>
         <analysis-charts v-if="chartData && loaderStatus === LoadingStatus.IDLE" :data="chartData" :items="tableData" />
       </g-container>
+      <g-container v-if="analysisData?.repo" class="mb-8" title="repository" expandable>
+        <repo-section :repo="analysisData.repo" />
+      </g-container>
       <g-container title="properties">
         <div class="d-flex">
           <file-tree
@@ -63,6 +66,7 @@
 <script setup lang="ts">
 import { ClassId, getAnalysisDetail, Level, type AnalysisPublic } from '@/client';
 import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
+import RepoSection from '@/components/analysis/RepoSection.vue';
 import GContainer from '@/components/GContainer.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
