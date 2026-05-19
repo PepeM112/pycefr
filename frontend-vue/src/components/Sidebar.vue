@@ -48,9 +48,3 @@ function toggleSidebar() {
   showMenu.value = !showMenu.value;
 }
 </script>
-
-<style scoped lang="scss">
-.text-snow {
-  color: snow;
-}
-</style>

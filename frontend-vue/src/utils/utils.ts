@@ -1,4 +1,4 @@
-import { Level, Origin } from '@/client';
+import { AnalysisStatus, Level, Origin } from '@/client';
 
 // File Extensions
 export type FileExtension = 'py' | 'js' | 'ts' | 'vue' | 'html' | 'css' | 'json' | 'md';
@@ -32,26 +32,24 @@ export function getLevelColor(level: Level): string {
   return LEVEL_COLOR_MAP[level];
 }
 
-export function getStatusColor(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'success';
-    case 'in_progress':
-      return 'warning';
-    case 'failed':
-      return 'error';
-    default:
-      return 'grey';
-  }
+const STATUS_COLOR_MAP: Record<AnalysisStatus, string> = {
+  [AnalysisStatus.COMPLETED]: 'success',
+  [AnalysisStatus.IN_PROGRESS]: 'warning',
+  [AnalysisStatus.FAILED]: 'error',
+  [AnalysisStatus.DELETED]: 'grey',
+};
+
+export function getStatusColor(status: AnalysisStatus): string {
+  return STATUS_COLOR_MAP[status] ?? 'grey';
 }
 
+const ORIGIN_ICON_MAP: Record<Origin, string> = {
+  [Origin.GITHUB]: 'iconify:simple-icons:github',
+  [Origin.LOCAL]: 'mdi-laptop',
+  [Origin.USER]: 'mdi-account',
+  [Origin.UNKNOWN]: '',
+};
+
 export function getOriginIcon(origin: Origin): string {
-  switch (origin) {
-    case Origin.GITHUB:
-      return 'iconify:simple-icons:github';
-    case Origin.LOCAL:
-      return 'mdi-laptop';
-    default:
-      return '';
-  }
+  return ORIGIN_ICON_MAP[origin] ?? '';
 }

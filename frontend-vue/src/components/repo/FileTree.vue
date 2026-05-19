@@ -15,8 +15,7 @@
           <template #activator="{ props }">
             <v-btn
               v-bind="props"
-              class="px-2"
-              style="min-width: unset"
+              class="tree-icon-btn px-2"
               color="primary-on-surface"
               density="compact"
               variant="text"
@@ -28,29 +27,29 @@
               </v-icon>
             </v-btn>
           </template>
-          <span style="font-size: 0.75rem">
+          <span class="text-caption">
             {{ searchOptions.allowFilterByFiles ? $t('enable_filtering_by_files') : $t('disable_filtering_by_files') }}
           </span>
         </v-tooltip>
 
-        <div v-if="searchOptions.allowFilterByFiles" style="display: flex; gap: 0.5rem">
+        <div v-if="searchOptions.allowFilterByFiles" class="d-flex ga-2">
           <v-btn
             v-if="selectedNodes?.length"
+            class="tree-action-btn"
             color="primary-on-surface"
             density="compact"
             size="small"
             variant="text"
-            style="min-width: unset; height: 24px"
             @click="selectedNodes = []"
           >
             {{ $t('clear') }}
           </v-btn>
           <v-btn
+            class="tree-action-btn"
             color="primary-on-surface"
             density="compact"
             size="small"
             variant="text"
-            style="min-width: unset; height: 24px"
             @click="emit('update:selected', 'all')"
           >
             {{ $t('select_all') }}
@@ -116,6 +115,15 @@ function toggleAllowFilterByFiles() {
 .file-tree-header {
   border-bottom: 1px solid rgba(var(--v-theme-border-color), 0.5);
   padding: 1rem 1rem 0.5rem 0.5rem;
+}
+
+.tree-icon-btn {
+  min-width: unset;
+}
+
+.tree-action-btn {
+  min-width: unset;
+  height: 24px;
 }
 
 .node-title {

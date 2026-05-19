@@ -1,9 +1,9 @@
 <template>
   <page-view :header="$t('summary')">
     <generic-loader :model-value="loadingStatus">
-      <v-row gutter="16">
+      <v-row>
         <v-col v-for="(analysis, index) in analysesData" :key="index" cols="12" sm="6" md="4">
-          <analysis-card :modelValue="analysis" @delete="removeAnalysis(analysis.id)" />
+          <analysis-card :modelValue="analysis" @delete="handleDelete(analysis.id)" />
         </v-col>
       </v-row>
     </generic-loader>
@@ -11,15 +11,17 @@
 </template>
 <script setup lang="ts">
 import type { AnalysisSummaryPublic } from '@/client';
-import { deleteAnalysis, listAnalysis } from '@/client';
+import { listAnalysis } from '@/client';
 import AnalysisCard from '@/components/analysis/AnalysisCard.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
 import PageView from '@/components/PageView.vue';
+import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useSnackbarStore } from '@/stores/snackbarStore';
 import { LoadingStatus } from '@/types/loading';
 import { onMounted, ref } from 'vue';
 
 const snackbarStore = useSnackbarStore();
+const { removeAnalysis } = useAnalysisDelete();
 
 const analysesData = ref<AnalysisSummaryPublic[]>([]);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
@@ -49,52 +51,14 @@ async function loadData() {
   loadingStatus.value = analysesData.value.length === 0 ? LoadingStatus.EMPTY : LoadingStatus.IDLE;
 }
 
-async function removeAnalysis(id: number = 0) {
-  if (!id) return;
-
-  const { error } = await deleteAnalysis({
-    path: { analysis_id: id },
-  });
-
-  if (error) {
-    console.error('error.deleting.analysis:', error);
-    snackbarStore.add({
-      text: 'error.deleting.analysis',
-      color: 'error',
-      icon: 'mdi-alert-circle-outline',
-      closable: true,
-    });
-    return;
+async function handleDelete(id: number) {
+  const success = await removeAnalysis(id);
+  if (success) {
+    analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
   }
-
-  snackbarStore.add({
-    text: 'success.deleting.analysis',
-    color: 'success',
-    icon: 'mdi-check-circle-outline',
-    closable: true,
-  });
-
-  analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
 }
 
 onMounted(async () => {
   await loadData();
 });
 </script>
-<style lang="scss" scoped>
-.description {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.25;
-  font-size: 0.875rem;
-  height: 2.5em;
-  color: rgb(var(--v-theme-on-surface), 0.7);
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-</style>

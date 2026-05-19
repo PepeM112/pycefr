@@ -3,18 +3,6 @@ import { type ComposerTranslation } from 'vue-i18n';
 
 export type Enum = Record<string, string | number>;
 
-export function isEnum(value: unknown): value is Enum {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const values = Object.values(value);
-  if (values.length === 0) return true;
-
-  const typeOfFirstValue = typeof values[0];
-
-  if (typeOfFirstValue !== 'string' && typeOfFirstValue !== 'number') return false;
-  return values.every(v => typeof v === typeOfFirstValue);
-}
-
 interface BuildListOptions {
   sort?: boolean;
   labelTransform?: (label: string) => string;

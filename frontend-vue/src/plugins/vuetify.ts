@@ -5,8 +5,6 @@ import 'vuetify/dist/vuetify.min.css';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
 import * as labsComponents from 'vuetify/labs/components';
 
-const savedTheme = localStorage.getItem('theme') || 'light';
-
 export default createVuetify({
   icons: {
     defaultSet: 'mdi',
@@ -48,7 +46,7 @@ export default createVuetify({
     },
   },
   theme: {
-    defaultTheme: savedTheme,
+    defaultTheme: 'light',
     themes: {
       light: {
         dark: false,

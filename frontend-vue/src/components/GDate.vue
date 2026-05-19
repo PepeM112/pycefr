@@ -1,7 +1,7 @@
 <template>
-  <v-tooltip>
-    <template #activator="{ props }">
-      <span v-bind="props" class="app-date">
+  <v-tooltip :disabled="!props.date">
+    <template #activator="{ props: tooltipProps }">
+      <span v-bind="tooltipProps" class="app-date">
         {{ displayDate }}
       </span>
     </template>
@@ -27,14 +27,12 @@ const props = withDefaults(
 );
 
 const displayDate = computed(() => {
-  // @ts-expect-error -> unused variable, needed to trigger re-computation when locale changes
-  const l = locale.value;
+  void locale.value;
   return formatDate(props.date, props.format, props.relative);
 });
 
 const tooltipDate = computed(() => {
-  // @ts-expect-error -> unused variable, needed to trigger re-computation when locale changes
-  const l = locale.value;
+  void locale.value;
   return formatDate(props.date, 'LLL');
 });
 </script>

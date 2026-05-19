@@ -45,7 +45,9 @@ type FlattenedNode = TreeNode & {
   hasChildren: boolean;
 };
 
-const emit = defineEmits(['update:selected']);
+const emit = defineEmits<{
+  'update:selected': [value: number[]];
+}>();
 
 const props = withDefaults(
   defineProps<{

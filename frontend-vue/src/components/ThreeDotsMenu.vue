@@ -37,4 +37,3 @@ const props = withDefaults(
   }
 );
 </script>
-<style></style>

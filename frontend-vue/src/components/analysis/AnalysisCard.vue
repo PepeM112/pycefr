@@ -59,6 +59,12 @@
           </div>
         </dl>
       </template>
+      <template v-else>
+        <p style="font-size: 0.875rem; color: rgba(var(--v-theme-on-surface), 0.5)">
+          <v-icon class="mr-2" icon="mdi-source-branch-remove" />
+          {{ $t('git_analysis_not_included') }}
+        </p>
+      </template>
     </v-sheet>
 
     <v-spacer />

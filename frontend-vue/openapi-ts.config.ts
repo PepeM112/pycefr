@@ -17,9 +17,5 @@ export default defineConfig({
       name: '@hey-api/sdk',
       transformer: true,
     },
-    {
-      dates: true,
-      name: '@hey-api/transformers',
-    },
   ],
 });

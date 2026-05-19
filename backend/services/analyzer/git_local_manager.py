@@ -220,7 +220,8 @@ class GitLocalManager:
         if email.endswith("@users.noreply.github.com"):
             local = email.split("@")[0]
             return local.split("+", 1)[-1] if "+" in local else local
-        return name
+        # Fallback: name may contain spaces which are invalid in GitHub usernames
+        return name.replace(" ", "")
 
     @staticmethod
     def _build_avatar_url(github_user: str) -> str:

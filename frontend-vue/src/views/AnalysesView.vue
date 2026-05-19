@@ -61,7 +61,7 @@
                     v-bind="tooltipProps"
                     density="comfortable"
                     icon="mdi-reload"
-                    @click="() => (showNewAnalysisDialog = true)"
+                    @click="handleRetry(item)"
                   />
                 </template>
                 <span>{{ $t('retry') }}</span>
@@ -106,7 +106,7 @@
         title="delete_analysis"
         text="confirm_delete_analysis"
         width="400"
-        @confirm-pre="() => removeAnalysis(analysisBeingDeleted)"
+        @confirm-pre="() => handleDeleteAnalysis(analysisBeingDeleted)"
         @close-pre="() => (analysisBeingDeleted = undefined)"
       />
     </g-container>
@@ -114,10 +114,11 @@
 </template>
 <script setup lang="ts">
 import {
+  type AnalysisPublic,
   type AnalysisSummaryPublic,
   AnalysisSortColumn,
   AnalysisStatus,
-  deleteAnalysis,
+  createAnalysis,
   downloadAnalysis,
   listAnalysis,
   Origin,
@@ -132,6 +133,7 @@ import GTable from '@/components/GTable.vue';
 import NewAnalysisDialog from '@/components/analysis/NewAnalysisDialog.vue';
 import PageView from '@/components/PageView.vue';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useFilter } from '@/composables/useFilter';
 import { useSorting } from '@/composables/useSorting';
@@ -147,13 +149,13 @@ import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 
 const snackbarStore = useSnackbarStore();
+const { removeAnalysis } = useAnalysisDelete();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
-const analysesData = ref<AnalysisSummaryPublic[]>([]);
+const analysesData = ref<(AnalysisSummaryPublic | AnalysisPublic)[]>([]);
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
-const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
 const reconnectAnalysisId = ref<number | null>(null);
 const reconnectAnalysisName = ref<string | undefined>(undefined);
@@ -259,17 +261,36 @@ async function loadData() {
   pagination.value = data.pagination;
 }
 
-async function removeAnalysis(id: number = 0) {
-  if (!id) return;
+async function handleDeleteAnalysis(id: number = 0) {
+  const success = await removeAnalysis(id);
+  if (!success) return;
 
-  const { error } = await deleteAnalysis({
-    path: { analysis_id: id },
+  analysisBeingDeleted.value = undefined;
+  analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
+  pagination.value.total -= 1;
+}
+
+function handleAnalysisCreated(analysis: AnalysisSummaryPublic | AnalysisPublic) {
+  analysesData.value.unshift(analysis);
+  pagination.value.total += 1;
+}
+
+function handleAnalysisCompleted() {
+  loadData();
+}
+
+async function handleRetry(item: AnalysisSummaryPublic) {
+  const { data, error } = await createAnalysis({
+    body: {
+      name: item.name || undefined,
+      repoUrl: item.repo?.url ?? '',
+      includeGit: true, // retry button only shows when item.repo?.url exists, which implies the original had git enabled
+    },
   });
 
-  if (error) {
-    console.error('error.deleting.analysis:', error);
+  if (error || !data) {
     snackbarStore.add({
-      text: 'error.deleting.analysis',
+      text: 'error.creating.analysis',
       color: 'error',
       icon: 'mdi-alert-circle-outline',
       closable: true,
@@ -277,25 +298,10 @@ async function removeAnalysis(id: number = 0) {
     return;
   }
 
-  snackbarStore.add({
-    text: 'success.deleting.analysis',
-    color: 'success',
-    icon: 'mdi-check-circle-outline',
-    closable: true,
-  });
-
-  analysisBeingDeleted.value = undefined;
-  analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
-  pagination.value.total -= 1;
-}
-
-function handleAnalysisCreated(analysis: AnalysisSummaryPublic) {
-  analysesData.value.unshift(analysis);
-  pagination.value.total += 1;
-}
-
-function handleAnalysisCompleted() {
-  loadData();
+  handleAnalysisCreated(data);
+  reconnectAnalysisId.value = data.id;
+  reconnectAnalysisName.value = data.name;
+  showNewAnalysisDialog.value = true;
 }
 
 function handleOpenProgress(item: AnalysisSummaryPublic) {
@@ -307,13 +313,9 @@ function handleOpenProgress(item: AnalysisSummaryPublic) {
 async function handleUpload() {
   if (!fileToUpload.value) return;
 
-  isUploading.value = true;
-
   const { data, error } = await uploadAnalysis({
     body: { file: fileToUpload.value[0] as File },
   });
-
-  isUploading.value = false;
 
   if (error) {
     snackbarStore.add({
