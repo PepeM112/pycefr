@@ -26,7 +26,7 @@
                 density="compact"
                 variant="outlined"
                 placeholder="Search..."
-                :append-inner-icon="'mdi-magnify'"
+                append-inner-icon="mdi-magnify"
                 hide-details
                 max-width="240"
                 min-width="240"
@@ -52,7 +52,7 @@
                 {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
-                <span class="level-bubble" :style="[{ backgroundColor: getLevelColor(item.level as Level) }]">
+                <span class="level-bubble" :style="{ backgroundColor: getLevelColor(item.level as Level) }">
                   {{ $t(Enums.getLabel(Level, item.level)) }}
                 </span>
               </template>

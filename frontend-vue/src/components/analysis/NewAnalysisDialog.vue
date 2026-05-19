@@ -66,7 +66,7 @@ import { useRouter } from 'vue-router';
 import { type AnalysisPublic, createAnalysis } from '@/client';
 import GInput from '@/components/GInput.vue';
 import AnalysisStepRow from '@/components/analysis/AnalysisStepRow.vue';
-import { type AnalysisStep, useAnalysisProgress } from '@/composables/useAnalysisProgress';
+import { type AnalysisStep, useAnalysisProgress } from '@/composables/analysis/useAnalysisProgress';
 import { useRules } from '@/composables/useRules';
 import { useSnackbarStore } from '@/stores/snackbarStore';
 import { RouteNames } from '@/router/route-names';

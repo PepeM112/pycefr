@@ -21,13 +21,18 @@ export const usePagination = (options: PaginationOptions = {}) => {
       total: total.value,
     }),
     set: newVal => {
-      const query = { ...route.query };
-      // If perPage changes, reset to page 1
-      query.p = (Number(route.query.pp) || defaultPerPage) !== newVal.perPage ? '1' : String(newVal.page);
-      query.pp = String(newVal.perPage);
-
       total.value = newVal.total;
-      router.push({ query });
+
+      const currentPage = Number(route.query.p) || 1;
+      const currentPerPage = Number(route.query.pp) || defaultPerPage;
+      const nextPage = currentPerPage !== newVal.perPage ? 1 : newVal.page;
+
+      if (nextPage === currentPage && newVal.perPage === currentPerPage) return;
+
+      const query = { ...route.query };
+      query.p = String(nextPage);
+      query.pp = String(newVal.perPage);
+      router.replace({ query });
     },
   });
 };

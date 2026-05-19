@@ -106,7 +106,7 @@
         title="delete_analysis"
         text="confirm_delete_analysis"
         width="400"
-        @confirm-pre="() => removeAnalysis(analysisBeingDeleted)"
+        @confirm-pre="() => handleDeleteAnalysis(analysisBeingDeleted)"
         @close-pre="() => (analysisBeingDeleted = undefined)"
       />
     </g-container>
@@ -119,7 +119,6 @@ import {
   AnalysisSortColumn,
   AnalysisStatus,
   createAnalysis,
-  deleteAnalysis,
   downloadAnalysis,
   listAnalysis,
   Origin,
@@ -134,6 +133,7 @@ import GTable from '@/components/GTable.vue';
 import NewAnalysisDialog from '@/components/analysis/NewAnalysisDialog.vue';
 import PageView from '@/components/PageView.vue';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useFilter } from '@/composables/useFilter';
 import { useSorting } from '@/composables/useSorting';
@@ -149,13 +149,13 @@ import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 
 const snackbarStore = useSnackbarStore();
+const { removeAnalysis } = useAnalysisDelete();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
 
 const analysesData = ref<(AnalysisSummaryPublic | AnalysisPublic)[]>([]);
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
-const isUploading = ref<boolean>(false);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
 const reconnectAnalysisId = ref<number | null>(null);
 const reconnectAnalysisName = ref<string | undefined>(undefined);
@@ -261,30 +261,9 @@ async function loadData() {
   pagination.value = data.pagination;
 }
 
-async function removeAnalysis(id: number = 0) {
-  if (!id) return;
-
-  const { error } = await deleteAnalysis({
-    path: { analysis_id: id },
-  });
-
-  if (error) {
-    console.error('error.deleting.analysis:', error);
-    snackbarStore.add({
-      text: 'error.deleting.analysis',
-      color: 'error',
-      icon: 'mdi-alert-circle-outline',
-      closable: true,
-    });
-    return;
-  }
-
-  snackbarStore.add({
-    text: 'success.deleting.analysis',
-    color: 'success',
-    icon: 'mdi-check-circle-outline',
-    closable: true,
-  });
+async function handleDeleteAnalysis(id: number = 0) {
+  const success = await removeAnalysis(id);
+  if (!success) return;
 
   analysisBeingDeleted.value = undefined;
   analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
@@ -334,13 +313,9 @@ function handleOpenProgress(item: AnalysisSummaryPublic) {
 async function handleUpload() {
   if (!fileToUpload.value) return;
 
-  isUploading.value = true;
-
   const { data, error } = await uploadAnalysis({
     body: { file: fileToUpload.value[0] as File },
   });
-
-  isUploading.value = false;
 
   if (error) {
     snackbarStore.add({

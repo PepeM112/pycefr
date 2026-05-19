@@ -14,9 +14,10 @@ export function groupClassesBySelection(
 
   const groupingMap = new Map<number, AnalysisClassPublicWithLevel>();
 
-  for (const file of fileClasses) {
-    if (!selectedFilePaths.has(file.filename)) continue;
-    for (const item of file.classes ?? []) {
+  fileClasses
+    .filter(file => selectedFilePaths.has(file.filename))
+    .flatMap(file => file.classes ?? [])
+    .forEach(item => {
       const existing = groupingMap.get(item.classId);
       if (existing) {
         existing.instances += item.instances;
@@ -27,8 +28,7 @@ export function groupClassesBySelection(
           level: getClassLevel(item.classId),
         });
       }
-    }
-  }
+    });
 
   return Array.from(groupingMap.values());
 }

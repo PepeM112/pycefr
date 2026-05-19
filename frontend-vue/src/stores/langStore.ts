@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue';
-import dayjs from 'dayjs';
 import 'dayjs/locale/en';
 import 'dayjs/locale/es';
 import { defineStore } from 'pinia';
@@ -16,12 +15,6 @@ export const LANGUAGE_OPTIONS = [
 
 export type LanguageCode = (typeof LANGUAGE_OPTIONS)[number]['code'];
 
-export interface LanguageOption {
-  code: LanguageCode;
-  label: string;
-  flag: string;
-}
-
 export const useLangStore = defineStore('lang', () => {
   const currentLang = ref<LanguageCode>(
     (localStorage.getItem('user-lang') || navigator.language.split('-')[0] || 'en') as LanguageCode
@@ -35,7 +28,6 @@ export const useLangStore = defineStore('lang', () => {
     const exists = LANGUAGE_OPTIONS.some(opt => opt.code === lang);
     if (exists) {
       currentLang.value = lang;
-      dayjs.locale(lang);
       localStorage.setItem('user-lang', lang);
     }
   }

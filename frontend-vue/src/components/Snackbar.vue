@@ -50,7 +50,7 @@ const snackbarStore = useSnackbarStore();
 
 const active = computed(() => snackbarStore.messages.length > 0);
 
-const displayMessages = computed(() => [...snackbarStore.messages].reverse().slice(0, 5));
+const displayMessages = computed(() => [...snackbarStore.messages].reverse());
 </script>
 
 <style scoped>

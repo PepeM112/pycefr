@@ -191,10 +191,6 @@ watch(
 </script>
 
 <style lang="scss" scoped>
-.filter-field {
-  width: 100%;
-}
-
 :deep(.v-field) {
   display: flex;
   align-items: center;
