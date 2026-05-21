@@ -10,7 +10,7 @@
         <v-card-text class="px-4">
           <v-form v-model="isFormValid" class="d-flex flex-column ga-4">
             <g-input label="analysis_name">
-              <v-text-field v-model="form.name" />
+              <v-text-field v-model="form.name" :placeholder="$t('analysis_name_placeholder')" />
             </g-input>
             <g-input label="repository_url" required>
               <v-text-field v-model="form.repoUrl" :rules="[rules.required, rules.url]" />

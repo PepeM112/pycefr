@@ -49,14 +49,8 @@ init-db: ## Wipe database and create a fresh one from schema.sql
 	@sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
 	@echo "Done"
 
-seed: ## Wipe data and fill database with test data (initialize_db.sql)
-	@echo "Seeding database with test data..."
-	@if [ ! -f "$(DB_SQLITE_PATH)" ]; then \
-		echo "Error: Database file not found"; \
-		exit 1; \
-	fi
-	@sqlite3 $(DB_SQLITE_PATH) ".read backend/db/initialize_db.sql"
-	@echo "Done"
+seed: ## Seed database with real analyses from well-known repos (backend must be running)
+	@$(PYTHON_VENV)/bin/python scripts/seed.py
 
 db-shell: ## Open SQLite interactive shell
 	@sqlite3 $(DB_SQLITE_PATH)

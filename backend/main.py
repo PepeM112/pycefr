@@ -1,11 +1,14 @@
 import logging
 import sys
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.logging import DefaultFormatter
 
 from backend.api import analysis_routes, common, labels
+from backend.db import db_utils
 
 # --- LOGGING CONFIGURATION ---
 formatter = DefaultFormatter(fmt="%(levelprefix)-10s %(message)s", use_colors=True)
@@ -17,8 +20,17 @@ root_logger.handlers = []
 root_logger.addHandler(console_handler)
 root_logger.setLevel(logging.INFO)
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    db_utils.mark_orphaned_analyses_as_failed()
+    yield
+
+
 app = FastAPI(
-    title="PyCEFR API", description="API for Python code complexity analysis and CEFR classification.", version="1.0.0"
+    title="PyCEFR API",
+    description="API for Python code complexity analysis and CEFR classification.",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # --- MIDDLEWARE ---
