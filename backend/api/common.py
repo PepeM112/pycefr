@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from backend.db.db_utils import get_unique_owners
+from backend.db.db_utils import get_all_tags, get_unique_owners
 from backend.models.schemas.common import EntityLabelString
 
 logger = logging.getLogger(__name__)
@@ -41,4 +41,16 @@ def get_owners(search: str | None = None, limit: int | None = None) -> List[Enti
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error retrieving owners",
+        ) from e
+
+
+@router.get("/tags", response_model=List[str], operation_id="get_tags")
+def get_tags(search: str | None = None, limit: int | None = None) -> List[str]:
+    try:
+        return get_all_tags(search, limit)
+    except Exception as e:
+        logger.error(f"Error retrieving tags: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving tags",
         ) from e

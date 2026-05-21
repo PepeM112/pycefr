@@ -4,6 +4,11 @@
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
     <generic-loader :model-value="loaderStatus">
+      <div v-if="analysisData?.tags?.length" class="d-flex ga-1 flex-wrap mb-6">
+        <v-chip v-for="tag in analysisData.tags" :key="tag" size="small" label>
+          {{ tag }}
+        </v-chip>
+      </div>
       <g-container class="mb-8" title="insights" expandable>
         <analysis-charts v-if="chartData && loaderStatus === LoadingStatus.IDLE" :data="chartData" :items="tableData" />
       </g-container>

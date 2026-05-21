@@ -33,6 +33,7 @@ class AnalysisPublic(BaseSchema):
     file_classes: List[AnalysisFilePublic] = []
     created_at: datetime
     repo: RepoPublic | None = None
+    tags: List[str] = []
 
 
 class AnalysisSummaryPublic(BaseSchema):
@@ -43,12 +44,19 @@ class AnalysisSummaryPublic(BaseSchema):
     error_message: str | None = None
     created_at: datetime
     repo: RepoSummaryPublic | None = None
+    tags: List[str] = []
 
 
 class AnalysisCreate(BaseSchema):
     name: str | None = None
     repo_url: str
     include_git: bool = True
+    tags: List[str] = []
+
+
+class AnalysisUpdate(BaseSchema):
+    name: str | None = None
+    tags: List[str] | None = None
 
 
 class AnalysisSortColumn(NamedIntEnum):
@@ -66,3 +74,4 @@ class AnalysisFilters(BaseSchema):
     status: List[AnalysisStatus] | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None
+    tags: List[str] | None = None

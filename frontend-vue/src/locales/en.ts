@@ -192,11 +192,16 @@ export default {
       analysis_data: 'Error fetching analysis data.',
       owners: 'Error fetching owners.',
       summary: 'Error fetching summary.',
+      tags: 'Error fetching tags.',
+    },
+    updating: {
+      analysis: 'Error updating analysis.',
     },
     uploading: {
       analysis: 'Error uploading analysis.',
     },
   },
+  edit_analysis: 'Edit Analysis',
   error_during_analysis: 'An error occurred during analysis.',
   error_message: 'Error message',
   failed: 'Failed',
@@ -257,11 +262,15 @@ export default {
     deleting: {
       analysis: 'Analysis deleted successfully.',
     },
+    updating: {
+      analysis: 'Analysis updated successfully.',
+    },
     uploading: {
       analysis: 'Analysis uploaded successfully.',
     },
   },
   summary: 'Summary',
+  tags: 'Tags',
   upload: 'Upload',
   upload_analysis: 'Upload Analysis',
   user: 'User',

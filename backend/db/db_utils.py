@@ -14,6 +14,7 @@ from backend.models.schemas.analysis import (
     AnalysisSortColumn,
     AnalysisStatus,
     AnalysisSummaryPublic,
+    AnalysisUpdate,
 )
 from backend.models.schemas.class_model import ClassId
 from backend.models.schemas.common import EntityLabelString, Origin, SortDirection, Sorting
@@ -115,6 +116,36 @@ class AnalysisRepository:
         )
 
     @staticmethod
+    def _insert_tags(cursor: sqlite3.Cursor, analysis_id: int, tags: List[str]) -> None:
+        if not tags:
+            return
+        cursor.executemany(
+            "INSERT OR IGNORE INTO analysis_tags (analysis_id, tag) VALUES (?, ?)",
+            [(analysis_id, tag.strip()) for tag in tags if tag.strip()],
+        )
+
+    @staticmethod
+    def _get_tags_for_analysis(cursor: sqlite3.Cursor, analysis_id: int) -> List[str]:
+        rows = cursor.execute(
+            "SELECT tag FROM analysis_tags WHERE analysis_id = ? ORDER BY tag", (analysis_id,)
+        ).fetchall()
+        return [row["tag"] for row in rows]
+
+    @staticmethod
+    def _get_tags_for_analyses(cursor: sqlite3.Cursor, analysis_ids: List[int]) -> dict[int, List[str]]:
+        if not analysis_ids:
+            return {}
+        placeholders = ",".join("?" * len(analysis_ids))
+        rows = cursor.execute(
+            f"SELECT analysis_id, tag FROM analysis_tags WHERE analysis_id IN ({placeholders}) ORDER BY tag",
+            analysis_ids,
+        ).fetchall()
+        tags_map: dict[int, List[str]] = {aid: [] for aid in analysis_ids}
+        for row in rows:
+            tags_map[row["analysis_id"]].append(row["tag"])
+        return tags_map
+
+    @staticmethod
     def _insert_contributors(
         cursor: sqlite3.Cursor, analysis_id: int, contributors: List[GitHubContributorPublic]
     ) -> None:
@@ -187,6 +218,11 @@ class AnalysisRepository:
                 where_clauses.append("created_at <= ?")
                 params.append(filters.date_to.isoformat())
 
+            if filters.tags:
+                tag_placeholders = ",".join("?" * len(filters.tags))
+                where_clauses.append(f"id IN (SELECT analysis_id FROM analysis_tags WHERE tag IN ({tag_placeholders}))")
+                params.extend(filters.tags)
+
         where_sql = " AND ".join(where_clauses)
 
         with self._connect() as conn:
@@ -197,6 +233,9 @@ class AnalysisRepository:
             ).fetchall()
 
             total = cursor.execute(f"SELECT COUNT(*) FROM analyses WHERE {where_sql}", params).fetchone()[0]
+
+            analysis_ids = [row["id"] for row in rows]
+            tags_map = self._get_tags_for_analyses(cursor, analysis_ids)
 
             return [
                 AnalysisSummaryPublic(
@@ -214,6 +253,7 @@ class AnalysisRepository:
                         last_updated_at=self._parse_dt(row["repo_last_update"]),
                         owner=self._map_owner(row),
                     ),
+                    tags=tags_map.get(row["id"], []),
                 )
                 for row in rows
             ], total
@@ -258,6 +298,8 @@ class AnalysisRepository:
 
             owner = self._map_owner(row)
 
+            tags = self._get_tags_for_analysis(cursor, analysis_id)
+
             return AnalysisPublic(
                 id=row["id"],
                 name=row["name"],
@@ -276,6 +318,7 @@ class AnalysisRepository:
                     commits=commits,
                     contributors=contributors,
                 ),
+                tags=tags,
             )
 
     def get_unique_owners(self, search_query: str | None = None, limit: int | None = None) -> List[EntityLabelString]:
@@ -330,11 +373,13 @@ class AnalysisRepository:
                         now_utc.isoformat(),
                     ),
                 )
-                conn.commit()
                 analysis_id = cursor.lastrowid
 
                 if analysis_id is None:
                     raise sqlite3.Error("Failed to retrieve lastrowid after INSERT")
+
+                self._insert_tags(cursor, analysis_id, analysis.tags)
+                conn.commit()
 
                 logger.info(f"Empty analysis record created with ID: {analysis_id} for repo: {analysis.repo_url}")
                 return AnalysisPublic(
@@ -345,6 +390,7 @@ class AnalysisRepository:
                     created_at=now_utc,
                     file_classes=[],
                     repo=RepoPublic(url=analysis.repo_url, name=repo_name, owner=None, commits=[], contributors=[]),
+                    tags=analysis.tags,
                 )
         except sqlite3.Error as e:
             logger.error(f"Database error while creating empty analysis: {e}")
@@ -413,6 +459,48 @@ class AnalysisRepository:
         except sqlite3.Error as e:
             logger.error(f"Database error while marking analysis {analysis_id} as failed: {e}")
 
+    def update_analysis(self, analysis_id: int, update: AnalysisUpdate) -> bool:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            row = cursor.execute(
+                "SELECT id FROM analyses WHERE id = ? AND status != 'deleted'", (analysis_id,)
+            ).fetchone()
+            if not row:
+                return False
+
+            if update.name is not None:
+                cursor.execute("UPDATE analyses SET name = ? WHERE id = ?", (update.name, analysis_id))
+
+            if update.tags is not None:
+                cursor.execute("DELETE FROM analysis_tags WHERE analysis_id = ?", (analysis_id,))
+                self._insert_tags(cursor, analysis_id, update.tags)
+
+            conn.commit()
+            return True
+
+    def get_all_tags(self, search: str | None = None, limit: int | None = None) -> List[str]:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT DISTINCT tag FROM analysis_tags
+                JOIN analyses ON analyses.id = analysis_tags.analysis_id
+                WHERE analyses.status != 'deleted'
+            """
+            params: List[str] = []
+
+            if search:
+                query += " AND tag LIKE ?"
+                params.append(f"%{search}%")
+
+            query += " ORDER BY tag"
+
+            if limit is not None:
+                query += " LIMIT ?"
+                params.append(str(limit))
+
+            rows = cursor.execute(query, params).fetchall()
+            return [row["tag"] for row in rows]
+
     def upload_analysis_data(self, analysis_data: AnalysisPublic) -> AnalysisPublic | None:
         with self._connect() as conn:
             cursor = conn.cursor()
@@ -459,6 +547,8 @@ class AnalysisRepository:
                 if repo:
                     self._insert_commits(cursor, new_analysis_id, repo.commits)
                     self._insert_contributors(cursor, new_analysis_id, repo.contributors)
+
+                self._insert_tags(cursor, new_analysis_id, analysis_data.tags)
 
                 conn.commit()
                 analysis_data.id = new_analysis_id
@@ -516,3 +606,11 @@ def get_unique_owners(search_query: str | None = None, limit: int | None = None)
 
 def upload_analysis_data(analysis_data: AnalysisPublic) -> AnalysisPublic | None:
     return _repo.upload_analysis_data(analysis_data)
+
+
+def update_analysis(analysis_id: int, update: AnalysisUpdate) -> bool:
+    return _repo.update_analysis(analysis_id, update)
+
+
+def get_all_tags(search: str | None = None, limit: int | None = None) -> List[str]:
+    return _repo.get_all_tags(search, limit)
