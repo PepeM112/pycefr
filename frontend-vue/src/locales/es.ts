@@ -36,6 +36,7 @@ export default {
   analysis_failed: 'Análisis Fallido',
   analysis_in_progress: 'Análisis En Progreso',
   analysis_name: 'Nombre del análisis',
+  analysis_name_placeholder: 'Autogenerado si se deja vacío',
   analysis_rules: {
     list_simple: 'Lista simple',
     list_nested: 'Lista anidada',

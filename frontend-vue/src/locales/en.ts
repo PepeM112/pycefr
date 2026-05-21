@@ -36,6 +36,7 @@ export default {
   analysis_failed: 'Analysis Failed',
   analysis_in_progress: 'Analysis In Progress',
   analysis_name: 'Analysis name',
+  analysis_name_placeholder: 'Auto-generated if empty',
   analysis_rules: {
     list_simple: 'List: Simple',
     list_nested: 'List: Nested',
