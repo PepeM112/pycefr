@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS analysis_tags;
 DROP TABLE IF EXISTS repo_contributors;
 DROP TABLE IF EXISTS repo_commits;
 DROP TABLE IF EXISTS analysis_file_classes;
@@ -66,6 +67,15 @@ CREATE TABLE repo_contributors (
     contributions INTEGER DEFAULT 0,
     FOREIGN KEY (analysis_id) REFERENCES analyses (id) ON DELETE CASCADE
 );
+CREATE TABLE analysis_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    analysis_id INTEGER NOT NULL,
+    tag TEXT NOT NULL,
+    FOREIGN KEY (analysis_id) REFERENCES analyses(id) ON DELETE CASCADE,
+    UNIQUE(analysis_id, tag)
+);
 CREATE INDEX idx_analysis_status ON analyses(status);
 CREATE INDEX idx_files_analysis_id ON analysis_files(analysis_id);
 CREATE INDEX idx_classes_file_id ON analysis_file_classes(file_id);
+CREATE INDEX idx_tags_analysis_id ON analysis_tags(analysis_id);
+CREATE INDEX idx_tags_tag ON analysis_tags(tag);

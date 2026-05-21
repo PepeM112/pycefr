@@ -18,6 +18,7 @@ from backend.models.schemas.analysis import (
     AnalysisSortColumn,
     AnalysisStatus,
     AnalysisSummaryPublic,
+    AnalysisUpdate,
 )
 from backend.models.schemas.common import PaginatedResponse, Pagination, SortDirection, Sorting
 from backend.services.analyzer.analyzer import Analyzer, clone_and_analyse
@@ -41,6 +42,7 @@ def list_analysis(
     ] = None,
     date_from: Annotated[datetime | None, Query(description="Created after (ISO format)")] = None,
     date_to: Annotated[datetime | None, Query(description="Created before (ISO format)")] = None,
+    tags: Annotated[List[str] | None, Query(description="Filter by tags")] = None,
 ) -> PaginatedResponse[AnalysisSummaryPublic]:
     """
     Retrieve a paginated and filtered list of all analyses.
@@ -55,6 +57,7 @@ def list_analysis(
         analysis_status: List of statuses to filter by.
         date_from: Start date filter.
         date_to: End date filter.
+        tags: List of tags to filter by (matches analyses with ANY of the given tags).
 
     Returns:
         PaginatedResponse: Containing the requested elements and metadata.
@@ -69,6 +72,7 @@ def list_analysis(
             status=analysis_status,
             date_from=date_from,
             date_to=date_to,
+            tags=tags,
         )
 
         data, total = db_utils.get_analyses(
@@ -143,6 +147,10 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
     Returns:
         AnalysisPublic: The newly created placeholder analysis.
     """
+    if analysis_create.name is not None and not analysis_create.name.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Name cannot be blank")
+    if analysis_create.name:
+        analysis_create.name = analysis_create.name.strip()
     analysis: AnalysisPublic | None = None
     try:
         analysis = db_utils.create_empty_analysis(analysis_create)
@@ -205,6 +213,31 @@ def delete_analysis(analysis_id: int) -> None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error deleting the analysis"
         ) from e
+
+
+@router.patch("/{analysis_id}", response_model=AnalysisPublic, operation_id="update_analysis")
+def update_analysis(analysis_id: int, body: AnalysisUpdate) -> AnalysisPublic:
+    if body.name is not None and not body.name.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Name cannot be blank")
+    if body.name:
+        body.name = body.name.strip()
+    try:
+        success = db_utils.update_analysis(analysis_id, body)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
+            )
+        analysis = db_utils.get_analysis_details(analysis_id)
+        if not analysis:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Analysis with ID {analysis_id} not found"
+            )
+        return analysis
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating analysis {analysis_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error updating analysis") from e
 
 
 @router.post(

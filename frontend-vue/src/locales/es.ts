@@ -192,11 +192,16 @@ export default {
       analysis_data: 'Error al obtener los datos del análisis.',
       owners: 'Error al obtener los propietarios.',
       summary: 'Error al obtener el resumen.',
+      tags: 'Error al obtener las etiquetas.',
+    },
+    updating: {
+      analysis: 'Error al actualizar el análisis.',
     },
     uploading: {
       analysis: 'Error al subir el análisis.',
     },
   },
+  edit_analysis: 'Editar Análisis',
   error_during_analysis: 'Ocurrió un error durante el análisis.',
   error_message: 'Mensaje de error',
   failed: 'Fallido',
@@ -257,11 +262,15 @@ export default {
     deleting: {
       analysis: 'Análisis eliminado con éxito.',
     },
+    updating: {
+      analysis: 'Análisis actualizado con éxito.',
+    },
     uploading: {
       analysis: 'Análisis subido con éxito.',
     },
   },
   summary: 'Resumen',
+  tags: 'Etiquetas',
   upload: 'Subir',
   upload_analysis: 'Subir Análisis',
   user: 'Usuario',

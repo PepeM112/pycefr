@@ -15,6 +15,17 @@
             <g-input label="repository_url" required>
               <v-text-field v-model="form.repoUrl" :rules="[rules.required, rules.url]" />
             </g-input>
+            <g-input label="tags">
+              <v-combobox
+                v-model="form.tags"
+                :items="tagSuggestions"
+                multiple
+                variant="outlined"
+                density="compact"
+                chips
+                closable-chips
+              />
+            </g-input>
             <v-checkbox v-model="form.includeGit" :label="$t('include_git_analysis')" density="compact" hide-details color="primary-on-surface" />
           </v-form>
         </v-card-text>
@@ -63,7 +74,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { type AnalysisPublic, createAnalysis } from '@/client';
+import { type AnalysisPublic, createAnalysis, getTags } from '@/client';
 import GInput from '@/components/GInput.vue';
 import AnalysisStepRow from '@/components/analysis/AnalysisStepRow.vue';
 import { type AnalysisStep, useAnalysisProgress } from '@/composables/analysis/useAnalysisProgress';
@@ -117,8 +128,18 @@ const storedIncludeGit = localStorage.getItem(INCLUDE_GIT_STORAGE_KEY);
 const form = ref({
   name: '',
   repoUrl: '',
+  tags: [] as string[],
   includeGit: storedIncludeGit === null ? true : storedIncludeGit === 'true',
 });
+
+const tagSuggestions = ref<string[]>([]);
+
+async function fetchTagSuggestions() {
+  const { data } = await getTags({ query: { limit: 50 } });
+  if (data) tagSuggestions.value = data;
+}
+
+fetchTagSuggestions();
 
 const localModel = computed({
   get: () => props.modelValue,
@@ -202,6 +223,7 @@ async function handleSubmit() {
       name: form.value.name || undefined,
       repoUrl: form.value.repoUrl,
       includeGit: form.value.includeGit,
+      tags: form.value.tags,
     },
   });
 
@@ -241,6 +263,7 @@ function resetState() {
   activeAnalysisId.value = null;
   form.value.name = '';
   form.value.repoUrl = '';
+  form.value.tags = [];
 }
 
 watch(

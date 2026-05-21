@@ -30,11 +30,30 @@
             </span>
           </template>
           <template #item-origin="{ item }">
-            <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
-            {{ $t(Enums.getLabel(Origin, item.origin)) }}
+            <a
+              v-if="item.origin === Origin.GITHUB && item.repo?.url"
+              class="origin-link"
+              :href="item.repo.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
+              {{ $t(Enums.getLabel(Origin, item.origin)) }}
+            </a>
+            <template v-else>
+              <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
+              {{ $t(Enums.getLabel(Origin, item.origin)) }}
+            </template>
           </template>
           <template #item-created_at="{ item }">
             <g-date :date="item.createdAt" relative />
+          </template>
+          <template #item-tags="{ item }">
+            <div class="d-flex ga-1 flex-wrap">
+              <v-chip v-for="tag in item.tags" :key="tag" size="small" label>
+                {{ tag }}
+              </v-chip>
+            </div>
           </template>
           <template #item-error_message="{ item }">
             {{ item.errorMessage }}
@@ -52,6 +71,11 @@
                   density="comfortable"
                   icon="mdi-eye-outline"
                   :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+                />
+                <v-btn
+                  density="comfortable"
+                  icon="mdi-pencil-outline"
+                  @click="handleOpenEdit(item)"
                 />
                 <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
               </template>
@@ -109,6 +133,11 @@
         @confirm-pre="() => handleDeleteAnalysis(analysisBeingDeleted)"
         @close-pre="() => (analysisBeingDeleted = undefined)"
       />
+      <edit-analysis-dialog
+        v-model="showEditDialog"
+        :analysis="analysisBeingEdited"
+        @saved="handleAnalysisEdited"
+      />
     </g-container>
   </page-view>
 </template>
@@ -130,11 +159,13 @@ import GDate from '@/components/GDate.vue';
 import GDialogCard from '@/components/GDialogCard.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
+import EditAnalysisDialog from '@/components/analysis/EditAnalysisDialog.vue';
 import NewAnalysisDialog from '@/components/analysis/NewAnalysisDialog.vue';
 import PageView from '@/components/PageView.vue';
 import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
 import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
+import { useTagFetcher } from '@/composables/fetcher/useTagFetcher';
 import { useFilter } from '@/composables/useFilter';
 import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
@@ -151,12 +182,15 @@ import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 const snackbarStore = useSnackbarStore();
 const { removeAnalysis } = useAnalysisDelete();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
+const tagFetcher = useTagFetcher({ limit: 20, debounce: 300 });
 
 const analysesData = ref<(AnalysisSummaryPublic | AnalysisPublic)[]>([]);
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
+const showEditDialog = ref(false);
+const analysisBeingEdited = ref<AnalysisSummaryPublic | null>(null);
 const reconnectAnalysisId = ref<number | null>(null);
 const reconnectAnalysisName = ref<string | undefined>(undefined);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
@@ -186,6 +220,15 @@ const filterList: FilterItem[] = [
     query: 's',
     options: {
       items: statusList,
+    },
+  },
+  {
+    label: 'tags',
+    type: FilterType.MULTIPLE_SELECT,
+    key: 'tags',
+    query: 't',
+    options: {
+      fetcher: tagFetcher,
     },
   },
   {
@@ -224,6 +267,7 @@ const headers: TableHeader[] = [
   { label: 'origin', key: 'origin', sortColumn: AnalysisSortColumn.ORIGIN },
   { label: 'creation_date', key: 'created_at', sortColumn: AnalysisSortColumn.CREATED_AT },
   { label: 'status', key: 'status', sortColumn: AnalysisSortColumn.STATUS },
+  { label: 'tags', key: 'tags' },
   { label: 'error_message', key: 'error_message' },
 ];
 
@@ -239,6 +283,7 @@ async function loadData() {
       name: filter.value.name as string[],
       owner: filter.value.owner as string[],
       status: filter.value.status as AnalysisStatus[],
+      tags: filter.value.tags as string[],
       date_from: (filter.value.dates as DateFilterValue)?.from,
       date_to: (filter.value.dates as DateFilterValue)?.to,
     },
@@ -338,6 +383,15 @@ async function handleUpload() {
   if (data) analysesData.value.unshift(data);
 }
 
+function handleOpenEdit(item: AnalysisSummaryPublic) {
+  analysisBeingEdited.value = item;
+  showEditDialog.value = true;
+}
+
+function handleAnalysisEdited(updated: AnalysisSummaryPublic) {
+  analysesData.value = analysesData.value.map(a => (a.id === updated.id ? updated : a));
+}
+
 async function handleDownload(id: number, name: string) {
   const { data, error } = await downloadAnalysis({
     path: { analysis_id: id },
@@ -370,5 +424,15 @@ async function handleDownload(id: number, name: string) {
   font-size: 0.75rem;
   border-radius: 1rem;
   padding: 2px 8px;
+}
+
+.origin-link {
+  display: inline-flex;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 </style>
