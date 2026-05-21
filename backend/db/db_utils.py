@@ -459,6 +459,23 @@ class AnalysisRepository:
         except sqlite3.Error as e:
             logger.error(f"Database error while marking analysis {analysis_id} as failed: {e}")
 
+    def mark_orphaned_analyses_as_failed(self) -> int:
+        try:
+            with self._connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE analyses SET status = ?, error_message = ? WHERE status = ?",
+                    (AnalysisStatus.FAILED.value, "Server was restarted during analysis.", AnalysisStatus.IN_PROGRESS.value),
+                )
+                conn.commit()
+                count = cursor.rowcount
+                if count:
+                    logger.info(f"Marked {count} orphaned in-progress analyses as FAILED.")
+                return count
+        except sqlite3.Error as e:
+            logger.error(f"Database error while cleaning orphaned analyses: {e}")
+            return 0
+
     def update_analysis(self, analysis_id: int, update: AnalysisUpdate) -> bool:
         with self._connect() as conn:
             cursor = conn.cursor()
@@ -614,3 +631,7 @@ def update_analysis(analysis_id: int, update: AnalysisUpdate) -> bool:
 
 def get_all_tags(search: str | None = None, limit: int | None = None) -> List[str]:
     return _repo.get_all_tags(search, limit)
+
+
+def mark_orphaned_analyses_as_failed() -> int:
+    return _repo.mark_orphaned_analyses_as_failed()
