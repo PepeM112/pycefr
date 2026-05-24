@@ -8,13 +8,28 @@ services:
       - DATABASE_PATH=/app/database/pycefr.db
     volumes:
       - db-data:/app/database
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
 
   frontend:
     build: ./frontend-vue
     ports:
       - "8080:80"
+    depends_on:
+      - backend
+    profiles:
+      - prod
+
+  frontend-dev:
+    build:
+      context: ./frontend-vue
+      target: build
+    command: npm run dev
+    volumes:
+      - ./frontend-vue:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
     depends_on:
       - backend
 

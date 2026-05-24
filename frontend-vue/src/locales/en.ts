@@ -3,27 +3,27 @@ export default {
   analyses: 'Analyses',
   analysis_insight: {
     complexity_abstraction: {
-      high: 'High Abstraction Layer: Advanced features (C1/C2) represent {ratio}% of the structural code, indicating extensive use of metaprogramming, complex decorators, or generators typical of framework-level architecture.',
+      high: 'High Abstraction Layer: The codebase reflects heavy use of metaprogramming, descriptors, or generator-based control flow typical of frameworks and ORMs.',
       professional:
-        'Professional Codebase: Moderate use of advanced features ({ratio}%). The architecture relies on solid OOP and functional patterns without excessive metaprogramming.',
+        'Professional Codebase: The architecture uses solid OOP and functional patterns with selective use of decorators, generators, or context managers.',
       standard:
         'Standard Complexity: The codebase is predominantly structural (A1-B2). It favors straightforward execution flow over deep abstractions.',
     },
     pythonic_density: {
       highly_idiomatic:
-        'Highly Idiomatic: Strong preference for Pythonic constructs. For every traditional for-loop, there are nearly as many (or more) comprehensions, context managers, and functional elements.',
+        'Highly Idiomatic: Pythonic constructs (comprehensions, context managers, lambdas) significantly outnumber traditional for-loops, indicating a strong preference for expressive, concise patterns.',
       balanced:
         'Balanced Idioms: The codebase mixes traditional iterative loops with Pythonic constructs like comprehensions appropriately.',
       imperative:
-        'Imperative Style: The code relies heavily on traditional iterative loops and standard assignments rather than Pythonic shorthands.',
+        'Imperative Style: Traditional for-loops dominate over Pythonic shorthands like comprehensions and lambdas, suggesting a more explicit, step-by-step coding approach.',
     },
     exception_handling: {
       defensive:
-        'Defensive Programming: High density of error handling. Almost half of the functions are protected by explicit try-except blocks.',
+        'Defensive Programming: High density of try-except blocks relative to function count, indicating explicit error handling at many points in the execution flow.',
       standard:
         'Standard Error Handling: Exceptions are caught at strategic points rather than wrapping every minor operation.',
       optimistic:
-        'Optimistic Execution: Very sparse explicit error handling. The system likely relies on a global exception handler or middleware to catch unhandled errors.',
+        'Optimistic Execution: Very sparse explicit error handling. The system likely relies on centralized exception handlers, middleware, or framework-level error management.',
     },
     structural_competence: {
       oop: 'Object-Oriented Focus: Heavy reliance on classes, encapsulation, and inheritance to structure the application logic.',

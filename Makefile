@@ -76,11 +76,14 @@ gen-ts: ## Generate TypeScript client from OpenAPI/Pydantic models
 # Docker
 # ==============================
 
-docker-up: ## Start all services with Docker Compose
-	docker compose up --build -d
+docker-up: ## Start backend + frontend dev server (HMR) with Docker
+	docker compose up --build
+
+docker-up-prod: ## Start all services in production mode (nginx)
+	docker compose --profile prod up --build
 
 docker-down: ## Stop Docker services
-	docker compose down
+	docker compose --profile prod down
 
 docker-seed: ## Seed the Docker database with demo data
 	docker compose exec backend python scripts/seed.py

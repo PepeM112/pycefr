@@ -8,6 +8,61 @@ function sumInstances(items: AnalysisClassPublicWithLevel[], classIds: ClassId[]
   return items.filter(it => classIds.includes(it.classId)).reduce((s, it) => s + it.instances, 0);
 }
 
+// --- INSIGHT THRESHOLDS ---
+// Calibrated against: Django, SQLAlchemy, Six, Loguru, Tenacity (May 2026)
+
+/**
+ * Complexity & Abstraction — % of C1/C2 instances over total.
+ * HIGH (>= 0.15%): Meta-frameworks that extend Python's core behavior.
+ *   Benchmarks: Six (0.31%), SQLAlchemy (0.19%).
+ *   Characterized by metaclasses, descriptors, and dynamic attribute creation.
+ * PROFESSIONAL (>= 0.03%): Mature libraries with selective advanced patterns.
+ *   Benchmarks: Loguru (0.06%), Django (0.04%).
+ *   Solid OOP/functional patterns, decorators, generators — without over-engineering.
+ * STANDARD (< 0.03%): Application-level code, business logic, scripts.
+ *   Benchmarks: Tenacity (0.00%).
+ *   Straightforward execution flow over deep abstractions.
+ */
+const COMPLEXITY_HIGH = 0.15;
+const COMPLEXITY_PROFESSIONAL = 0.03;
+
+/**
+ * Pythonic Density — ratio of comprehensions/context-managers/lambdas to for-loops.
+ * HIGHLY IDIOMATIC (>= 5.0): Pythonic constructs significantly outnumber loops.
+ *   Benchmarks: Loguru (6.55).
+ *   Indicates active refactoring of loops into expressive one-liners.
+ * BALANCED (>= 2.0): Healthy mix of both styles.
+ *   Benchmarks: Django (4.58), SQLAlchemy (3.61), Tenacity (3.29).
+ * IMPERATIVE (< 2.0): Traditional for-loops dominate.
+ *   Benchmarks: Six (1.91).
+ *   Explicit step-by-step iteration preferred over shorthands.
+ */
+const PYTHONIC_HIGHLY_IDIOMATIC = 5.0;
+const PYTHONIC_BALANCED = 2.0;
+
+/**
+ * Exception Handling — try-except blocks per function definition.
+ * DEFENSIVE (>= 0.15): ~1.5 try-blocks per 10 functions.
+ *   Found in I/O-heavy or network-facing code (e.g. Requests, Six compat shims).
+ *   Benchmarks: Six (0.15), Loguru (0.12).
+ * STANDARD (>= 0.05): ~1 try-block per 20 functions.
+ *   Exceptions caught at strategic boundaries.
+ *   Benchmarks: Tenacity (0.08).
+ * OPTIMISTIC (< 0.05): Relies on centralized/framework-level error management.
+ *   Benchmarks: Django (0.04), SQLAlchemy (0.02).
+ */
+const ERROR_DEFENSIVE = 0.15;
+const ERROR_STANDARD = 0.05;
+
+/**
+ * Structural Competence — OOP constructs (classes) per standalone function.
+ * OOP FOCUS (>= 0.3): Class-heavy architecture.
+ *   Benchmarks: Six (0.53), Django (0.44), SQLAlchemy (0.39), Tenacity (0.37).
+ * PROCEDURAL (< 0.3): Flat architecture driven by standalone functions.
+ *   Benchmarks: Loguru (0.08).
+ */
+const STRUCTURE_OOP = 0.3;
+
 // --- INSIGHTS ---
 
 export function getComplexityAbstractionInsight(items: AnalysisClassPublicWithLevel[], totalInstances: number): string {
@@ -17,29 +72,9 @@ export function getComplexityAbstractionInsight(items: AnalysisClassPublicWithLe
 
   const advancedRatio = (advancedCount / totalInstances) * 100;
 
-  /** * HIGH ABSTRACTION THRESHOLD (>= 0.20%)
-   * Found in "meta-frameworks" and tools that extend Python's core behavior.
-   * Benchmarks: FastAPI (0.31%), Six (0.31%), Pydantic (0.21%), SQLAlchemy (0.20%).
-   * Characterized by heavy use of metaclasses, dynamic attribute access, and custom descriptors.
-   */
-  if (advancedRatio >= 0.2) {
-    return t('analysis_insight.complexity_abstraction.high', { ratio: advancedRatio.toFixed(2) });
-  } else if (advancedRatio >= 0.05) {
-    /** * PROFESSIONAL CODEBASE THRESHOLD (>= 0.05%)
-     * Found in high-quality libraries and mature backend services.
-     * Benchmark: Loguru (0.06%).
-     * Indicates solid use of advanced patterns like decorators, generators,
-     * and complex type hinting without over-engineering.
-     */
-    return t('analysis_insight.complexity_abstraction.professional', { ratio: advancedRatio.toFixed(2) });
-  } else {
-    /** * STANDARD STRUCTURAL THRESHOLD (< 0.05%)
-     * Found in most application-level code, business logic, and scripts.
-     * Benchmarks: Django Apps (0.04%), Tenacity, Requests.
-     * Focuses on readability and execution flow over deep structural abstractions.
-     */
-    return t('analysis_insight.complexity_abstraction.standard');
-  }
+  if (advancedRatio >= COMPLEXITY_HIGH) return t('analysis_insight.complexity_abstraction.high');
+  if (advancedRatio >= COMPLEXITY_PROFESSIONAL) return t('analysis_insight.complexity_abstraction.professional');
+  return t('analysis_insight.complexity_abstraction.standard');
 }
 
 export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[]): string {
@@ -53,27 +88,9 @@ export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[])
 
   const idiomRatio = forLoopsCount > 0 ? pyCount / forLoopsCount : 0;
 
-  /**
-   * HIGHLY IDIOMATIC THRESHOLD (>= 3.5)
-   * There are 3.5x more comprehensions/context managers than standard for-loops.
-   * This indicates a developer/team that actively refactors loops into pythonic structures.
-   */
-  if (idiomRatio >= 3.5) {
-    return t('analysis_insight.pythonic_density.highly_idiomatic');
-  } else if (idiomRatio >= 1.5) {
-    /**
-     * BALANCED THRESHOLD (>= 1.5)
-     * Roughly equal use of loops and pythonic constructs.
-     * Typical of modern, well-maintained libraries.
-     */
-    return t('analysis_insight.pythonic_density.balanced');
-  } else {
-    /**
-     * IMPERATIVE THRESHOLD (< 1.5)
-     * Heavy reliance on traditional iteration.
-     */
-    return t('analysis_insight.pythonic_density.imperative');
-  }
+  if (idiomRatio >= PYTHONIC_HIGHLY_IDIOMATIC) return t('analysis_insight.pythonic_density.highly_idiomatic');
+  if (idiomRatio >= PYTHONIC_BALANCED) return t('analysis_insight.pythonic_density.balanced');
+  return t('analysis_insight.pythonic_density.imperative');
 }
 
 export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[]): string {
@@ -85,27 +102,10 @@ export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[
   const functionDefs = sumInstances(items, [ClassId.FUNCTIONDEF_SIMPLE, ClassId.FUNCTIONDEF_RECURSIVE]);
 
   const errorHandlingDensity = functionDefs > 0 ? exceptionBlocks / functionDefs : 0;
-  /**
-   * DEFENSIVE THRESHOLD (>= 0.15)
-   * 1.5 try-blocks per 10 functions.
-   * Found in network/I-O heavy libraries (like Requests) that must handle low-level failures constantly.
-   */
-  if (errorHandlingDensity >= 0.15) {
-    return t('analysis_insight.exception_handling.defensive');
-  } else if (errorHandlingDensity >= 0.05) {
-    /**
-     * STANDARD THRESHOLD (>= 0.05)
-     * 1 try-block per 20 functions.
-     * Normal application logic. Exceptions are caught at strategic boundaries.
-     */
-    return t('analysis_insight.exception_handling.standard');
-  } else {
-    /**
-     * OPTIMISTIC THRESHOLD (< 0.05)
-     * Relies heavily on framework-level middleware (like Django/FastAPI) or global error handlers.
-     */
-    return t('analysis_insight.exception_handling.optimistic');
-  }
+
+  if (errorHandlingDensity >= ERROR_DEFENSIVE) return t('analysis_insight.exception_handling.defensive');
+  if (errorHandlingDensity >= ERROR_STANDARD) return t('analysis_insight.exception_handling.standard');
+  return t('analysis_insight.exception_handling.optimistic');
 }
 
 export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLevel[]): string {
@@ -117,23 +117,10 @@ export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLev
   ]);
   const proceduralCount = sumInstances(items, [ClassId.FUNCTIONDEF_SIMPLE]);
 
-  // If there are no functions, it's heavily OOP.
   const structureRatio = proceduralCount > 0 ? oopCount / proceduralCount : 10;
-  /**
-   * OOP FOCUS (>= 0.3)
-   * High ratio of classes/init blocks compared to standalone functions.
-   * Frameworks like Django and FastAPI live here.
-   */
-  if (structureRatio >= 0.3) {
-    return t('analysis_insight.structural_competence.oop');
-  } else {
-    /**
-     * PROCEDURAL/LOGIC FOCUS (< 0.3)
-     * Heavy reliance on standalone functions and flat architecture.
-     * Libraries like Loguru or specific data-processing scripts live here.
-     */
-    return t('analysis_insight.structural_competence.procedural');
-  }
+
+  if (structureRatio >= STRUCTURE_OOP) return t('analysis_insight.structural_competence.oop');
+  return t('analysis_insight.structural_competence.procedural');
 }
 
 // --- CHART DATA BUILDERS ---
