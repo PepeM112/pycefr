@@ -1,4 +1,4 @@
-import { type Level, SortDirection, AnalysisFilePublic } from '@/client';
+import { type Level, SortDirection, type AnalysisFilePublic } from '@/client';
 import type { AnalysisClassPublicWithLevel } from '@/types/analysis';
 import type { Sorting } from '@/composables/useSorting';
 
