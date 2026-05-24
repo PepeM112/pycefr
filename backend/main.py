@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.logging import DefaultFormatter
 
 from backend.api import analysis_routes, common, labels
+from backend.config.settings import settings
 from backend.db import db_utils
 
 # --- LOGGING CONFIGURATION ---
@@ -36,7 +37,7 @@ app = FastAPI(
 # --- MIDDLEWARE ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 _COMMIT_MARKER = "PYCEFR_COMMIT:"
 
 
+def _parse_iso_date(value: str) -> datetime:
+    """Parse ISO 8601 date, handling the 'Z' suffix unsupported in Python 3.10."""
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 class GitLocalManager:
     """
     Extracts repository metadata from a locally cloned git repository.
@@ -109,8 +114,8 @@ class GitLocalManager:
         last_line = last_output.strip() if last_output.strip() else None
 
         return (
-            datetime.fromisoformat(first_line) if first_line else None,
-            datetime.fromisoformat(last_line) if last_line else None,
+            _parse_iso_date(first_line) if first_line else None,
+            _parse_iso_date(last_line) if last_line else None,
         )
 
     def get_commit_stats(self) -> List[RepoCommitPublic]:
@@ -163,7 +168,7 @@ class GitLocalManager:
                 stats["github_user"] = current_github_user
                 stats["commits"] += 1
                 try:
-                    stats["commit_timestamps"].append(datetime.fromisoformat(date_str).timestamp())
+                    stats["commit_timestamps"].append(_parse_iso_date(date_str).timestamp())
                 except ValueError:
                     logger.warning(f"Could not parse commit date: {date_str!r}")
 

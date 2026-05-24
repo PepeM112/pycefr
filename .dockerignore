@@ -1,0 +1,15 @@
+.venv/
+node_modules/
+database/
+.git/
+.env
+*.egg-info/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+backend/tmp/
+frontend-vue/dist/
+frontend-vue/node_modules/
+results/
+.claude/
+.DS_Store

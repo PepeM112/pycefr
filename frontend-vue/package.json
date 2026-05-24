@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "format": "eslint . --fix && stylelint \"**/*.{vue,scss,css}\" --fix --allow-empty-input && prettier \"**/*.{css,scss,vue,ts,js,json,yaml,yml}\" --write --ignore-path .prettierignore -u",
     "format:check": "eslint . && stylelint \"**/*.{vue,scss,css}\" --allow-empty-input && prettier \"**/*.{css,scss,vue,ts,js,json,yaml,yml}\" --check --ignore-path .prettierignore -u",

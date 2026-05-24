@@ -73,6 +73,22 @@ gen-ts: ## Generate TypeScript client from OpenAPI/Pydantic models
 	@echo "Done"
 
 # ==============================
+# Docker
+# ==============================
+
+docker-up: ## Start all services with Docker Compose
+	docker compose up --build -d
+
+docker-down: ## Stop Docker services
+	docker compose down
+
+docker-seed: ## Seed the Docker database with demo data
+	docker compose exec backend python scripts/seed.py
+
+docker-logs: ## Tail Docker logs
+	docker compose logs -f
+
+# ==============================
 # Maintenance
 # ==============================
 

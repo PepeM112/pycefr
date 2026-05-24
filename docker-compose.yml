@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    environment:
+      - DATABASE_PATH=/app/database/pycefr.db
+    volumes:
+      - db-data:/app/database
+    expose:
+      - "8000"
+
+  frontend:
+    build: ./frontend-vue
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
