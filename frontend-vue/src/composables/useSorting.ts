@@ -1,6 +1,6 @@
-import { SortDirection } from '@/client';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { SortDirection } from '@/client';
 
 export type Sorting<T extends string | number = string> = {
   column: T;

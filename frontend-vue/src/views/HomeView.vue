@@ -3,14 +3,14 @@
     <generic-loader :model-value="loadingStatus">
       <v-row>
         <v-col v-for="(analysis, index) in analysesData" :key="index" cols="12" sm="6" md="4">
-          <analysis-card :modelValue="analysis" @delete="handleDelete(analysis.id)" />
+          <analysis-card :model-value="analysis" @delete="handleDelete(analysis.id)" />
         </v-col>
       </v-row>
     </generic-loader>
   </page-view>
 </template>
 <script setup lang="ts">
-import type { AnalysisSummaryPublic } from '@/client';
+import { onMounted, ref } from 'vue';
 import { listAnalysis } from '@/client';
 import AnalysisCard from '@/components/analysis/AnalysisCard.vue';
 import GenericLoader from '@/components/GenericLoader.vue';
@@ -18,7 +18,7 @@ import PageView from '@/components/PageView.vue';
 import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useSnackbarStore } from '@/stores/snackbarStore';
 import { LoadingStatus } from '@/types/loading';
-import { onMounted, ref } from 'vue';
+import type { AnalysisSummaryPublic } from '@/client';
 
 const snackbarStore = useSnackbarStore();
 const { removeAnalysis } = useAnalysisDelete();

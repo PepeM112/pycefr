@@ -10,12 +10,13 @@ class Settings(BaseSettings):
     auto_display_console: bool = True
     ignore_folders: Union[str, List[str]] = ["node_modules/", ".git/", "__pycache__/"]
     python_threshold_percentage: int = 50
+    cors_origins: Union[str, List[str]] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    @field_validator("ignore_folders", mode="before")
+    @field_validator("ignore_folders", "cors_origins", mode="before")
     @classmethod
-    def parse_ignore_folders(cls, v: Union[str, List[str]]) -> List[str]:
+    def parse_comma_separated(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str):
             return [i.strip() for i in v.split(",") if i.strip()]
         return v

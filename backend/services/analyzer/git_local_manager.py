@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 _COMMIT_MARKER = "PYCEFR_COMMIT:"
 
 
+
+
 class GitLocalManager:
     """
     Extracts repository metadata from a locally cloned git repository.

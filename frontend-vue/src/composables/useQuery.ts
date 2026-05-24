@@ -1,6 +1,6 @@
 import { computed, type ComputedRef } from 'vue';
-import type { LocationQuery } from 'vue-router';
 import { NavigationFailureType, isNavigationFailure, useRoute, useRouter } from 'vue-router';
+import type { LocationQuery } from 'vue-router';
 
 export interface Query {
   /** The current reactive URL query parameters */

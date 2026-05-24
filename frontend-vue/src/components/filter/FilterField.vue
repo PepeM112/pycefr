@@ -1,8 +1,8 @@
 <template>
   <v-text-field
     v-if="type === FilterType.SINGLE"
-    class="bg-transparent w-100"
     v-model="simpleModel"
+    class="bg-transparent w-100"
     :type="props.options?.number ? 'number' : 'text'"
     clearable
     hide-details
@@ -13,8 +13,8 @@
 
   <v-combobox
     v-else-if="type === FilterType.MULTIPLE"
-    class="bg-transparent w-100"
     v-model="arrayModel"
+    class="bg-transparent w-100"
     :type="props.options?.number ? 'number' : 'text'"
     multiple
     chips
@@ -33,9 +33,9 @@
 
   <v-autocomplete
     v-else-if="isSelectType"
-    class="bg-transparent w-100"
     v-model="selectModel"
     v-model:search="search"
+    class="bg-transparent w-100"
     :items="sortedItems"
     :loading="props.options?.fetcher?.loading.value"
     :multiple="isMultiple"
@@ -60,11 +60,17 @@
 </template>
 
 <script setup lang="ts">
-import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
-import { FilterType, type DateFilterValue, type FilterEntity, type FilterMapping, type FilterOptions } from '@/types/filter';
-import { isDateFilterValue, isFilterEntity, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import DatetimeFilter from '@/components/filter/DatetimeFilter.vue';
+import {
+  FilterType,
+  type DateFilterValue,
+  type FilterEntity,
+  type FilterMapping,
+  type FilterOptions,
+} from '@/types/filter';
+import { isDateFilterValue, isFilterEntity, isPrimitiveValue, normalizeToFilterEntity } from '@/utils/filter';
 import type { Primitive } from 'vuetify/lib/util';
 
 const emit = defineEmits<{

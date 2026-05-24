@@ -1,5 +1,5 @@
-import type { DateFilterValue, FilterEntity, FilterItem, FilterValue } from '@/types/filter';
 import { FilterType } from '@/types/filter';
+import type { DateFilterValue, FilterEntity, FilterItem, FilterValue } from '@/types/filter';
 import type { LocationQuery, LocationQueryValue } from 'vue-router';
 import type { Primitive } from 'vuetify/lib/util';
 
@@ -18,7 +18,12 @@ export function isPrimitiveValue(val: unknown): val is Primitive {
 
 export function isFilterEntity(val: unknown): val is FilterEntity {
   return (
-    !!val && typeof val === 'object' && 'label' in val && typeof val.label === 'string' && 'value' in val && isPrimitiveValue(val.value)
+    !!val &&
+    typeof val === 'object' &&
+    'label' in val &&
+    typeof val.label === 'string' &&
+    'value' in val &&
+    isPrimitiveValue(val.value)
   );
 }
 
@@ -44,7 +49,10 @@ export function normalizeToFilterEntity(
 /**
  * Converts a specific filter value into a dictionary of URL parameters.
  */
-export const serializeFilterValue = (filterItem: FilterItem, filterValue: FilterValue): Record<string, Primitive | Primitive[] | number | undefined> => {
+export const serializeFilterValue = (
+  filterItem: FilterItem,
+  filterValue: FilterValue
+): Record<string, Primitive | Primitive[] | number | undefined> => {
   const value = filterValue[filterItem.key];
 
   if (value === undefined || value === null || value === '') return {};

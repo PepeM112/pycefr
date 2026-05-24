@@ -1,6 +1,6 @@
+import { getExtensionIcon, type FileExtension } from '@/utils/utils';
 import type { AnalysisFilePublic } from '@/client';
 import type { TreeNode } from '@/types/treeview';
-import { getExtensionIcon, type FileExtension } from '@/utils/utils';
 
 export type BuildTreeResult = {
   tree: TreeNode[];

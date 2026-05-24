@@ -1,5 +1,5 @@
-import { enumsLabels } from '@/messages';
 import { type ComposerTranslation } from 'vue-i18n';
+import { enumsLabels } from '@/messages';
 
 export type Enum = Record<string, string | number>;
 

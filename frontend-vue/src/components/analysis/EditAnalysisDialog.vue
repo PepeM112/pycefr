@@ -68,7 +68,7 @@ watch(
       form.value.name = analysis.name;
       form.value.tags = [...(analysis.tags ?? [])];
     }
-  },
+  }
 );
 
 watch(
@@ -78,7 +78,7 @@ watch(
       const { data } = await getTags({ query: { limit: 50 } });
       if (data) tagSuggestions.value = data;
     }
-  },
+  }
 );
 
 async function handleSave() {

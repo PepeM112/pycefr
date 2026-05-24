@@ -1,5 +1,5 @@
-import { FilterType, type FilterItem } from '@/types/filter';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FilterType, type FilterItem } from '@/types/filter';
 import { deserializeFilterValue, serializeFilterValue } from '../filter';
 
 /**

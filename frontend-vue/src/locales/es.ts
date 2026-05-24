@@ -3,27 +3,27 @@ export default {
   analyses: 'Análisis',
   analysis_insight: {
     complexity_abstraction: {
-      high: 'Capa de Abstracción Alta: Las características avanzadas (C1/C2) representan el {ratio}% del código estructural, lo que indica un uso extensivo de metaprogramación, decoradores complejos o generadores típicos de arquitecturas a nivel de framework.',
+      high: 'Capa de Abstracción Alta: El código refleja un uso intensivo de metaprogramación, descriptores o flujo de control basado en generadores, típico de frameworks y ORMs.',
       professional:
-        'Base de Código Profesional: Uso moderado de funciones avanzadas ({ratio}%). La arquitectura se apoya en patrones sólidos de POO y funcionales sin caer en un exceso de metaprogramación.',
+        'Base de Código Profesional: La arquitectura emplea patrones sólidos de POO y funcionales con uso selectivo de decoradores, generadores o gestores de contexto.',
       standard:
         'Complejidad Estándar: La base de código es predominantemente estructural (A1-B2). Favorece un flujo de ejecución directo sobre abstracciones profundas.',
     },
     pythonic_density: {
       highly_idiomatic:
-        "Altamente Idiomático: Fuerte preferencia por constructos de Python. Por cada bucle 'for' tradicional, hay casi tantos (o más) comprensiones, gestores de contexto y elementos funcionales.",
+        'Altamente Idiomático: Los constructos pythónicos (comprensiones, gestores de contexto, lambdas) superan significativamente a los bucles for tradicionales, indicando una fuerte preferencia por patrones expresivos y concisos.',
       balanced:
         'Estilo Equilibrado: El código mezcla adecuadamente los bucles iterativos tradicionales con constructos idiomáticos de Python como las comprensiones.',
       imperative:
-        'Estilo Imperativo: El código depende en gran medida de bucles iterativos tradicionales y asignaciones estándar en lugar de las abreviaturas propias de Python (shorthands).',
+        'Estilo Imperativo: Los bucles for tradicionales dominan sobre las abreviaturas pythónicas como comprensiones y lambdas, sugiriendo un enfoque de codificación más explícito y paso a paso.',
     },
     exception_handling: {
       defensive:
-        'Programación Defensiva: Alta densidad de gestión de errores. Casi la mitad de las funciones están protegidas por bloques try-except explícitos.',
+        'Programación Defensiva: Alta densidad de bloques try-except en relación al número de funciones, indicando gestión de errores explícita en muchos puntos del flujo de ejecución.',
       standard:
         'Gestión de Errores Estándar: Las excepciones se capturan en puntos estratégicos en lugar de envolver cada operación menor.',
       optimistic:
-        'Ejecución Optimista: Gestión de errores explícita muy escasa. El sistema probablemente confía en un manejador de excepciones global o un middleware para capturar errores no controlados.',
+        'Ejecución Optimista: Gestión de errores explícita muy escasa. El sistema probablemente confía en manejadores de excepciones centralizados, middleware o gestión de errores a nivel de framework.',
     },
     structural_competence: {
       oop: 'Enfoque Orientado a Objetos: Gran dependencia de clases, encapsulación y herencia para estructurar la lógica de la aplicación.',
