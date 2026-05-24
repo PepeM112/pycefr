@@ -168,6 +168,13 @@ export default {
   created_before: 'Antes de',
   created_after: 'Después de',
   creation_date: 'Fecha de creación',
+  dashboard: {
+    title: 'Panel',
+    total: 'Total de Análisis',
+    top_constructs: 'Top 10 Constructos',
+    recent_analyses: 'Análisis Recientes',
+    load_more: 'Cargar más',
+  },
   date: 'Fecha',
   dates: 'Fechas',
   delete: 'Eliminar',

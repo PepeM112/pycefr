@@ -3,7 +3,7 @@
     <template #actions>
       <three-dots-menu :model-value="menuItems" />
     </template>
-    <div class="bg-primary mb-6 rounded-lg">
+    <div class="d-flex align-center bg-primary mb-6 rounded-lg">
       <v-menu :close-on-content-click="false" eager>
         <template #activator="{ props: menuProps }">
           <v-btn
@@ -20,77 +20,104 @@
           <filter-table v-model:filter="filter" :filter-list="filterList" />
         </v-card>
       </v-menu>
+      <v-spacer />
+      <v-btn-toggle v-model="viewMode" class="mr-2" density="comfortable" mandatory variant="text">
+        <v-btn value="table" icon="mdi-table" size="small" />
+        <v-btn value="cards" icon="mdi-view-grid" size="small" />
+      </v-btn-toggle>
     </div>
     <g-container class="mb-4">
       <generic-loader :model-value="loadingStatus">
-        <g-table v-model:pagination="pagination" v-model:sort="sorting" :model-value="analysesData" :headers="headers">
-          <template #item-status="{ item }">
-            <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
-              {{ $t(item.status) }}
-            </span>
-          </template>
-          <template #item-origin="{ item }">
-            <a
-              v-if="item.origin === Origin.GITHUB && item.repo?.url"
-              class="origin-link"
-              :href="item.repo.url"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
-              {{ $t(Enums.getLabel(Origin, item.origin)) }}
-            </a>
-            <template v-else>
-              <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
-              {{ $t(Enums.getLabel(Origin, item.origin)) }}
+        <!-- TABLE VIEW -->
+        <template v-if="viewMode === 'table'">
+          <g-table
+            v-model:pagination="pagination"
+            v-model:sort="sorting"
+            :model-value="analysesData"
+            :headers="headers"
+          >
+            <template #item-status="{ item }">
+              <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
+                {{ $t(item.status) }}
+              </span>
             </template>
-          </template>
-          <template #item-created_at="{ item }">
-            <g-date :date="item.createdAt" relative />
-          </template>
-          <template #item-tags="{ item }">
-            <div class="d-flex ga-1 flex-wrap">
-              <v-chip v-for="tag in item.tags" :key="tag" size="small" label>
-                {{ tag }}
-              </v-chip>
-            </div>
-          </template>
-          <template #item-error_message="{ item }">
-            {{ item.errorMessage }}
-          </template>
-          <template #actions="{ item }">
-            <v-btn
-              v-if="item.status === AnalysisStatus.IN_PROGRESS"
-              density="comfortable"
-              icon="mdi-progress-clock"
-              @click="handleOpenProgress(item)"
-            />
-            <template v-if="item.status !== AnalysisStatus.IN_PROGRESS">
-              <template v-if="item.status === AnalysisStatus.COMPLETED">
+            <template #item-origin="{ item }">
+              <a
+                v-if="item.origin === Origin.GITHUB && item.repo?.url"
+                class="origin-link"
+                :href="item.repo.url"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
+                {{ $t(Enums.getLabel(Origin, item.origin)) }}
+              </a>
+              <template v-else>
+                <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
+                {{ $t(Enums.getLabel(Origin, item.origin)) }}
+              </template>
+            </template>
+            <template #item-created_at="{ item }">
+              <g-date :date="item.createdAt" relative />
+            </template>
+            <template #item-tags="{ item }">
+              <div class="d-flex ga-1 flex-wrap">
+                <v-chip v-for="tag in item.tags" :key="tag" size="small" label>
+                  {{ tag }}
+                </v-chip>
+              </div>
+            </template>
+            <template #item-error_message="{ item }">
+              {{ item.errorMessage }}
+            </template>
+            <template #actions="{ item }">
+              <v-btn
+                v-if="item.status === AnalysisStatus.IN_PROGRESS"
+                density="comfortable"
+                icon="mdi-progress-clock"
+                @click="handleOpenProgress(item)"
+              />
+              <template v-if="item.status !== AnalysisStatus.IN_PROGRESS">
+                <template v-if="item.status === AnalysisStatus.COMPLETED">
+                  <v-btn
+                    density="comfortable"
+                    icon="mdi-eye-outline"
+                    :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+                  />
+                  <v-btn density="comfortable" icon="mdi-pencil-outline" @click="handleOpenEdit(item)" />
+                  <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
+                </template>
+                <v-tooltip v-else-if="item.status === AnalysisStatus.FAILED && item.repo?.url">
+                  <template #activator="{ props: tooltipProps }">
+                    <v-btn v-bind="tooltipProps" density="comfortable" icon="mdi-reload" @click="handleRetry(item)" />
+                  </template>
+                  <span>{{ $t('retry') }}</span>
+                </v-tooltip>
                 <v-btn
                   density="comfortable"
-                  icon="mdi-eye-outline"
-                  :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
+                  icon="mdi-trash-can-outline"
+                  color="error"
+                  variant="text"
+                  @click="analysisBeingDeleted = item.id"
                 />
-                <v-btn density="comfortable" icon="mdi-pencil-outline" @click="handleOpenEdit(item)" />
-                <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
               </template>
-              <v-tooltip v-else-if="item.status === AnalysisStatus.FAILED && item.repo?.url">
-                <template #activator="{ props: tooltipProps }">
-                  <v-btn v-bind="tooltipProps" density="comfortable" icon="mdi-reload" @click="handleRetry(item)" />
-                </template>
-                <span>{{ $t('retry') }}</span>
-              </v-tooltip>
-              <v-btn
-                density="comfortable"
-                icon="mdi-trash-can-outline"
-                color="error"
-                variant="text"
-                @click="analysisBeingDeleted = item.id"
-              />
             </template>
-          </template>
-        </g-table>
+          </g-table>
+        </template>
+
+        <!-- CARD VIEW -->
+        <template v-else>
+          <v-row>
+            <v-col v-for="analysis in analysesData" :key="analysis.id" cols="12" sm="6" md="4">
+              <analysis-card :model-value="analysis" @delete="handleDeleteAnalysis(analysis.id)" />
+            </v-col>
+          </v-row>
+          <div v-if="hasMoreCards" class="d-flex justify-center mt-6">
+            <v-btn variant="tonal" :loading="isLoadingMore" prepend-icon="mdi-chevron-down" @click="handleLoadMore">
+              {{ $t('dashboard.load_more') }}
+            </v-btn>
+          </div>
+        </template>
       </generic-loader>
       <new-analysis-dialog
         v-model="showNewAnalysisDialog"
@@ -135,8 +162,9 @@
     </g-container>
   </page-view>
 </template>
+
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   type AnalysisPublic,
   type AnalysisSummaryPublic,
@@ -148,6 +176,7 @@ import {
   Origin,
   uploadAnalysis,
 } from '@/client';
+import AnalysisCard from '@/components/analysis/AnalysisCard.vue';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
@@ -173,6 +202,11 @@ import { getOriginIcon, getStatusColor } from '@/utils/utils';
 import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 
+const CARDS_PER_PAGE = 9;
+const VIEW_MODE_KEY = 'pycefr-analyses-view-mode';
+
+type ViewMode = 'table' | 'cards';
+
 const snackbarStore = useSnackbarStore();
 const { removeAnalysis } = useAnalysisDelete();
 const ownerFetcher = useOwnerFetcher({ limit: 10, debounce: 300 });
@@ -188,6 +222,20 @@ const analysisBeingEdited = ref<AnalysisSummaryPublic | null>(null);
 const reconnectAnalysisId = ref<number | null>(null);
 const reconnectAnalysisName = ref<string | undefined>(undefined);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
+const viewMode = ref<ViewMode>((localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || 'table');
+const cardPage = ref(1);
+const cardTotal = ref(0);
+const isLoadingMore = ref(false);
+
+watch(viewMode, val => {
+  localStorage.setItem(VIEW_MODE_KEY, val);
+  if (val === 'cards') {
+    cardPage.value = 1;
+    loadCardsData(true);
+  }
+});
+
+const hasMoreCards = computed(() => analysesData.value.length < cardTotal.value);
 
 const statusList = Enums.buildList(AnalysisStatus);
 
@@ -266,6 +314,11 @@ const headers: TableHeader[] = [
 ];
 
 async function loadData() {
+  if (viewMode.value === 'cards') {
+    await loadCardsData(true);
+    return;
+  }
+
   loadingStatus.value = LoadingStatus.LOADING;
   const { data, error } = await listAnalysis({
     query: {
@@ -273,7 +326,6 @@ async function loadData() {
       per_page: pagination.value.perPage,
       sort_column: Number(sorting.value.column) as AnalysisSortColumn,
       sort_direction: sorting.value.direction,
-      // Filters
       name: filter.value.name as string[],
       owner: filter.value.owner as string[],
       status: filter.value.status as AnalysisStatus[],
@@ -284,7 +336,6 @@ async function loadData() {
   });
 
   if (error) {
-    console.error('error.fetching.analyses:', error);
     snackbarStore.add({
       text: 'error.fetching.analyses',
       color: 'error',
@@ -300,18 +351,77 @@ async function loadData() {
   pagination.value = data.pagination;
 }
 
+async function loadCardsData(reset: boolean) {
+  if (reset) {
+    cardPage.value = 1;
+    loadingStatus.value = LoadingStatus.LOADING;
+  } else {
+    isLoadingMore.value = true;
+  }
+
+  const { data, error } = await listAnalysis({
+    query: {
+      page: cardPage.value,
+      per_page: CARDS_PER_PAGE,
+      sort_column: Number(sorting.value.column) as AnalysisSortColumn,
+      sort_direction: sorting.value.direction,
+      name: filter.value.name as string[],
+      owner: filter.value.owner as string[],
+      status: filter.value.status as AnalysisStatus[],
+      tags: filter.value.tags as string[],
+      date_from: (filter.value.dates as DateFilterValue)?.from,
+      date_to: (filter.value.dates as DateFilterValue)?.to,
+    },
+  });
+
+  isLoadingMore.value = false;
+
+  if (error) {
+    snackbarStore.add({
+      text: 'error.fetching.analyses',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
+    loadingStatus.value = LoadingStatus.ERROR;
+    return;
+  }
+
+  if (reset) {
+    analysesData.value = data.elements;
+  } else {
+    analysesData.value = [...analysesData.value, ...data.elements];
+  }
+
+  cardTotal.value = data.pagination.total;
+  loadingStatus.value = analysesData.value.length === 0 ? LoadingStatus.EMPTY : LoadingStatus.IDLE;
+}
+
+function handleLoadMore() {
+  cardPage.value += 1;
+  loadCardsData(false);
+}
+
 async function handleDeleteAnalysis(id: number = 0) {
   const success = await removeAnalysis(id);
   if (!success) return;
 
   analysisBeingDeleted.value = undefined;
   analysesData.value = analysesData.value.filter(analysis => analysis.id !== id);
-  pagination.value.total -= 1;
+  if (viewMode.value === 'table') {
+    pagination.value.total -= 1;
+  } else {
+    cardTotal.value -= 1;
+  }
 }
 
 function handleAnalysisCreated(analysis: AnalysisSummaryPublic | AnalysisPublic) {
   analysesData.value.unshift(analysis);
-  pagination.value.total += 1;
+  if (viewMode.value === 'table') {
+    pagination.value.total += 1;
+  } else {
+    cardTotal.value += 1;
+  }
 }
 
 function handleAnalysisCompleted() {
@@ -323,7 +433,7 @@ async function handleRetry(item: AnalysisSummaryPublic) {
     body: {
       name: item.name || undefined,
       repoUrl: item.repo?.url ?? '',
-      includeGit: true, // retry button only shows when item.repo?.url exists, which implies the original had git enabled
+      includeGit: true,
     },
   });
 
@@ -413,6 +523,7 @@ async function handleDownload(id: number, name: string) {
   window.URL.revokeObjectURL(url);
 }
 </script>
+
 <style lang="scss" scoped>
 .status-badge {
   font-size: 0.75rem;

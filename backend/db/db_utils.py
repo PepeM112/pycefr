@@ -25,6 +25,7 @@ from backend.models.schemas.repo import (
     RepoPublic,
     RepoSummaryPublic,
 )
+from backend.models.schemas.stats import DashboardStats, RecentAnalysis, TopConstruct
 
 logger = logging.getLogger(__name__)
 DATABASE_PATH = os.getenv("DATABASE_PATH", "database/pycefr.db")
@@ -577,6 +578,81 @@ class AnalysisRepository:
                 logger.error(f"Error uploading analysis: {e}")
                 raise
 
+    def get_dashboard_stats(self) -> DashboardStats:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+
+            status_rows = cursor.execute(
+                "SELECT status, COUNT(*) as cnt FROM analyses WHERE status != 'deleted' GROUP BY status"
+            ).fetchall()
+            status_counts: dict[str, int] = {row["status"]: row["cnt"] for row in status_rows}
+            total = sum(status_counts.values())
+
+            level_rows = cursor.execute("""
+                SELECT cm.level, SUM(afc.instances) as total
+                FROM analysis_file_classes afc
+                JOIN class_model cm ON afc.class_id = cm.id
+                JOIN analysis_files af ON afc.file_id = af.id
+                JOIN analyses a ON af.analysis_id = a.id
+                WHERE a.status = 'completed'
+                GROUP BY cm.level
+            """).fetchall()
+
+            level_names = {1: "A1", 2: "A2", 3: "B1", 4: "B2", 5: "C1", 6: "C2"}
+            level_distribution = {
+                level_names[row["level"]]: row["total"] for row in level_rows if row["level"] in level_names
+            }
+
+            construct_rows = cursor.execute("""
+                SELECT cm.id as class_id, cm.level, SUM(afc.instances) as total
+                FROM analysis_file_classes afc
+                JOIN class_model cm ON afc.class_id = cm.id
+                JOIN analysis_files af ON afc.file_id = af.id
+                JOIN analyses a ON af.analysis_id = a.id
+                WHERE a.status = 'completed'
+                GROUP BY cm.id, cm.level
+                ORDER BY total DESC
+                LIMIT 10
+            """).fetchall()
+
+            class_id_to_name = {e.value: e.name.lower() for e in ClassId}
+            top_constructs = [
+                TopConstruct(
+                    name=class_id_to_name.get(row["class_id"], f"unknown_{row['class_id']}"),
+                    level=level_names.get(row["level"], "UNKNOWN"),
+                    count=row["total"],
+                )
+                for row in construct_rows
+            ]
+
+            recent_rows = cursor.execute("""
+                SELECT id, name, status, created_at
+                FROM analyses
+                WHERE status != 'deleted'
+                ORDER BY created_at DESC
+                LIMIT 5
+            """).fetchall()
+
+            recent_analyses = [
+                RecentAnalysis(
+                    id=row["id"],
+                    repo_name=row["name"],
+                    status=row["status"],
+                    created_at=self._parse_dt(row["created_at"]) or datetime.now(timezone.utc),
+                )
+                for row in recent_rows
+            ]
+
+            return DashboardStats(
+                total_analyses=total,
+                completed=status_counts.get("completed", 0),
+                failed=status_counts.get("failed", 0),
+                in_progress=status_counts.get("in_progress", 0),
+                level_distribution=level_distribution,
+                top_constructs=top_constructs,
+                recent_analyses=recent_analyses,
+            )
+
 
 # ---------------------------------------------------------------------------
 # Module-level API (delegates to a default repository instance)
@@ -635,3 +711,7 @@ def get_all_tags(search: str | None = None, limit: int | None = None) -> List[st
 
 def mark_orphaned_analyses_as_failed() -> int:
     return _repo.mark_orphaned_analyses_as_failed()
+
+
+def get_dashboard_stats() -> DashboardStats:
+    return _repo.get_dashboard_stats()

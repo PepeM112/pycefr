@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.logging import DefaultFormatter
 
-from backend.api import analysis_routes, common, labels
+from backend.api import analysis_routes, common, labels, stats_routes
 from backend.config.settings import settings
 from backend.db import db_utils
 
@@ -48,6 +48,7 @@ api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(analysis_routes.router)
 api_v1_router.include_router(common.router)
 api_v1_router.include_router(labels.router)
+api_v1_router.include_router(stats_routes.router)
 
 app.include_router(api_v1_router)
 
