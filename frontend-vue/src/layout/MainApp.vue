@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <sidebar v-model:showMenu="showSidebar" />
+    <sidebar v-model:show-menu="showSidebar" />
 
     <v-main class="m-app">
       <transition name="fade" mode="out-in">
@@ -14,11 +14,11 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import dayjs from 'dayjs';
 import Sidebar from '@/components/Sidebar.vue';
 import Snackbar from '@/components/Snackbar.vue';
 import { useThemeStore } from '@/stores/themeStore';
-import { useI18n } from 'vue-i18n';
-import dayjs from 'dayjs';
 
 const { locale } = useI18n();
 

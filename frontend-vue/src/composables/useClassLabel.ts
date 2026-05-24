@@ -1,5 +1,5 @@
-import { type ClassPublic, classLabel, Level } from '@/client';
 import { ref } from 'vue';
+import { type ClassPublic, classLabel, Level } from '@/client';
 
 const cache = ref<Array<ClassPublic>>([]);
 

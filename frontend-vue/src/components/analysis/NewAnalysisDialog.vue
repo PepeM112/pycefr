@@ -26,7 +26,13 @@
                 closable-chips
               />
             </g-input>
-            <v-checkbox v-model="form.includeGit" :label="$t('include_git_analysis')" density="compact" hide-details color="primary-on-surface" />
+            <v-checkbox
+              v-model="form.includeGit"
+              :label="$t('include_git_analysis')"
+              density="compact"
+              hide-details
+              color="primary-on-surface"
+            />
           </v-form>
         </v-card-text>
         <v-divider />
@@ -74,6 +80,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { type AnalysisPublic, createAnalysis, getTags } from '@/client';
 import GInput from '@/components/GInput.vue';
 import AnalysisStepRow from '@/components/analysis/AnalysisStepRow.vue';
@@ -81,7 +88,6 @@ import { type AnalysisStep, useAnalysisProgress } from '@/composables/analysis/u
 import { useRules } from '@/composables/useRules';
 import { useSnackbarStore } from '@/stores/snackbarStore';
 import { RouteNames } from '@/router/route-names';
-import { useI18n } from 'vue-i18n';
 
 type StepState = 'pending' | 'active' | 'completed' | 'failed' | 'skipped';
 
@@ -274,7 +280,7 @@ watch(
       isRunning.value = true;
       connect(newId);
     }
-  },
+  }
 );
 
 watch(
@@ -285,7 +291,7 @@ watch(
       isRunning.value = true;
       connect(props.reconnectAnalysisId);
     }
-  },
+  }
 );
 
 watch(isTerminal, isTerminalNow => {

@@ -15,8 +15,8 @@
     </template>
     <v-sheet class="pa-2" rounded="lg">
       <vue-date-picker
-        v-model="datePickerDate"
         :key="isDark.toString()"
+        v-model="datePickerDate"
         range
         multi-calendars
         inline
@@ -36,9 +36,9 @@ import { computed, ref } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { useTheme } from 'vuetify';
+import dayjs from 'dayjs';
 import { type DateFilterValue } from '@/types/filter';
 import { formatDate } from '@/utils/datetime';
-import dayjs from 'dayjs';
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: DateFilterValue | undefined): void;

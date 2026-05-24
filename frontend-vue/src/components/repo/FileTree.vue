@@ -61,11 +61,11 @@
     <g-treeview
       :items="localModelValue"
       :selected="selectedNodes"
-      @update:selected="val => (selectedNodes = val)"
       :search="searchOptions.searchText"
       :selectable="searchOptions.allowFilterByFiles"
       height="800"
       class="pa-0 pb-8"
+      @update:selected="val => (selectedNodes = val)"
     >
       <template #item="{ item, expanded }">
         <v-icon v-if="item.children" :icon="expanded ? 'mdi-folder-open' : 'mdi-folder'" size="small" class="mr-2" />

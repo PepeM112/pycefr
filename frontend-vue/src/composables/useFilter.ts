@@ -1,9 +1,9 @@
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import type { LocationQuery } from 'vue-router';
-import { useQuery } from './useQuery';
-import type { FilterItem, FilterValue } from '@/types/filter';
 import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
+import { useQuery } from './useQuery';
+import type { LocationQuery } from 'vue-router';
+import type { FilterItem, FilterValue } from '@/types/filter';
 
 /**
  * Orchestrates the synchronization between local filter state and the browser URL.

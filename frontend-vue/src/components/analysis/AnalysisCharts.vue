@@ -52,11 +52,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Enums from '@/utils/enums';
-import { ClassId, Level } from '@/client';
-import { getLevelColor } from '@/utils/utils';
-import type { ChartData } from '@/types/analysis';
-import { useThemeStore } from '@/stores/themeStore';
 import {
   Chart as ChartJS,
   Title,
@@ -72,10 +67,15 @@ import {
   Filler,
 } from 'chart.js';
 import { TreemapController, TreemapElement, type TreemapScriptableContext } from 'chartjs-chart-treemap';
-import type { TooltipItem } from 'chart.js';
 import { Bar, Radar, Doughnut, Pie, Chart } from 'vue-chartjs';
+import Enums from '@/utils/enums';
+import { ClassId, Level } from '@/client';
+import { getLevelColor } from '@/utils/utils';
+import { useThemeStore } from '@/stores/themeStore';
 import * as AnalysisChartsUtils from '@/utils/analysisCharts';
 import ChartContainer from './ChartContainer.vue';
+import type { TooltipItem } from 'chart.js';
+import type { ChartData } from '@/types/analysis';
 
 ChartJS.register(
   Title,
@@ -247,7 +247,6 @@ const charts = computed(() => [
     hasData: hasNumericData(treemapData.value as { datasets: Record<string, unknown>[] }),
   },
 ]);
-
 
 const levelData = computed(() => {
   const levels = Enums.buildList(Level);

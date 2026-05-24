@@ -17,13 +17,13 @@
           </v-btn>
         </template>
         <v-card class="bg-primary" width="420">
-          <filter-table v-model:filter="filter" :filterList="filterList" />
+          <filter-table v-model:filter="filter" :filter-list="filterList" />
         </v-card>
       </v-menu>
     </div>
     <g-container class="mb-4">
       <generic-loader :model-value="loadingStatus">
-        <g-table :model-value="analysesData" :headers="headers" v-model:pagination="pagination" v-model:sort="sorting">
+        <g-table v-model:pagination="pagination" v-model:sort="sorting" :model-value="analysesData" :headers="headers">
           <template #item-status="{ item }">
             <span class="status-badge" :class="`bg-${getStatusColor(item.status)}`">
               {{ $t(item.status) }}
@@ -72,21 +72,12 @@
                   icon="mdi-eye-outline"
                   :to="{ name: RouteNames.ANALYSIS_DETAIL, params: { id: item.id } }"
                 />
-                <v-btn
-                  density="comfortable"
-                  icon="mdi-pencil-outline"
-                  @click="handleOpenEdit(item)"
-                />
+                <v-btn density="comfortable" icon="mdi-pencil-outline" @click="handleOpenEdit(item)" />
                 <v-btn density="comfortable" icon="mdi-tray-arrow-down" @click="handleDownload(item.id, item.name)" />
               </template>
               <v-tooltip v-else-if="item.status === AnalysisStatus.FAILED && item.repo?.url">
                 <template #activator="{ props: tooltipProps }">
-                  <v-btn
-                    v-bind="tooltipProps"
-                    density="comfortable"
-                    icon="mdi-reload"
-                    @click="handleRetry(item)"
-                  />
+                  <v-btn v-bind="tooltipProps" density="comfortable" icon="mdi-reload" @click="handleRetry(item)" />
                 </template>
                 <span>{{ $t('retry') }}</span>
               </v-tooltip>
@@ -107,7 +98,14 @@
         :reconnect-analysis-name="reconnectAnalysisName"
         @created="handleAnalysisCreated"
         @completed="handleAnalysisCompleted"
-        @update:model-value="val => { if (!val) { reconnectAnalysisId = null; reconnectAnalysisName = undefined; } }"
+        @update:model-value="
+          val => {
+            if (!val) {
+              reconnectAnalysisId = null;
+              reconnectAnalysisName = undefined;
+            }
+          }
+        "
       />
       <g-dialog-card
         v-model="showUploadDialog"
@@ -115,7 +113,7 @@
         confirm-label="upload"
         width="400"
         show-size
-        :disableConfirm="fileToUpload.length === 0"
+        :disable-confirm="fileToUpload.length === 0"
         @confirm-pre="() => handleUpload()"
         @close-pre="
           () => {
@@ -133,15 +131,12 @@
         @confirm-pre="() => handleDeleteAnalysis(analysisBeingDeleted)"
         @close-pre="() => (analysisBeingDeleted = undefined)"
       />
-      <edit-analysis-dialog
-        v-model="showEditDialog"
-        :analysis="analysisBeingEdited"
-        @saved="handleAnalysisEdited"
-      />
+      <edit-analysis-dialog v-model="showEditDialog" :analysis="analysisBeingEdited" @saved="handleAnalysisEdited" />
     </g-container>
   </page-view>
 </template>
 <script setup lang="ts">
+import { ref } from 'vue';
 import {
   type AnalysisPublic,
   type AnalysisSummaryPublic,
@@ -175,7 +170,6 @@ import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import Enums from '@/utils/enums';
 import { getOriginIcon, getStatusColor } from '@/utils/utils';
-import { ref } from 'vue';
 import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
 

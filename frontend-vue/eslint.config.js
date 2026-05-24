@@ -1,7 +1,7 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import vue from 'eslint-plugin-vue';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
 import vueParser from 'vue-eslint-parser';
 import globals from 'globals';
@@ -11,58 +11,70 @@ import yamlPlugin from 'eslint-plugin-yaml';
 import jsoncPlugin from 'eslint-plugin-jsonc';
 import accessibility from 'eslint-plugin-vuejs-accessibility';
 import { defineConfig } from 'eslint/config';
+import { configs, parser, plugin } from 'typescript-eslint';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig([
   { ignores: ['dist/', 'node_modules/'] },
 
+  js.configs.recommended,
+  ...configs.recommended,
+  ...vue.configs['flat/recommended'],
   // JS
   {
-    ...js.configs.recommended,
     files: ['**/*.js', '**/*.mjs'],
     rules: {
-      ...js.configs.recommended.rules,
       'require-jsdoc': 'off',
       'valid-jsdoc': 'off',
       'new-cap': 'off',
       'no-invalid-this': 'off',
     },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.vue', '**/*.js', '**/*.mjs'],
     languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: parser,
+        project: ['./tsconfig.eslint.json'],
+        tsconfigRootDir: __dirname,
+        extraFileExtensions: ['.vue'],
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
       globals: {
         ...globals.browser,
         ...globals.node,
       },
-      ecmaVersion: 'latest',
-      sourceType: 'module',
     },
-  },
-
-  // Vue
-  ...vue.configs['flat/recommended'],
-
-  // Imports
-  {
-    files: ['**/*.{js,ts,tsx,vue}'],
-    plugins: { import: importPlugin },
+    plugins: {
+      '@typescript-eslint': plugin,
+      import: importPlugin,
+      'vuejs-accessibility': accessibility,
+    },
     settings: {
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx'],
-        'vue-eslint-parser': ['.vue'],
-      },
       'import/resolver': {
-        typescript: {
-          project: './tsconfig.eslint.json',
-          alwaysTryTypes: true,
-        },
+        typescript: { project: './tsconfig.eslint.json', alwaysTryTypes: true },
         node: true,
       },
     },
     rules: {
       ...importPlugin.configs.recommended.rules,
+      ...accessibility.configs.recommended.rules,
+      // TS
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
+
+      // Import
       'import/no-unresolved': 'error',
       'import/named': 'error',
       'import/default': 'error',
       'import/namespace': 'error',
-      'import/no-cycle': 'warn',
+      'import/no-cycle': 'off',
       'import/no-self-import': 'error',
       'import/extensions': ['error', 'ignorePackages', { js: 'never', ts: 'never', vue: 'always' }],
       'import/order': [
@@ -71,99 +83,46 @@ export default defineConfig([
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'object', 'type'],
         },
       ],
-    },
-  },
-
-  {
-    files: ['**/*.vue'],
-    rules: {
-      'import/default': 'off',
-    },
-  },
-
-  // TypeScript
-  {
-    files: ['**/*.ts', '**/*.tsx'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        project: './tsconfig.eslint.json',
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: globals.browser,
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-    },
-    rules: {
-      ...tsPlugin.configs.recommended.rules,
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      'no-undef': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-
-  // Vue
-  {
-    files: ['**/*.vue'],
-    languageOptions: {
-      parser: vueParser,
-      parserOptions: {
-        parser: tsParser,
-        project: './tsconfig.eslint.json',
-        extraFileExtensions: ['.vue'],
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: globals.browser,
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-      'vuejs-accessibility': accessibility,
-    },
-    rules: {
-      // TS
-      ...tsPlugin.configs.recommended.rules,
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      'no-undef': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-
       // Vue
-
-      'vuejs-accessibility/alt-text': 'error',
-      'vuejs-accessibility/anchor-has-content': 'error',
-      'vuejs-accessibility/mouse-events-have-key-events': 'error',
-      'vuejs-accessibility/click-events-have-key-events': 'error',
-      'vuejs-accessibility/label-has-for': 'off',
-
-      // Vue Rules overrides
-      'vue/html-self-closing': [
+      'vue/html-self-closing': ['error', { html: { void: 'always', normal: 'always', component: 'always' } }],
+      'vue/block-order': ['error', { order: ['template', 'script', 'style'] }],
+      'vue/multi-word-component-names': 'off',
+      'vue/no-required-prop-with-default': 'off',
+      'vue/attributes-order': [
         'error',
         {
-          html: { void: 'always', normal: 'always', component: 'always' },
-          svg: 'always',
-          math: 'always',
+          order: [
+            'DEFINITION', // ej: is, v-is
+            'CONDITIONALS', // ej: v-if, v-else-if, v-else, v-show, v-cloak
+            'LIST_RENDERING', // ej: v-for
+            'RENDER_MODIFIERS', // ej: v-once, v-pre
+            'GLOBAL', // ej: id
+            'UNIQUE', // ej: ref, key
+            'SLOT', // ej: v-slot, slot
+            'TWO_WAY_BINDING', // ej: v-model
+            'OTHER_DIRECTIVES', // ej: v-custom-directive
+            'OTHER_ATTR', // ej: custom-prop="foo", class, style
+            'CONTENT', // ej: v-text, v-html
+            'EVENTS', // ej: @click, v-on="foo"
+          ],
+          alphabetical: false,
         },
       ],
-      'vue/block-order': ['error', { order: ['template', 'script', 'style'] }],
-      'vue/multi-word-component-names': 'warn',
+    },
+  },
+
+  {
+    files: ['**/*.vue'],
+    rules: {
+      'import/default': 'off', // Disabled to prevent false positives when importing .vue files
     },
   },
 
   // YAML
-  {
-    files: ['**/*.yml', '**/*.yaml'],
-    ...yamlPlugin.configs['flat/recommended'],
-  },
+  { files: ['**/*.yml', '**/*.yaml'], ...yamlPlugin.configs['flat/recommended'] },
 
   // JSON
-  {
-    files: ['**/*.json', '**/*.jsonc'],
-    ...jsoncPlugin.configs['flat/recommended'],
-  },
+  { files: ['**/*.json', '**/*.jsonc'], ...jsoncPlugin.configs['flat/recommended'] },
 
   vuePrettier,
   prettier,

@@ -6,9 +6,9 @@
         <td class="bg-background px-0" style="width: 100%">
           <filter-field
             :model-value="filter[filterItem.key]"
-            @update:model-value="val => filter[filterItem.key] = val"
             :type="filterItem.type"
             :options="filterItem.options"
+            @update:model-value="val => (filter[filterItem.key] = val)"
           />
         </td>
       </tr>
@@ -16,8 +16,8 @@
   </v-table>
 </template>
 <script setup lang="ts">
-import type { FilterItem, FilterValue } from '@/types/filter';
 import FilterField from './FilterField.vue';
+import type { FilterItem, FilterValue } from '@/types/filter';
 
 const filter = defineModel<FilterValue>('filter', { required: true });
 const props = withDefaults(

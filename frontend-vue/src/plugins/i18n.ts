@@ -7,4 +7,3 @@ export default createI18n({
   fallbackLocale: 'en',
   messages: messages,
 });
- 

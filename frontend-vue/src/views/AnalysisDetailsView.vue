@@ -18,8 +18,8 @@
       <g-container title="properties">
         <div class="d-flex">
           <file-tree
-            :model-value="fileTreeData"
             v-model:selected="selectedTreeNodeIds"
+            :model-value="fileTreeData"
             @update:selected="onUpdateSelected"
           />
           <v-divider class="mx-8" vertical thickness="2px" color="secondary" opacity="100" />
@@ -52,7 +52,7 @@
                 </v-btn>
               </div>
             </div>
-            <g-table :model-value="tableData" :headers="headers" v-model:pagination="pagination" v-model:sort="sort">
+            <g-table v-model:pagination="pagination" v-model:sort="sort" :model-value="tableData" :headers="headers">
               <template #item-classId="{ item }">
                 {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
@@ -69,6 +69,9 @@
   </page-view>
 </template>
 <script setup lang="ts">
+import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import { ClassId, getAnalysisDetail, Level, type AnalysisPublic } from '@/client';
 import AnalysisCharts from '@/components/analysis/AnalysisCharts.vue';
 import RepoSection from '@/components/analysis/RepoSection.vue';
@@ -84,16 +87,13 @@ import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
-import type { TreeNode } from '@/types/treeview';
-import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
 import { buildChartData } from '@/utils/analysisCharts';
 import { filterAndSortClasses, groupClassesBySelection } from '@/utils/analysisTable';
 import { buildFileTree, resolveSelectedPaths } from '@/utils/analysisTree';
 import Enums from '@/utils/enums';
 import { getLevelColor } from '@/utils/utils';
-import { computed, onMounted, ref, shallowRef, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
+import type { TreeNode } from '@/types/treeview';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -135,12 +135,8 @@ const processedData = computed<AnalysisClassPublicWithLevel[]>(() => {
   if (fileClasses.length === 0) return [];
 
   const grouped = groupClassesBySelection(fileClasses, selectedPaths.value, classLabel.getClassLevel);
-  return filterAndSortClasses(
-    grouped,
-    selectedLevels.value,
-    search.value,
-    sort.value,
-    classId => t(Enums.getLabel(ClassId, classId))
+  return filterAndSortClasses(grouped, selectedLevels.value, search.value, sort.value, classId =>
+    t(Enums.getLabel(ClassId, classId))
   );
 });
 

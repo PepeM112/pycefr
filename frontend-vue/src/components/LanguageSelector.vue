@@ -9,11 +9,11 @@
         v-for="lang in LANGUAGE_OPTIONS"
         :key="lang.code"
         class="px-3"
-        @click="changeLanguage(lang.code)"
         density="comfortable"
+        @click="changeLanguage(lang.code)"
       >
         <template #prepend>
-          <v-icon :icon="`iconify:${lang.flag}`" size="20"/>
+          <v-icon :icon="`iconify:${lang.flag}`" size="20" />
         </template>
         <v-list-item-title>{{ t(lang.label) }}</v-list-item-title>
       </v-list-item>

@@ -2,7 +2,13 @@
   <div class="step-row d-flex ga-3" :class="rowClass">
     <div class="step-icon-column d-flex flex-column align-center">
       <v-icon v-if="state === 'completed'" color="success" icon="mdi-check-circle" size="24" />
-      <v-progress-circular v-else-if="state === 'active'" indeterminate size="24" width="2" color="primary-on-surface" />
+      <v-progress-circular
+        v-else-if="state === 'active'"
+        indeterminate
+        size="24"
+        width="2"
+        color="primary-on-surface"
+      />
       <v-icon v-else-if="state === 'failed'" color="error" icon="mdi-alert-circle" size="24" />
       <v-icon v-else-if="state === 'skipped'" color="grey-lighten-1" icon="mdi-minus-circle-outline" size="24" />
       <v-icon v-else color="grey-lighten-1" icon="mdi-circle-outline" size="24" />

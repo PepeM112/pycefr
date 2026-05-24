@@ -1,6 +1,5 @@
-import { type Level, SortDirection } from '@/client';
+import { type Level, SortDirection, AnalysisFilePublic } from '@/client';
 import type { AnalysisClassPublicWithLevel } from '@/types/analysis';
-import type { AnalysisFilePublic } from '@/client';
 import type { Sorting } from '@/composables/useSorting';
 
 type ClassWithLabel = AnalysisClassPublicWithLevel & { translatedLabel: string };

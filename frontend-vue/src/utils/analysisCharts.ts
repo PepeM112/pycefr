@@ -1,6 +1,6 @@
 import { ClassId, Level, type AnalysisFilePublic, type RepoCommitPublic } from '@/client';
-import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 import i18n from '@/plugins/i18n';
+import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 
 const { t } = i18n.global;
 
@@ -43,7 +43,12 @@ export function getComplexityAbstractionInsight(items: AnalysisClassPublicWithLe
 }
 
 export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[]): string {
-  const pyCount = sumInstances(items, [ClassId.LISTCOMP_SIMPLE, ClassId.DICTCOMP_SIMPLE, ClassId.WITH_SIMPLE, ClassId.LAMBDA_SIMPLE]);
+  const pyCount = sumInstances(items, [
+    ClassId.LISTCOMP_SIMPLE,
+    ClassId.DICTCOMP_SIMPLE,
+    ClassId.WITH_SIMPLE,
+    ClassId.LAMBDA_SIMPLE,
+  ]);
   const forLoopsCount = sumInstances(items, [ClassId.LOOP_FOR_SIMPLE, ClassId.LOOP_FOR_NESTED]);
 
   const idiomRatio = forLoopsCount > 0 ? pyCount / forLoopsCount : 0;
@@ -72,7 +77,11 @@ export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[])
 }
 
 export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[]): string {
-  const exceptionBlocks = sumInstances(items, [ClassId.EXCEPTION_TRY_EXCEPT, ClassId.EXCEPTION_TRY_FINALLY, ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY]);
+  const exceptionBlocks = sumInstances(items, [
+    ClassId.EXCEPTION_TRY_EXCEPT,
+    ClassId.EXCEPTION_TRY_FINALLY,
+    ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY,
+  ]);
   const functionDefs = sumInstances(items, [ClassId.FUNCTIONDEF_SIMPLE, ClassId.FUNCTIONDEF_RECURSIVE]);
 
   const errorHandlingDensity = functionDefs > 0 ? exceptionBlocks / functionDefs : 0;
@@ -100,7 +109,12 @@ export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[
 }
 
 export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLevel[]): string {
-  const oopCount = sumInstances(items, [ClassId.CLASS_SIMPLE, ClassId.CLASS_INHERITED, ClassId.CLASS_INIT, ClassId.CLASS_PROPERTIES]);
+  const oopCount = sumInstances(items, [
+    ClassId.CLASS_SIMPLE,
+    ClassId.CLASS_INHERITED,
+    ClassId.CLASS_INIT,
+    ClassId.CLASS_PROPERTIES,
+  ]);
   const proceduralCount = sumInstances(items, [ClassId.FUNCTIONDEF_SIMPLE]);
 
   // If there are no functions, it's heavily OOP.
@@ -124,10 +138,7 @@ export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLev
 
 // --- CHART DATA BUILDERS ---
 
-function buildChartFiles(
-  fileClasses: AnalysisFilePublic[],
-  selectedFilePaths: Set<string>
-): ChartFileItem[] {
+function buildChartFiles(fileClasses: AnalysisFilePublic[], selectedFilePaths: Set<string>): ChartFileItem[] {
   const hasSelection = selectedFilePaths.size > 0;
 
   return fileClasses
@@ -189,7 +200,11 @@ export function getPythonicStats(items: AnalysisClassPublicWithLevel[]) {
 }
 
 export function getExceptionStats(items: AnalysisClassPublicWithLevel[]) {
-  const catching = [ClassId.EXCEPTION_TRY_EXCEPT, ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY, ClassId.EXCEPTION_TRY_FINALLY];
+  const catching = [
+    ClassId.EXCEPTION_TRY_EXCEPT,
+    ClassId.EXCEPTION_TRY_EXCEPT_ELSE_FINALLY,
+    ClassId.EXCEPTION_TRY_FINALLY,
+  ];
   const signaling = [ClassId.EXCEPTION_RAISE, ClassId.EXCEPTION_ASSERT];
 
   return [sumInstances(items, catching), sumInstances(items, signaling)];

@@ -39,7 +39,7 @@
             <a :href="modelValue?.repo?.owner?.profileUrl" target="_blank">
               {{ getProfileNameFromUrl(modelValue?.repo?.owner?.profileUrl || modelValue?.repo?.url) }}
             </a>
-            <span style="margin: 0 2px;">/</span>
+            <span style="margin: 0 2px">/</span>
             <a :href="modelValue?.repo?.url" target="_blank">{{ modelValue?.repo?.name }}</a>
           </span>
           <span v-else>{{ modelValue?.repo?.name }}</span>

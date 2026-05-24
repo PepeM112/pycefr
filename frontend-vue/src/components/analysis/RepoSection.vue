@@ -7,7 +7,13 @@
         </v-avatar>
         <div class="repo-header-info">
           <h3 class="text-subtitle-1 font-weight-bold mb-0">
-            <a v-if="repo.owner?.profileUrl" :href="repo.owner.profileUrl" target="_blank" rel="noopener" class="repo-link">
+            <a
+              v-if="repo.owner?.profileUrl"
+              :href="repo.owner.profileUrl"
+              target="_blank"
+              rel="noopener"
+              class="repo-link"
+            >
               {{ repo.owner.githubUser }}
             </a>
             <span v-if="repo.owner?.profileUrl && repo.url" class="mx-1">/</span>
@@ -113,9 +119,9 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { RepoPublic, RepoCommitPublic } from '@/client';
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
 import GDate from '@/components/GDate.vue';
+import type { RepoPublic, RepoCommitPublic } from '@/client';
 
 const INITIAL_SIZE = 10;
 const BATCH_SIZE = 20;
@@ -161,7 +167,7 @@ const allRows = computed<ContributorRow[]>(() =>
       totalFilesModified: commitData?.totalFilesModified ?? 0,
       estimatedHours: commitData?.estimatedHours ?? 0,
     };
-  }),
+  })
 );
 
 const filteredRows = computed(() => {
@@ -181,13 +187,9 @@ watch(search, () => {
   displayCount.value = INITIAL_SIZE;
 });
 
-const totalCommits = computed(() =>
-  allRows.value.reduce((sum, row) => sum + row.commits, 0),
-);
+const totalCommits = computed(() => allRows.value.reduce((sum, row) => sum + row.commits, 0));
 
-const totalHours = computed(() =>
-  allRows.value.reduce((sum, row) => sum + row.estimatedHours, 0).toFixed(1),
-);
+const totalHours = computed(() => allRows.value.reduce((sum, row) => sum + row.estimatedHours, 0).toFixed(1));
 </script>
 
 <style lang="scss" scoped>

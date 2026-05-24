@@ -10,8 +10,8 @@
 </template>
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatDate } from '@/utils/datetime';
 import { useI18n } from 'vue-i18n';
+import { formatDate } from '@/utils/datetime';
 
 const { locale } = useI18n();
 
