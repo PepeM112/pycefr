@@ -477,6 +477,15 @@ class AnalysisRepository:
             logger.error(f"Database error while cleaning orphaned analyses: {e}")
             return 0
 
+    def count_in_progress_analyses(self) -> int:
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            row = cursor.execute(
+                "SELECT COUNT(*) as cnt FROM analyses WHERE status = ?",
+                (AnalysisStatus.IN_PROGRESS.value,),
+            ).fetchone()
+            return row["cnt"] if row else 0
+
     def update_analysis(self, analysis_id: int, update: AnalysisUpdate) -> bool:
         with self._connect() as conn:
             cursor = conn.cursor()
@@ -715,3 +724,7 @@ def mark_orphaned_analyses_as_failed() -> int:
 
 def get_dashboard_stats() -> DashboardStats:
     return _repo.get_dashboard_stats()
+
+
+def count_in_progress_analyses() -> int:
+    return _repo.count_in_progress_analyses()

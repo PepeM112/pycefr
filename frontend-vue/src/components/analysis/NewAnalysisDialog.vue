@@ -18,13 +18,19 @@
             <g-input label="tags">
               <v-combobox
                 v-model="form.tags"
-                :items="tagSuggestions"
+                :items="availableTags"
                 multiple
                 variant="outlined"
                 density="compact"
                 chips
                 closable-chips
-              />
+                hide-details
+                :hide-no-data="false"
+              >
+                <template #item="{ props: itemProps }">
+                  <v-list-item v-bind="itemProps" :prepend-icon="undefined" />
+                </template>
+              </v-combobox>
             </g-input>
             <v-checkbox
               v-model="form.includeGit"
@@ -139,6 +145,10 @@ const form = ref({
 });
 
 const tagSuggestions = ref<string[]>([]);
+
+const availableTags = computed(() =>
+  tagSuggestions.value.filter(tag => !form.value.tags.includes(tag)).sort((a, b) => a.localeCompare(b))
+);
 
 async function fetchTagSuggestions() {
   const { data } = await getTags({ query: { limit: 50 } });

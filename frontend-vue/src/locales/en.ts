@@ -134,6 +134,18 @@ export default {
   },
   apply: 'Apply',
   basic_handling: 'Basic Handling',
+  bulk_analysis: {
+    title: 'Bulk Analysis',
+    urls_label: 'Repository URLs',
+    url_placeholder: 'Paste a GitHub URL and press Enter',
+    slots_info: '{used} of {max} slots in use',
+    slots_tooltip: 'Maximum of 5 analyses can run simultaneously',
+    no_slots: 'All analysis slots are in use',
+    duplicate_url: 'This URL has already been added',
+    start: 'Start {count} analyses',
+    success: '{count} analyses started successfully',
+    error_single: 'Could not start analysis for {repo} — limit reached',
+  },
   cancel: 'Cancel',
   close: 'Close',
   categories: {

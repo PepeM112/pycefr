@@ -134,6 +134,18 @@ export default {
   },
   apply: 'Aceptar',
   basic_handling: 'Manejo Básico',
+  bulk_analysis: {
+    title: 'Análisis Múltiple',
+    urls_label: 'URLs de repositorios',
+    url_placeholder: 'Pega una URL de GitHub y pulsa Enter',
+    slots_info: '{used} de {max} slots en uso',
+    slots_tooltip: 'Máximo de 5 análisis pueden ejecutarse simultáneamente',
+    no_slots: 'Todos los slots de análisis están en uso',
+    duplicate_url: 'Esta URL ya ha sido añadida',
+    start: 'Iniciar {count} análisis',
+    success: '{count} análisis iniciados correctamente',
+    error_single: 'No se pudo iniciar el análisis de {repo} — límite alcanzado',
+  },
   cancel: 'Cancelar',
   close: 'Cerrar',
   categories: {

@@ -159,12 +159,13 @@
         @close-pre="() => (analysisBeingDeleted = undefined)"
       />
       <edit-analysis-dialog v-model="showEditDialog" :analysis="analysisBeingEdited" @saved="handleAnalysisEdited" />
+      <bulk-analysis-dialog v-model="showBulkDialog" @created="handleAnalysisCreated" />
     </g-container>
   </page-view>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import {
   type AnalysisPublic,
   type AnalysisSummaryPublic,
@@ -176,7 +177,9 @@ import {
   Origin,
   uploadAnalysis,
 } from '@/client';
+import { client } from '@/client/client.gen';
 import AnalysisCard from '@/components/analysis/AnalysisCard.vue';
+import BulkAnalysisDialog from '@/components/analysis/BulkAnalysisDialog.vue';
 import FilterTable from '@/components/filter/FilterTable.vue';
 import GContainer from '@/components/GContainer.vue';
 import GDate from '@/components/GDate.vue';
@@ -215,6 +218,7 @@ const tagFetcher = useTagFetcher({ limit: 20, debounce: 300 });
 const analysesData = ref<(AnalysisSummaryPublic | AnalysisPublic)[]>([]);
 const showNewAnalysisDialog = ref<boolean>(false);
 const showUploadDialog = ref<boolean>(false);
+const showBulkDialog = ref<boolean>(false);
 const fileToUpload = ref<File[]>([]);
 const analysisBeingDeleted = ref<number | undefined>(undefined);
 const showEditDialog = ref(false);
@@ -295,6 +299,11 @@ const menuItems: MenuProps[] = [
     label: 'new_analysis',
     icon: 'mdi-plus',
     onClick: async () => (showNewAnalysisDialog.value = true),
+  },
+  {
+    label: 'bulk_analysis.title',
+    icon: 'mdi-playlist-plus',
+    onClick: async () => (showBulkDialog.value = true),
   },
   {
     label: 'upload_analysis',
@@ -415,12 +424,61 @@ async function handleDeleteAnalysis(id: number = 0) {
   }
 }
 
+const activeTrackers = new Map<number, EventSource>();
+
+function trackAnalysis(analysisId: number) {
+  if (activeTrackers.has(analysisId)) return;
+
+  const baseUrl = client.getConfig().baseUrl ?? '';
+  const es = new EventSource(`${baseUrl}/api/v1/analyses/${analysisId}/progress`);
+  activeTrackers.set(analysisId, es);
+
+  es.onmessage = (event: MessageEvent) => {
+    const data = JSON.parse(event.data) as { step: string; error?: string };
+    if (data.step !== 'COMPLETED' && data.step !== 'FAILED') return;
+
+    const newStatus = data.step === 'COMPLETED' ? AnalysisStatus.COMPLETED : AnalysisStatus.FAILED;
+    const match = analysesData.value.find(a => a.id === analysisId);
+    if (match) {
+      match.status = newStatus;
+      if (data.step === 'FAILED' && data.error) {
+        match.errorMessage = data.error;
+      }
+    }
+
+    stopTracking(analysisId);
+  };
+
+  es.onerror = () => {
+    stopTracking(analysisId);
+  };
+}
+
+function stopTracking(analysisId: number) {
+  const es = activeTrackers.get(analysisId);
+  if (es) {
+    es.close();
+    activeTrackers.delete(analysisId);
+  }
+}
+
+function stopAllTracking() {
+  activeTrackers.forEach(es => es.close());
+  activeTrackers.clear();
+}
+
+onUnmounted(stopAllTracking);
+
 function handleAnalysisCreated(analysis: AnalysisSummaryPublic | AnalysisPublic) {
   analysesData.value.unshift(analysis);
   if (viewMode.value === 'table') {
     pagination.value.total += 1;
   } else {
     cardTotal.value += 1;
+  }
+
+  if (analysis.status === AnalysisStatus.IN_PROGRESS) {
+    trackAnalysis(analysis.id);
   }
 }
 
