@@ -226,7 +226,7 @@ function deserializeStandardValue(
 
   // Return array for multiple types, otherwise return the first element
   if (isMultiple) {
-    return mappedValues;
+    return mappedValues as Primitive[] | FilterEntity[];
   }
 
   return mappedValues.length > 0 ? mappedValues[0] : undefined;

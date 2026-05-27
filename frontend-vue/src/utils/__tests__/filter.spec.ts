@@ -112,7 +112,7 @@ describe('utils/filter.ts', () => {
         // LOGIC: Override default logic with user-defined serialization functions.
         const item = createItem({
           key: 'custom',
-          serializer: val => ({ transformed: val.custom + '_OK' }),
+          serializer: val => ({ transformed: String(val.custom) + '_OK' }),
         });
         expect(serializeFilterValue(item, { custom: 'data' })).toEqual({ transformed: 'data_OK' });
       });

@@ -10,7 +10,7 @@ COPY pyproject.toml pycefr.py ./
 COPY backend/ backend/
 COPY scripts/ scripts/
 
-RUN pip install --no-cache-dir . && \
+RUN pip install --no-cache-dir ".[dev]" && \
     chmod +x backend/docker-entrypoint.sh
 
 EXPOSE 8000

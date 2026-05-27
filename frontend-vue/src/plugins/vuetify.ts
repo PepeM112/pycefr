@@ -12,7 +12,7 @@ export default createVuetify({
     sets: {
       mdi,
       iconify: {
-        component: ({ icon, ...rest }: IconProps) => h(Icon, { icon, ...rest }),
+        component: ({ icon, ...rest }: IconProps) => h(Icon, { icon: icon as string, ...rest }),
       },
     },
   },

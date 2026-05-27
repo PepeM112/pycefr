@@ -147,6 +147,12 @@ const enumsLabels: EnumsLabelsItem<Enum>[] = [
       [ClassId.EXCEPTION_ASSERT]: 'analysis_rules.exception_assert',
       // With
       [ClassId.WITH_SIMPLE]: 'analysis_rules.with_simple',
+      // Async
+      [ClassId.ASYNC_AWAIT]: 'analysis_rules.async_await',
+      // Pattern Matching
+      [ClassId.PATTERN_MATCHING]: 'analysis_rules.pattern_matching',
+      // Type Hinting
+      [ClassId.TYPE_HINTING]: 'analysis_rules.type_hinting',
     },
   }),
   createEnumsLabelsItem({

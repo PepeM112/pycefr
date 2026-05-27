@@ -23,12 +23,10 @@ PyCEFR parses the AST of every Python file in a project and maps each language c
 | Backend | Python 3.11+, FastAPI, Pydantic v2, SQLite |
 | Frontend | Vue 3 (Composition API), TypeScript, Vuetify 3, Chart.js |
 | Tooling | Vite, ESLint, Prettier, Stylelint, Husky, Vitest |
-| Infrastructure | Docker, Docker Compose, nginx |
+| Infrastructure | Docker, Docker Compose |
 | API Client | Auto-generated from OpenAPI via `@hey-api/openapi-ts` |
 
-## Quick Start (Docker)
-
-The fastest way to run PyCEFR — no local Python or Node.js required.
+## Quick Start
 
 ### Prerequisites
 
@@ -45,57 +43,29 @@ cp .env.example .env
 #   API_KEY=ghp_your_github_token_here
 ```
 
-### 2. Run (development mode)
+### 2. Run
 
 ```bash
-make docker-up
+make up
 ```
 
 This starts:
 - **Backend** at [http://localhost:8000](http://localhost:8000)
 - **Frontend** (Vite dev server with HMR) at [http://localhost:3000](http://localhost:3000)
 
-### 3. Run (production mode)
+### 3. Seed demo data (optional)
 
 ```bash
-make docker-up-prod
+make seed
 ```
 
-This starts:
-- **Backend** at [http://localhost:8000](http://localhost:8000)
-- **Frontend** (nginx) at [http://localhost:8080](http://localhost:8080)
-
-### 4. Seed demo data (optional)
-
-```bash
-make docker-seed
-```
-
-### 5. Open the app
+### 4. Open the app
 
 Navigate to the frontend URL and paste a GitHub repository URL to start an analysis.
 
 ---
 
-## Local Development Setup
-
-For contributors who prefer running services directly on their machine.
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 20+
-- A [GitHub personal access token](https://github.com/settings/tokens)
-
-### 1. Install dependencies
-
-```bash
-make setup
-```
-
-This creates a Python virtual environment (`.venv/`), installs backend dependencies, installs frontend npm packages, and initialises the SQLite database.
-
-### 2. Configure environment
+## Environment Variables
 
 Create a `.env` file in the project root (or copy from `.env.example`):
 
@@ -123,87 +93,50 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 | `AUTO_DISPLAY_CONSOLE` | Automatically print results to the console after CLI analysis |
 | `CORS_ORIGINS` | Comma-separated allowed CORS origins |
 
-### 3. Run
-
-Start both servers:
-
-```bash
-# Terminal 1 — Backend (http://localhost:8000)
-make up-backend
-
-# Terminal 2 — Frontend (http://localhost:5173)
-make up-frontend
-```
-
-Or run everything at once:
-
-```bash
-make run-all
-```
-
 ---
 
 ## CLI Usage
 
-PyCEFR also works as a command-line tool:
+PyCEFR also works as a command-line tool inside the backend container:
 
 ```bash
 # Analyse a GitHub repository
-.venv/bin/python pycefr.py --repo https://github.com/user/repo
+docker compose exec backend pycefr --repo https://github.com/user/repo
 
 # Analyse a GitHub user (choose from their public repos)
-.venv/bin/python pycefr.py --user username
+docker compose exec backend pycefr --user username
 
-# Analyse a local directory
-.venv/bin/python pycefr.py --directory /path/to/project
+# Analyse a local directory (must be mounted into the container)
+docker compose exec backend pycefr --directory /path/to/project
 
 # List previous results
-.venv/bin/python pycefr.py --list
+docker compose exec backend pycefr --list
 
 # Display results in console
-.venv/bin/python pycefr.py --console results/result_file.json
+docker compose exec backend pycefr --console results/result_file.json
 ```
 
 ---
 
 ## Development
 
-### Useful commands
+### Available commands
 
 ```bash
 make help            # Show all available commands
+make up              # Start all services
+make build           # Rebuild images (after dependency changes)
+make down            # Stop all services
+make seed            # Seed the database with demo data
 make test            # Run backend tests (pytest)
-make init-db         # Reset and recreate the database
-make seed            # Seed database with demo data (backend must be running)
+make lint            # Run all linters (backend + frontend)
+make lint-back       # Run backend linters (ruff + mypy)
+make lint-front      # Run frontend linters (eslint + vue-tsc)
+make logs            # Tail Docker logs
+make shell           # Open SQLite interactive shell
+make reset           # Stop services and wipe the database volume
 make gen-ts          # Regenerate TypeScript client from OpenAPI schema
-make clean           # Remove .venv, generated clients, and database
-```
-
-### Docker commands
-
-```bash
-make docker-up       # Start dev mode (Vite HMR)
-make docker-up-prod  # Start production mode (nginx)
-make docker-down     # Stop all services
-make docker-seed     # Seed the Docker database
-make docker-logs     # Tail Docker logs
-```
-
-### Frontend linting and formatting
-
-```bash
-cd frontend-vue
-npm run lint         # ESLint (auto-fix)
-npm run format       # Prettier
-npm run type-check   # vue-tsc
-npm run test         # Vitest
-```
-
-### Backend linting
-
-```bash
-.venv/bin/python -m ruff check .
-.venv/bin/python -m mypy .
+make clean           # Remove generated TypeScript client
 ```
 
 ---
@@ -234,10 +167,8 @@ pycefr/
       plugins/         # Vuetify, i18n, router setup
       utils/           # Helpers (charts, date formatting, enums)
       views/           # Page-level components
-    Dockerfile         # Multi-stage build → nginx
-    nginx.conf         # Production reverse proxy config
-  database/            # SQLite database file (gitignored)
-  docker-compose.yml   # Dev + prod service definitions
+    Dockerfile         # Frontend container definition
+  docker-compose.yml   # Docker service definitions
   pycefr.py            # CLI entry point
   Makefile             # Build and run commands
   pyproject.toml       # Python project metadata and tool config
