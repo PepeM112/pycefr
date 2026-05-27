@@ -178,7 +178,6 @@ import EditAnalysisDialog from '@/components/analysis/EditAnalysisDialog.vue';
 import NewAnalysisDialog from '@/components/analysis/NewAnalysisDialog.vue';
 import PageView from '@/components/PageView.vue';
 import ThreeDotsMenu from '@/components/ThreeDotsMenu.vue';
-import type { MenuAction } from '@/types/menu';
 import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useTagFetcher } from '@/composables/fetcher/useTagFetcher';
@@ -193,6 +192,7 @@ import Enums from '@/utils/enums';
 import { getOriginIcon, getStatusColor } from '@/utils/utils';
 import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
+import type { MenuAction } from '@/types/menu';
 
 const CARDS_PER_PAGE = 9;
 const VIEW_MODE_KEY = 'pycefr-analyses-view-mode';

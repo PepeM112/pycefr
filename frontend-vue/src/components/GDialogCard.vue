@@ -114,7 +114,7 @@ async function confirm() {
     emit('confirmPost');
     confirmationKeyInput.value = undefined;
     localModel.value = false;
-  } catch (error) {
+  } catch {
     innerLoading.value = false;
   }
 }
@@ -129,7 +129,7 @@ async function close() {
     emit('closePost');
     confirmationKeyInput.value = undefined;
     localModel.value = false;
-  } catch (error) {
+  } catch {
     innerLoading.value = false;
   }
 }

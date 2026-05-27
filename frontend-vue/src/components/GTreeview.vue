@@ -3,9 +3,13 @@
     <v-virtual-scroll :items="flattenedItems" :height="height" item-height="34">
       <template #default="{ item }">
         <div
+          role="treeitem"
+          tabindex="0"
+          :aria-selected="isSelected(item)"
           class="g-tree-node"
           :style="{ paddingLeft: `${item.depth * 16 + 8}px` }"
-          @click="item.hasChildren ? toggleExpand(item.id) : null"
+          @click="item.hasChildren ? toggleExpand(item.id) : undefined"
+          @keydown.enter="item.hasChildren ? toggleExpand(item.id) : undefined"
         >
           <v-checkbox-btn
             v-if="isSelectable"
@@ -72,7 +76,11 @@ const isExpanded = (id: number) => expandedIds.value.has(id) || props.search.len
 
 function toggleExpand(id: number) {
   const newSet = new Set(expandedIds.value);
-  newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+  if (newSet.has(id)) {
+    newSet.delete(id);
+  } else {
+    newSet.add(id);
+  }
   expandedIds.value = newSet;
 }
 

@@ -22,6 +22,7 @@ const props = withDefaults(
     isRelative?: boolean;
   }>(),
   {
+    format: undefined,
     isRelative: false,
   }
 );
