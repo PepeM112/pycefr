@@ -1,6 +1,7 @@
 import { nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
+import { FilterType } from '@/types/filter';
 import { useQuery } from './useQuery';
 import type { LocationQuery } from 'vue-router';
 import type { FilterItem, FilterValue } from '@/types/filter';
@@ -15,6 +16,13 @@ export function useFilter(filterList: FilterItem[]) {
   const filters = ref<FilterValue>({});
   let isHydrating = true;
 
+  const allQueryKeys = new Set(
+    filterList.flatMap(item => {
+      const key = item.query || item.key;
+      return item.type === FilterType.DATE ? [`${key}_from`, `${key}_to`] : [key];
+    })
+  );
+
   /**
    * Updates query using filter values.
    *
@@ -22,6 +30,7 @@ export function useFilter(filterList: FilterItem[]) {
    */
   const syncToUrl = () => {
     const serializedEntries = filterList.flatMap(item => Object.entries(serializeFilterValue(item, filters.value)));
+    const producedKeys = new Set(serializedEntries.map(([key]) => key));
 
     const queryToUpdate = serializedEntries.reduce<LocationQuery>(
       (query, [key, val]) => {
@@ -36,6 +45,10 @@ export function useFilter(filterList: FilterItem[]) {
       },
       { ...route.query }
     );
+
+    allQueryKeys.forEach(key => {
+      if (!producedKeys.has(key)) delete queryToUpdate[key];
+    });
 
     queryToUpdate.p = '1';
 
