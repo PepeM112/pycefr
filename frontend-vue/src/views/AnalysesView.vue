@@ -573,12 +573,6 @@ async function handleDownload(id: number, name: string) {
 </script>
 
 <style lang="scss" scoped>
-.status-badge {
-  font-size: 0.75rem;
-  border-radius: 1rem;
-  padding: 2px 8px;
-}
-
 .origin-link {
   display: inline-flex;
   color: inherit;

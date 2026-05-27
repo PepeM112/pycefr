@@ -84,15 +84,7 @@ function toggleExpand(id: number) {
   expandedIds.value = newSet;
 }
 
-function getDescendantIds(node: TreeNode): number[] {
-  let ids = [node.id];
-  if (node.children) {
-    for (const child of node.children) {
-      ids = [...ids, ...getDescendantIds(child)];
-    }
-  }
-  return ids;
-}
+const getDescendantIds = (node: TreeNode): number[] => [node.id, ...(node.children?.flatMap(getDescendantIds) ?? [])];
 
 function isSelected(node: TreeNode): boolean {
   if (props.selected === 'all') return true;

@@ -149,8 +149,12 @@ const availableTags = computed(() =>
 );
 
 async function fetchTagSuggestions() {
-  const { data } = await getTags({ query: { limit: 50 } });
-  if (data) tagSuggestions.value = data;
+  try {
+    const { data } = await getTags({ query: { limit: 50 } });
+    if (data) tagSuggestions.value = data;
+  } catch {
+    // Tag suggestions are non-critical — fail silently
+  }
 }
 
 void fetchTagSuggestions();

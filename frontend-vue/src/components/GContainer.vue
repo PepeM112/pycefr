@@ -36,7 +36,7 @@ defineProps<{
   isExpandable?: boolean;
 }>();
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
 .g-container {
   position: relative;
   background-color: rgb(var(--v-theme-surface));

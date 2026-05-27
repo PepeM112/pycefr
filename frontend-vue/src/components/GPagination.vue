@@ -46,8 +46,8 @@ function onPageChange(page: number) {
 }
 
 function onPerPageChange(perPage: number) {
-  const newTotalPages = Math.ceil(props.modelValue.total / perPage);
-  const page = props.modelValue.page > newTotalPages ? newTotalPages || 1 : props.modelValue.page;
+  const newTotal = perPage > 0 ? Math.ceil(props.modelValue.total / perPage) : 1;
+  const page = props.modelValue.page > newTotal ? newTotal || 1 : props.modelValue.page;
   emit('update:modelValue', { ...props.modelValue, perPage, page });
 }
 </script>

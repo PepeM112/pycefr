@@ -202,11 +202,3 @@ async function loadData() {
 
 onMounted(loadData);
 </script>
-
-<style lang="scss" scoped>
-.status-badge {
-  font-size: 0.75rem;
-  border-radius: 1rem;
-  padding: 2px 8px;
-}
-</style>

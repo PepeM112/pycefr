@@ -19,7 +19,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(item, index) in props.modelValue" :key="index">
+      <tr v-for="(item, index) in props.modelValue" :key="item[props.itemKey] ?? index">
         <td v-for="header in headers" :key="header.key">
           <div
             class="d-flex align-center"
@@ -59,10 +59,12 @@ const props = withDefaults(
   defineProps<{
     modelValue: T[];
     headers: TableHeader[];
+    itemKey?: string;
   }>(),
   {
     modelValue: () => [],
     headers: () => [],
+    itemKey: 'id',
   }
 );
 

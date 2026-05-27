@@ -86,6 +86,7 @@ const props = defineProps<{
 }>();
 
 const search = ref('');
+const isMenuOpen = ref(false);
 
 const localModel = computed({
   get: () => props.modelValue,
@@ -179,9 +180,9 @@ function onSelectionUpdate() {
   search.value = '';
 }
 
-/* Fetch when opening menu */
-function onMenuUpdate(isOpen: boolean) {
-  if (isOpen && props.options?.fetcher) {
+function onMenuUpdate(open: boolean) {
+  isMenuOpen.value = open;
+  if (open && props.options?.fetcher) {
     void props.options.fetcher.fetch(search.value);
   }
 }
@@ -189,7 +190,7 @@ function onMenuUpdate(isOpen: boolean) {
 watch(
   () => search.value,
   newValue => {
-    if (props.options?.fetcher) {
+    if (isMenuOpen.value && props.options?.fetcher) {
       void props.options.fetcher.fetch(newValue);
     }
   }
