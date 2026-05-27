@@ -27,7 +27,7 @@ export function getLabel<T extends Enum>(enumType: T, value: T[keyof T], t?: Com
   const enumLabels = getLabelsByEnumType(enumType);
 
   if (enumLabels?.labels && value in enumLabels.labels) {
-    const labelKey = enumLabels.labels[value as keyof typeof enumLabels.labels];
+    const labelKey = enumLabels.labels[value];
     if (labelKey) return t ? t(labelKey) : labelKey;
   }
 
