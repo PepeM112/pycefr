@@ -313,6 +313,7 @@ const treemapData = computed(() => {
   return {
     datasets: [
       {
+        data: [],
         tree: flatData,
         key: 'v' as const,
         groups: ['g' as const],
