@@ -4,10 +4,10 @@
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
     <generic-loader :model-value="loaderStatus">
-      <g-container class="mb-8" title="insights" expandable>
+      <g-container class="mb-8" title="insights" is-expandable>
         <analysis-charts v-if="chartData && loaderStatus === LoadingStatus.IDLE" :data="chartData" :items="tableData" />
       </g-container>
-      <g-container v-if="analysisData?.repo" class="mb-8" title="repository" expandable>
+      <g-container v-if="analysisData?.repo" class="mb-8" title="repository" is-expandable>
         <repo-section :repo="analysisData.repo" />
       </g-container>
       <g-container title="properties">
@@ -80,6 +80,7 @@ import { useClassLabel } from '@/composables/useClassLabel';
 import { usePagination } from '@/composables/usePagination';
 import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
+import { useSnackbarStore } from '@/stores/snackbarStore';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import { buildChartData } from '@/utils/analysisCharts';
@@ -92,6 +93,7 @@ import type { TreeNode } from '@/types/treeview';
 
 const { t } = useI18n();
 const route = useRoute();
+const snackbarStore = useSnackbarStore();
 const sort = useSorting();
 const pagination = usePagination();
 const classLabel = useClassLabel();
@@ -167,11 +169,15 @@ function onUpdateSelected(value: number[] | 'all') {
 }
 
 async function loadData() {
+  if (isNaN(analysisId)) {
+    loaderStatus.value = LoadingStatus.ERROR;
+    return;
+  }
   loaderStatus.value = LoadingStatus.LOADING;
-  const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId ?? 0 } });
+  const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId } });
   if (error) {
     loaderStatus.value = LoadingStatus.ERROR;
-    console.error('error.fetching.analysis_data:', error);
+    snackbarStore.add({ text: 'error.fetching.analysis_data', color: 'error', icon: 'mdi-alert-circle-outline', closable: true });
     return;
   }
   analysisData.value = data;

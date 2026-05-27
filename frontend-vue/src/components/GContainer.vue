@@ -1,6 +1,6 @@
 <template>
-  <section class="g-container" :class="{ 'pa-6': !expandable }">
-    <template v-if="!expandable">
+  <section class="g-container" :class="{ 'pa-6': !isExpandable }">
+    <template v-if="!isExpandable">
       <div class="d-flex mb-4">
         <h2 v-if="title" class="text-h5 font-weight-bold">{{ $t(title) }}</h2>
         <v-spacer />
@@ -33,7 +33,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   title?: string;
-  expandable?: boolean;
+  isExpandable?: boolean;
 }>();
 </script>
 <style lang="scss">

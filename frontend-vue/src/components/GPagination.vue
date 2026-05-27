@@ -37,7 +37,9 @@ const props = defineProps<{
   modelValue: Pagination;
 }>();
 
-const totalPages = computed<number>(() => Math.ceil(props.modelValue.total / props.modelValue.perPage));
+const totalPages = computed<number>(() =>
+  props.modelValue.perPage > 0 ? Math.ceil(props.modelValue.total / props.modelValue.perPage) : 1
+);
 
 function onPageChange(page: number) {
   emit('update:modelValue', { ...props.modelValue, page });

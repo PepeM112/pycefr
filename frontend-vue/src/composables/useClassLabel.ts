@@ -3,35 +3,30 @@ import { type ClassPublic, classLabel, Level } from '@/client';
 
 const cache = ref<Array<ClassPublic>>([]);
 
-export function useClassLabel<T = ClassPublic>(options?: { mapper?: (item: ClassPublic) => T; force?: boolean }) {
-  const items = ref<T[]>([]);
-  const loading = ref<boolean>(false);
+export function useClassLabel(options?: { isForce?: boolean }) {
+  const items = ref<ClassPublic[]>([]);
+  const isLoading = ref<boolean>(false);
 
   async function fetch() {
-    if (cache.value.length > 0 && !options?.force) {
-      applyData(cache.value);
+    if (cache.value.length > 0 && !options?.isForce) {
+      items.value = cache.value;
       return;
     }
 
     try {
-      loading.value = true;
+      isLoading.value = true;
       const { data, error } = await classLabel();
 
       if (error) throw error;
 
       const results = data ?? [];
       cache.value = results;
-
-      applyData(results);
+      items.value = results;
     } catch (e) {
       console.error('Error loading labels:', e);
     } finally {
-      loading.value = false;
+      isLoading.value = false;
     }
-  }
-
-  function applyData(data: ClassPublic[]) {
-    items.value = options?.mapper ? data.map(options.mapper) : (data as T[]);
   }
 
   function getClassLevel(classId: number): Level {
@@ -40,7 +35,7 @@ export function useClassLabel<T = ClassPublic>(options?: { mapper?: (item: Class
 
   return {
     items,
-    loading,
+    isLoading,
     fetch,
     getClassLevel,
   };

@@ -45,12 +45,12 @@ export function useFetchOnQuery(fetcher: () => Promise<void> | void, options: Fe
 
   /**
    * Executes the fetcher function.
-   * @param force - If true, ignores the debounceWait (used for initial mount).
+   * @param isImmediate - If true, ignores the debounceWait (used for initial mount).
    */
-  const executeFetch = (force: boolean = false) => {
+  const executeFetch = (isImmediate: boolean = false) => {
     if (timeout) clearTimeout(timeout);
 
-    if (force || !options.debounceWait) {
+    if (isImmediate || !options.debounceWait) {
       fetcher();
       return;
     }

@@ -105,10 +105,10 @@ const conclusions = computed(() => {
   if (totalInstances === 0) return [];
 
   return [
-    AnalysisChartsUtils.getComplexityAbstractionInsight(items, totalInstances),
-    AnalysisChartsUtils.getPythonicDensityInsight(items),
-    AnalysisChartsUtils.getExceptionHandlingInsight(items),
-    AnalysisChartsUtils.getStructuralCompetenceInsight(items),
+    AnalysisChartsUtils.getComplexityAbstractionInsight(items, totalInstances, t),
+    AnalysisChartsUtils.getPythonicDensityInsight(items, t),
+    AnalysisChartsUtils.getExceptionHandlingInsight(items, t),
+    AnalysisChartsUtils.getStructuralCompetenceInsight(items, t),
   ];
 });
 
@@ -190,9 +190,9 @@ const treemapOptions = computed(() => ({
   },
 }));
 
-const hasNumericData = (data: { datasets: Record<string, unknown>[] }) =>
-  data.datasets.some(ds => {
-    const values = (ds.data as number[]) ?? (ds.tree as { v: number }[])?.map(d => d.v);
+const hasNumericData = (chartData: { datasets: { data?: number[]; tree?: { v: number }[] }[] }) =>
+  chartData.datasets.some(ds => {
+    const values = ds.data ?? ds.tree?.map(d => d.v);
     return Array.isArray(values) && values.some(v => v > 0);
   });
 
@@ -203,7 +203,7 @@ const charts = computed(() => [
     data: levelData.value,
     options: levelBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
-    hasData: hasNumericData(levelData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(levelData.value),
   },
   {
     title: 'charts.competency_radar',
@@ -211,7 +211,7 @@ const charts = computed(() => [
     data: radarData.value,
     options: radarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
-    hasData: hasNumericData(radarData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(radarData.value),
   },
   {
     title: 'charts.top_patterns',
@@ -219,7 +219,7 @@ const charts = computed(() => [
     data: topClassesData.value,
     options: horizontalBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
-    hasData: hasNumericData(topClassesData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(topClassesData.value),
   },
   {
     title: 'charts.pythonic_ratio',
@@ -227,7 +227,7 @@ const charts = computed(() => [
     data: pythonicData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
-    hasData: hasNumericData(pythonicData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(pythonicData.value),
   },
   {
     title: 'charts.exception_strategy',
@@ -235,7 +235,7 @@ const charts = computed(() => [
     data: exceptionData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
-    hasData: hasNumericData(exceptionData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(exceptionData.value),
   },
   {
     title: 'charts.directory_density_map',
@@ -244,7 +244,7 @@ const charts = computed(() => [
     options: treemapOptions.value,
     grid: { cols: 12, lg: 6 },
     type: 'treemap',
-    hasData: hasNumericData(treemapData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(treemapData.value),
   },
 ]);
 

@@ -37,7 +37,7 @@
     v-model:search="search"
     class="bg-transparent w-100"
     :items="sortedItems"
-    :loading="props.options?.fetcher?.loading.value"
+    :loading="props.options?.fetcher?.isLoading.value"
     :multiple="isMultiple"
     :chips="isMultiple"
     :closable-chips="isMultiple"
@@ -157,7 +157,7 @@ const isSelectType = computed(() => [FilterType.SELECT, FilterType.MULTIPLE_SELE
 
 const sortedItems = computed<FilterEntity[]>(() => {
   if (props.options?.sortItems) {
-    return localItems.value.sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
+    return [...localItems.value].sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
   }
 
   const translatedItems = localItems.value.map(it => {

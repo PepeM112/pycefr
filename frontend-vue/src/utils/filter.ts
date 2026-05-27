@@ -41,7 +41,7 @@ export function normalizeToFilterEntity(
 
   return {
     ...item,
-    label: item[itemTitle],
+    label: String(item[itemTitle]),
     value: item[itemValue],
   };
 }

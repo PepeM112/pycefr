@@ -8,7 +8,7 @@
           @click="item.hasChildren ? toggleExpand(item.id) : null"
         >
           <v-checkbox-btn
-            v-if="selectable"
+            v-if="isSelectable"
             class="tree-checkbox"
             :model-value="isSelected(item)"
             :indeterminate="isIndeterminate(item)"
@@ -53,14 +53,14 @@ const props = withDefaults(
   defineProps<{
     items: TreeNode[];
     selected: number[] | 'all';
-    selectable?: boolean;
+    isSelectable?: boolean;
     search?: string;
     height?: string | number;
   }>(),
   {
     items: () => [],
     selected: () => [],
-    selectable: false,
+    isSelectable: false,
     search: '',
     height: '400px',
   }
@@ -88,7 +88,8 @@ function getDescendantIds(node: TreeNode): number[] {
 
 function isSelected(node: TreeNode): boolean {
   if (props.selected === 'all') return true;
-  const selectedIds = props.selected as number[];
+  if (!Array.isArray(props.selected)) return false;
+  const selectedIds = props.selected;
 
   if (!node.children || node.children.length === 0) {
     return selectedIds.includes(node.id);

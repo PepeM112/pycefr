@@ -44,7 +44,7 @@
   <g-pagination v-if="pagination" v-model="pagination" class="mt-4" />
 </template>
 
-<script setup lang="ts" generic="T extends Record<string, any>">
+<script setup lang="ts" generic="T extends Record<string, unknown>">
 import { computed } from 'vue';
 import { type Pagination, SortDirection } from '@/client';
 import GPagination from '@/components/GPagination.vue';
@@ -65,7 +65,6 @@ const props = withDefaults(
   defineProps<{
     modelValue: T[];
     headers: TableHeader[];
-    pagination?: Pagination;
   }>(),
   {
     modelValue: () => [],

@@ -6,7 +6,7 @@ import type { FilterEntity } from '@/types/filter';
 
 export function useTagFetcher(options: FetcherOptions = {}): ItemFetcher {
   const items = ref<FilterEntity[]>([]);
-  const loading = ref(false);
+  const isLoading = ref(false);
 
   let timeoutId: number | null = null;
 
@@ -16,13 +16,13 @@ export function useTagFetcher(options: FetcherOptions = {}): ItemFetcher {
       timeoutId = null;
     }
 
-    if (options.lazy && items.value.length > 0 && !search) {
+    if (options.isLazy && items.value.length > 0 && !search) {
       return items.value;
     }
 
     const executeFetch = async () => {
       try {
-        loading.value = true;
+        isLoading.value = true;
         const { data, error } = await getTags({ query: { search, limit: options.limit } });
 
         if (error) throw error;
@@ -34,11 +34,11 @@ export function useTagFetcher(options: FetcherOptions = {}): ItemFetcher {
           })) ?? [];
 
         return items.value;
-      } catch (e) {
+      } catch {
         useSnackbarStore().add({ color: 'error', text: 'error.fetching.tags' });
         return [];
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
     };
 
@@ -54,5 +54,5 @@ export function useTagFetcher(options: FetcherOptions = {}): ItemFetcher {
     return executeFetch();
   }
 
-  return { items, loading, fetch };
+  return { items, isLoading, fetch };
 }

@@ -128,7 +128,7 @@ const localModel = computed({
 
 const urls = ref<string[]>([]);
 const inputError = ref<string | null>(null);
-let previousUrls: string[] = [];
+const previousUrls = ref<string[]>([]);
 const inProgressCount = ref(0);
 const isSubmitting = ref(false);
 const tagSuggestions = ref<string[]>([]);
@@ -201,15 +201,15 @@ function extractRepoName(url: string): string {
 }
 
 function handleUrlsChange(newUrls: string[]) {
-  const added = newUrls.filter(u => !previousUrls.includes(u));
+  const added = newUrls.filter(u => !previousUrls.value.includes(u));
 
   if (added.length === 0) {
-    previousUrls = [...newUrls];
+    previousUrls.value = [...newUrls];
     inputError.value = null;
     return;
   }
 
-  const validated: string[] = [...previousUrls];
+  const validated: string[] = [...previousUrls.value];
   for (const raw of added) {
     const url = raw.trim().replace(/\/+$/, '');
     if (!url) continue;
@@ -234,7 +234,7 @@ function handleUrlsChange(newUrls: string[]) {
   }
 
   urls.value = validated;
-  previousUrls = [...validated];
+  previousUrls.value = [...validated];
 }
 
 function handlePaste(event: ClipboardEvent) {
@@ -255,63 +255,66 @@ async function handleSubmit() {
   if (urls.value.length === 0) return;
 
   isSubmitting.value = true;
-  localStorage.setItem(INCLUDE_GIT_STORAGE_KEY, String(form.value.includeGit));
+  try {
+    localStorage.setItem(INCLUDE_GIT_STORAGE_KEY, String(form.value.includeGit));
 
-  const results = await Promise.allSettled(
-    urls.value.map(url =>
-      createAnalysis({
-        body: {
-          repoUrl: url,
-          includeGit: form.value.includeGit,
-          tags: form.value.tags,
-        },
-      })
-    )
-  );
+    const results = await Promise.allSettled(
+      urls.value.map(url =>
+        createAnalysis({
+          body: {
+            repoUrl: url,
+            includeGit: form.value.includeGit,
+            tags: form.value.tags,
+          },
+        })
+      )
+    );
 
-  let successCount = 0;
-  results.forEach((result, index) => {
-    if (result.status === 'rejected') {
-      snackbarStore.add({
-        text: t('bulk_analysis.error_single', { repo: extractRepoName(urls.value[index]) }),
-        color: 'error',
-        icon: 'mdi-alert-circle-outline',
-      });
-      return;
-    }
+    let successCount = 0;
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        snackbarStore.add({
+          text: t('bulk_analysis.error_single', { repo: extractRepoName(urls.value[index]) }),
+          color: 'error',
+          icon: 'mdi-alert-circle-outline',
+        });
+        return;
+      }
 
-    const { data, error } = result.value;
-    if (error || !data) {
-      snackbarStore.add({
-        text: t('bulk_analysis.error_single', { repo: extractRepoName(urls.value[index]) }),
-        color: 'error',
-        icon: 'mdi-alert-circle-outline',
-      });
-      return;
-    }
+      const { data, error } = result.value;
+      if (error || !data) {
+        snackbarStore.add({
+          text: t('bulk_analysis.error_single', { repo: extractRepoName(urls.value[index]) }),
+          color: 'error',
+          icon: 'mdi-alert-circle-outline',
+        });
+        return;
+      }
 
-    successCount++;
-    emit('created', data);
-  });
-
-  if (successCount > 0) {
-    snackbarStore.add({
-      text: t('bulk_analysis.success', { count: successCount }),
-      color: 'success',
-      icon: 'mdi-check-circle-outline',
+      successCount++;
+      emit('created', data);
     });
-  }
 
-  isSubmitting.value = false;
-  urls.value = [];
-  previousUrls = [];
-  form.value.tags = [];
-  localModel.value = false;
+    if (successCount > 0) {
+      snackbarStore.add({
+        text: t('bulk_analysis.success', { count: successCount }),
+        color: 'success',
+        icon: 'mdi-check-circle-outline',
+      });
+    }
+
+    urls.value = [];
+    previousUrls.value = [];
+    form.value.tags = [];
+    localModel.value = false;
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 function handleClose() {
   urls.value = [];
-  previousUrls = [];
+  previousUrls.value = [];
   inputError.value = null;
   form.value.tags = [];
   localModel.value = false;

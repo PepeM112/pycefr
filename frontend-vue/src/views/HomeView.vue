@@ -56,10 +56,10 @@
                       {{ $t(item.status) }}
                     </span>
                   </td>
-                  <td><g-date :date="item.createdAt" relative /></td>
+                  <td><g-date :date="item.createdAt" is-relative /></td>
                   <td class="text-right">
                     <v-btn
-                      v-if="item.status === 'completed'"
+                      v-if="item.status === AnalysisStatus.COMPLETED"
                       density="comfortable"
                       icon="mdi-eye-outline"
                       variant="text"

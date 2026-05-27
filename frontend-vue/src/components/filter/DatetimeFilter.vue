@@ -32,7 +32,7 @@
   </v-menu>
 </template>
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { useTheme } from 'vuetify';
@@ -57,7 +57,14 @@ const props = withDefaults(
 
 const showMenu = ref<boolean>(false);
 const datePickerDate = ref<Date[] | undefined>(undefined);
-const localDate = ref<DateFilterValue | undefined>(undefined);
+const localDate = ref<DateFilterValue | undefined>(props.modelValue);
+
+watch(
+  () => props.modelValue,
+  val => {
+    localDate.value = val;
+  }
+);
 
 const isDark = computed(() => theme.global.current.value.dark);
 

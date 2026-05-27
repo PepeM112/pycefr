@@ -12,10 +12,14 @@ export const useSorting = () => {
   const router = useRouter();
 
   const sortFilter = computed<Sorting>({
-    get: () => ({
-      column: (route.query.s_c as string) || '',
-      direction: route.query.s_d ? (Number(route.query.s_d) as SortDirection) : SortDirection.UNKNOWN,
-    }),
+    get: () => {
+      const rawDir = Number(route.query.s_d);
+      const isValidDir = [SortDirection.UNKNOWN, SortDirection.ASC, SortDirection.DESC].includes(rawDir);
+      return {
+        column: typeof route.query.s_c === 'string' ? route.query.s_c : '',
+        direction: isValidDir ? rawDir : SortDirection.UNKNOWN,
+      };
+    },
     set: (newVal: Sorting) => {
       const isSameColumn = sortFilter.value.column === String(newVal.column);
       let nextDir: SortDirection;

@@ -62,7 +62,7 @@
       :items="localModelValue"
       :selected="selectedNodes"
       :search="searchOptions.searchText"
-      :selectable="searchOptions.allowFilterByFiles"
+      :is-selectable="searchOptions.allowFilterByFiles"
       height="800"
       class="pa-0 pb-8"
       @update:selected="val => (selectedNodes = val)"

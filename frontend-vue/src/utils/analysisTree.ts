@@ -1,4 +1,4 @@
-import { getExtensionIcon, type FileExtension } from '@/utils/utils';
+import { getExtensionIcon } from '@/utils/utils';
 import type { AnalysisFilePublic } from '@/client';
 import type { TreeNode } from '@/types/treeview';
 
@@ -37,8 +37,8 @@ export function buildFileTree(fileClasses: AnalysisFilePublic[]): BuildTreeResul
       let icon = 'mdi-file-outline';
       if (!hasChildren) {
         const parts = key.split('.');
-        const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
-        icon = getExtensionIcon(extension) || 'mdi-file-outline';
+        const extension = parts.length > 1 ? (parts.pop()?.toLowerCase() ?? '') : '';
+        icon = getExtensionIcon(extension) ?? 'mdi-file-outline';
       }
 
       const node: TreeNode = {

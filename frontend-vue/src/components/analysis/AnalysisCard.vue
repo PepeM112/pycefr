@@ -6,7 +6,11 @@
       </v-avatar>
       <div class="d-flex flex-column">
         <h3 class="font-weight-bold text-truncate">
-          <router-link v-if="modelValue?.status === 'completed'" :to="`/repo/${modelValue?.id}`" class="analysis-link">
+          <router-link
+            v-if="modelValue?.status === AnalysisStatus.COMPLETED"
+            :to="`/repo/${modelValue?.id}`"
+            class="analysis-link"
+          >
             {{ modelValue?.name || 'N/A' }}
           </router-link>
           <span v-else>
@@ -72,7 +76,7 @@
     <v-card-actions class="pa-0 align-end">
       <v-spacer />
       <v-btn
-        v-if="modelValue?.status === 'completed'"
+        v-if="modelValue?.status === AnalysisStatus.COMPLETED"
         color="primary-on-surface"
         variant="flat"
         density="comfortable"
@@ -82,7 +86,7 @@
         {{ $t('see_more') }}
       </v-btn>
       <v-btn
-        v-else-if="modelValue?.status === 'failed'"
+        v-else-if="modelValue?.status === AnalysisStatus.FAILED"
         color="error"
         variant="flat"
         density="comfortable"
@@ -101,11 +105,11 @@ import GDate from '@/components/GDate.vue';
 import { RouteNames } from '@/router/route-names';
 import { getStatusColor } from '@/utils/utils';
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'delete', value: number): void;
 }>();
 
-const props = defineProps<{
+defineProps<{
   modelValue: AnalysisSummaryPublic;
 }>();
 
@@ -113,7 +117,7 @@ function getProfileNameFromUrl(url: string): string {
   try {
     const parsedUrl = new URL(url);
     return parsedUrl.pathname.split('/')[1] || 'Unknown';
-  } catch (e) {
+  } catch {
     return 'Unknown';
   }
 }

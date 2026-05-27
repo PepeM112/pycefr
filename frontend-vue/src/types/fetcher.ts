@@ -9,13 +9,13 @@ import type { Primitive } from 'vuetify/lib/util';
 export interface FetcherOptions<T extends Primitive | FilterEntity = Primitive | FilterEntity, R = T> {
   map?: (item: R) => T;
   compare?: (a: T, b: T) => boolean;
-  lazy?: boolean;
+  isLazy?: boolean;
   limit?: number; // Limit for the number of items to fetch from the API (by default API returns all items)
   debounce?: number; // Time in ms to debounce the fetch function
 }
 
 export interface ItemFetcher {
   items: Ref<Primitive[] | FilterEntity[]>;
-  loading: Ref<boolean>;
+  isLoading: Ref<boolean>;
   fetch: (search?: string) => Promise<Primitive[] | FilterEntity[]>;
 }

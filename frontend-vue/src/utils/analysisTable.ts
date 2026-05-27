@@ -48,6 +48,9 @@ export function filterAndSortClasses(
 
   if (sort.direction === SortDirection.UNKNOWN || !sort.column) return labeled;
 
+  const SORTABLE_COLUMNS: Set<string> = new Set<string>(['classId', 'level', 'instances']);
+  if (!SORTABLE_COLUMNS.has(sort.column)) return labeled;
+
   const sorted = [...labeled];
   sorted.sort((a, b) => {
     let comparison = 0;

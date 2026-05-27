@@ -22,11 +22,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLangStore, type LanguageCode, LANGUAGE_OPTIONS } from '@/stores/langStore';
 
-const { locale, t } = useI18n();
+const { t } = useI18n();
 const langStore = useLangStore();
 const isMenuOpen = ref(false);
 
@@ -34,14 +34,6 @@ function changeLanguage(code: LanguageCode) {
   langStore.setLanguage(code);
   isMenuOpen.value = false;
 }
-
-watch(
-  () => langStore.currentLang,
-  newLang => {
-    locale.value = newLang;
-  },
-  { immediate: true }
-);
 </script>
 <style scoped lang="scss">
 :deep(.v-list-item__prepend .v-list-item__spacer) {

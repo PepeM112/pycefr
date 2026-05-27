@@ -58,7 +58,7 @@
               </template>
             </template>
             <template #item-created_at="{ item }">
-              <g-date :date="item.createdAt" relative />
+              <g-date :date="item.createdAt" is-relative />
             </template>
             <template #item-tags="{ item }">
               <div class="d-flex ga-1 flex-wrap">
@@ -140,7 +140,7 @@
         confirm-label="upload"
         width="400"
         show-size
-        :disable-confirm="fileToUpload.length === 0"
+        :is-confirm-disabled="fileToUpload.length === 0"
         @confirm-pre="() => handleUpload()"
         @close-pre="
           () => {
@@ -155,7 +155,7 @@
         title="delete_analysis"
         text="confirm_delete_analysis"
         width="400"
-        @confirm-pre="() => handleDeleteAnalysis(analysisBeingDeleted)"
+        @confirm-pre="() => analysisBeingDeleted !== undefined && handleDeleteAnalysis(analysisBeingDeleted)"
         @close-pre="() => (analysisBeingDeleted = undefined)"
       />
       <edit-analysis-dialog v-model="showEditDialog" :analysis="analysisBeingEdited" @saved="handleAnalysisEdited" />
@@ -411,7 +411,7 @@ function handleLoadMore() {
   loadCardsData(false);
 }
 
-async function handleDeleteAnalysis(id: number = 0) {
+async function handleDeleteAnalysis(id: number) {
   const success = await removeAnalysis(id);
   if (!success) return;
 
