@@ -182,7 +182,7 @@ function onSelectionUpdate() {
 /* Fetch when opening menu */
 function onMenuUpdate(isOpen: boolean) {
   if (isOpen && props.options?.fetcher) {
-    props.options.fetcher.fetch(search.value);
+    void props.options.fetcher.fetch(search.value);
   }
 }
 
@@ -190,7 +190,7 @@ watch(
   () => search.value,
   newValue => {
     if (props.options?.fetcher) {
-      props.options.fetcher.fetch(newValue);
+      void props.options.fetcher.fetch(newValue);
     }
   }
 );

@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
 import { useQuery } from './useQuery';
@@ -13,6 +13,7 @@ export function useFilter(filterList: FilterItem[]) {
   const { updateQuery } = useQuery();
 
   const filters = ref<FilterValue>({});
+  let isHydrating = true;
 
   /**
    * Updates query using filter values.
@@ -38,7 +39,7 @@ export function useFilter(filterList: FilterItem[]) {
 
     queryToUpdate.p = '1';
 
-    updateQuery(queryToUpdate);
+    void updateQuery(queryToUpdate);
   };
 
   /**
@@ -58,12 +59,21 @@ export function useFilter(filterList: FilterItem[]) {
   };
 
   hydrateFromUrl();
+  void nextTick(() => {
+    isHydrating = false;
+  });
 
   watch(
     () => filters.value,
-    () => syncToUrl(),
+    () => {
+      if (!isHydrating) syncToUrl();
+    },
     { deep: true }
   );
 
-  return filters;
+  function getValue<R>(key: string): R | undefined {
+    return filters.value[key] as R | undefined;
+  }
+
+  return { filters, getValue };
 }

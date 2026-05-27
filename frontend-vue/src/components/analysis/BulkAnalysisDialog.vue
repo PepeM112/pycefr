@@ -162,9 +162,9 @@ async function fetchTagSuggestions() {
 }
 
 function startPolling() {
-  fetchInProgressCount();
-  fetchTagSuggestions();
-  pollTimer = setInterval(fetchInProgressCount, POLL_INTERVAL_MS);
+  void fetchInProgressCount();
+  void fetchTagSuggestions();
+  pollTimer = setInterval(() => void fetchInProgressCount(), POLL_INTERVAL_MS);
 }
 
 function stopPolling() {

@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { type ClassPublic, classLabel, Level } from '@/client';
+import { type ClassId, type ClassPublic, classLabel, Level } from '@/client';
 
 const cache = ref<Array<ClassPublic>>([]);
 
@@ -17,7 +17,7 @@ export function useClassLabel(options?: { isForce?: boolean }) {
       isLoading.value = true;
       const { data, error } = await classLabel();
 
-      if (error) throw error;
+      if (error) throw error instanceof Error ? error : new Error('Failed to load labels');
 
       const results = data ?? [];
       cache.value = results;
@@ -31,7 +31,7 @@ export function useClassLabel(options?: { isForce?: boolean }) {
     }
   }
 
-  function getClassLevel(classId: number): Level {
+  function getClassLevel(classId: ClassId): Level {
     return cache.value.find(item => item.id === classId)?.level ?? Level.UNKNOWN;
   }
 

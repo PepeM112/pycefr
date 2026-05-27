@@ -255,7 +255,7 @@ const levelData = computed(() => {
     datasets: [
       {
         data: AnalysisChartsUtils.getLevelDistributionStats(props.data.items),
-        backgroundColor: levels.map(l => getLevelColor(l.value as Level)),
+        backgroundColor: levels.map(l => getLevelColor(l.value)),
       },
     ],
   };

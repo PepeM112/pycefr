@@ -36,12 +36,12 @@
                   v-for="level in LEVELS"
                   :key="`level-${level.value}`"
                   class="level-bubble-btn"
-                  :class="{ selected: selectedLevels.includes(level.value as Level) }"
-                  :style="{ backgroundColor: getLevelColor(level.value as Level) }"
+                  :class="{ selected: selectedLevels.includes(level.value) }"
+                  :style="{ backgroundColor: getLevelColor(level.value) }"
                   size="small"
                   density="comfortable"
                   rounded="circle"
-                  @click="toggleLevel(level.value as Level)"
+                  @click="toggleLevel(level.value)"
                 >
                   {{ level.label }}
                 </v-btn>
@@ -52,7 +52,7 @@
                 {{ $t(`${getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
-                <span class="level-bubble" :style="{ backgroundColor: getLevelColor(item.level as Level) }">
+                <span class="level-bubble" :style="{ backgroundColor: getLevelColor(item.level) }">
                   {{ $t(getLabel(Level, item.level)) }}
                 </span>
               </template>
@@ -107,16 +107,14 @@ const search = ref<string>('');
 const analysisData = shallowRef<AnalysisPublic | undefined>(undefined);
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
-const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
+const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value));
 const idPathMap = ref<Record<number, string>>({});
 
 const MENU_ITEMS: MenuAction[] = [
   {
     label: 'refresh_data',
     icon: 'mdi-refresh',
-    onClick: async () => {
-      await loadData();
-    },
+    onClick: () => void loadData(),
   },
 ];
 
@@ -208,7 +206,7 @@ watch(
 );
 
 onMounted(async () => {
-  classLabel.fetch();
+  void classLabel.fetch();
   await loadData();
   initializeTree();
 });

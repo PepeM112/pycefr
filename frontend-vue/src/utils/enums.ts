@@ -13,25 +13,28 @@ function getLabelsByEnumType(enumType: Enum) {
   return enumsLabels.find(v => v.enum === enumType);
 }
 
-export function getValuesWithoutZero<T extends Enum>(enumType: T): T[keyof T][] {
+export function getValuesWithoutZero<V extends string | number, T extends Record<string, V>>(enumType: T): V[] {
   return Object.keys(enumType)
     .filter(key => isNaN(Number(key)))
     .map(key => enumType[key])
     .filter(
-      (v): v is T[keyof T] =>
-        (typeof v === 'number' && v !== 0) || (typeof v === 'string' && v.toLowerCase() !== 'unknown')
+      (v): v is V => (typeof v === 'number' && v !== 0) || (typeof v === 'string' && v.toLowerCase() !== 'unknown')
     );
 }
 
-export function getLabel<T extends Enum>(enumType: T, value: T[keyof T], t?: ComposerTranslation): string {
+export function getLabel<V extends string | number, T extends Record<string, V>>(
+  enumType: T,
+  value: V,
+  t?: ComposerTranslation
+): string {
   const enumLabels = getLabelsByEnumType(enumType);
 
   if (enumLabels?.labels && value in enumLabels.labels) {
-    const labelKey = enumLabels.labels[value as keyof typeof enumLabels.labels];
+    const labelKey = enumLabels.labels[value];
     if (labelKey) return t ? t(labelKey) : labelKey;
   }
 
-  const fallback = enumType[value as keyof T];
+  const fallback = enumType[value as unknown as keyof T];
 
   if (fallback !== undefined && fallback !== null) {
     return String(fallback);
@@ -40,10 +43,10 @@ export function getLabel<T extends Enum>(enumType: T, value: T[keyof T], t?: Com
   return t ? t('unknown') : 'unknown';
 }
 
-export function buildList<T extends Enum>(
+export function buildList<V extends string | number, T extends Record<string, V>>(
   enumType: T,
   options?: BuildListOptions
-): Array<{ value: T[keyof T]; label: string }> {
+): Array<{ value: V; label: string }> {
   const t = options?.t;
   const values = getValuesWithoutZero(enumType);
 

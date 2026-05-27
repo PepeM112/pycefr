@@ -223,7 +223,7 @@ watch(viewMode, val => {
   localStorage.setItem(VIEW_MODE_KEY, val);
   if (val === 'cards') {
     cardPage.value = 1;
-    loadCardsData(true);
+    void loadCardsData(true);
   }
 });
 
@@ -275,7 +275,7 @@ const filterList: FilterItem[] = [
 
 const sorting = useSorting();
 const pagination = usePagination();
-const filter = useFilter(filterList);
+const { filters: filter, getValue: getFilterValue } = useFilter(filterList);
 
 useFetchOnQuery(loadData, {
   immediate: true,
@@ -286,17 +286,17 @@ const menuItems: MenuAction[] = [
   {
     label: 'new_analysis',
     icon: 'mdi-plus',
-    onClick: async () => (showNewAnalysisDialog.value = true),
+    onClick: () => (showNewAnalysisDialog.value = true),
   },
   {
     label: 'bulk_analysis.title',
     icon: 'mdi-playlist-plus',
-    onClick: async () => (showBulkDialog.value = true),
+    onClick: () => (showBulkDialog.value = true),
   },
   {
     label: 'upload_analysis',
     icon: 'mdi-tray-arrow-up',
-    onClick: async () => (showUploadDialog.value = true),
+    onClick: () => (showUploadDialog.value = true),
   },
 ];
 
@@ -311,17 +311,18 @@ const headers: TableHeader[] = [
 ];
 
 function buildFilterQuery(page: number, perPage: number) {
+  const dates = getFilterValue<DateFilterValue>('dates');
   return {
     page,
     per_page: perPage,
-    sort_column: Number(sorting.value.column) as AnalysisSortColumn,
+    sort_column: Number(sorting.value.column),
     sort_direction: sorting.value.direction,
-    name: filter.value.name as string[],
-    owner: filter.value.owner as string[],
-    status: filter.value.status as AnalysisStatus[],
-    tags: filter.value.tags as string[],
-    date_from: (filter.value.dates as DateFilterValue)?.from,
-    date_to: (filter.value.dates as DateFilterValue)?.to,
+    name: getFilterValue<string[]>('name'),
+    owner: getFilterValue<string[]>('owner'),
+    status: getFilterValue<AnalysisStatus[]>('status'),
+    tags: getFilterValue<string[]>('tags'),
+    date_from: dates?.from,
+    date_to: dates?.to,
   };
 }
 
@@ -389,7 +390,7 @@ async function loadCardsData(reset: boolean) {
 
 function handleLoadMore() {
   cardPage.value += 1;
-  loadCardsData(false);
+  void loadCardsData(false);
 }
 
 async function handleDeleteAnalysis(id: number) {
@@ -415,7 +416,7 @@ function trackAnalysis(analysisId: number) {
   activeTrackers.set(analysisId, es);
 
   es.onmessage = (event: MessageEvent) => {
-    const data = JSON.parse(event.data) as { step: string; error?: string };
+    const data = JSON.parse(String(event.data)) as { step: string; error?: string };
     if (data.step !== 'COMPLETED' && data.step !== 'FAILED') return;
 
     const newStatus = data.step === 'COMPLETED' ? AnalysisStatus.COMPLETED : AnalysisStatus.FAILED;
@@ -464,7 +465,7 @@ function handleAnalysisCreated(analysis: AnalysisSummaryPublic | AnalysisPublic)
 }
 
 function handleAnalysisCompleted() {
-  loadData();
+  void loadData();
 }
 
 async function handleRetry(item: AnalysisSummaryPublic) {
@@ -500,7 +501,7 @@ async function handleUpload() {
   if (!fileToUpload.value) return;
 
   const { data, error } = await uploadAnalysis({
-    body: { file: fileToUpload.value[0] as File },
+    body: { file: fileToUpload.value[0] },
   });
 
   if (error) {

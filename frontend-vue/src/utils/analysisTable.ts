@@ -1,4 +1,4 @@
-import { type Level, SortDirection, type AnalysisFilePublic } from '@/client';
+import { type ClassId, type Level, SortDirection, type AnalysisFilePublic } from '@/client';
 import type { AnalysisClassPublicWithLevel } from '@/types/analysis';
 import type { Sorting } from '@/composables/useSorting';
 
@@ -7,7 +7,7 @@ type ClassWithLabel = AnalysisClassPublicWithLevel & { translatedLabel: string }
 export function groupClassesBySelection(
   fileClasses: AnalysisFilePublic[],
   selectedFilePaths: Set<string>,
-  getClassLevel: (classId: number) => Level
+  getClassLevel: (classId: ClassId) => Level
 ): AnalysisClassPublicWithLevel[] {
   if (fileClasses.length === 0) return [];
 

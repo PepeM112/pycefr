@@ -153,7 +153,7 @@ async function fetchTagSuggestions() {
   if (data) tagSuggestions.value = data;
 }
 
-fetchTagSuggestions();
+void fetchTagSuggestions();
 
 const localModel = computed({
   get: () => props.modelValue,
@@ -277,7 +277,7 @@ function handleViewResults() {
   resetState();
   localModel.value = false;
   if (id) {
-    router.push({ name: RouteNames.ANALYSIS_DETAIL, params: { id } });
+    void router.push({ name: RouteNames.ANALYSIS_DETAIL, params: { id } });
   }
 }
 

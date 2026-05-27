@@ -42,7 +42,7 @@ export const useSorting = () => {
 
       if (query.p) query.p = '1';
 
-      router.replace({ query });
+      void router.replace({ query });
     },
   });
 

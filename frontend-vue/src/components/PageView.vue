@@ -25,7 +25,7 @@ const props = defineProps<{
 
 function navigateBack() {
   if (props.back) {
-    router.push(props.back);
+    void router.push(props.back);
   }
 }
 </script>

@@ -5,11 +5,11 @@ import type { FilterEntity } from '@/types/filter';
 
 type ApiFn = (params: { query: { search?: string; limit?: number } }) => Promise<{ data?: unknown; error?: unknown }>;
 
-type MapperFn<T> = (items: T[]) => FilterEntity[];
+type MapperFn = (items: unknown[]) => FilterEntity[];
 
-export function createFetcher<T>(
+export function createFetcher(
   apiFn: ApiFn,
-  mapper: MapperFn<T>,
+  mapper: MapperFn,
   errorKey: string,
   options: FetcherOptions = {}
 ): ItemFetcher {
@@ -33,9 +33,9 @@ export function createFetcher<T>(
         isLoading.value = true;
         const { data, error } = await apiFn({ query: { search, limit: options.limit } });
 
-        if (error) throw error;
+        if (error) throw error instanceof Error ? error : new Error('Fetch failed');
 
-        items.value = data ? mapper(data as T[]) : [];
+        items.value = data ? mapper(data as unknown[]) : [];
         return items.value;
       } catch {
         useSnackbarStore().add({ color: 'error', text: errorKey });
@@ -47,9 +47,8 @@ export function createFetcher<T>(
 
     if (search && options.debounce) {
       return new Promise<FilterEntity[]>(resolve => {
-        timeoutId = window.setTimeout(async () => {
-          const result = await executeFetch();
-          resolve(result || []);
+        timeoutId = window.setTimeout(() => {
+          void executeFetch().then(result => resolve(result || []));
         }, options.debounce);
       });
     }

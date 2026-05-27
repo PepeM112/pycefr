@@ -51,12 +51,12 @@ export function useFetchOnQuery(fetcher: () => Promise<void> | void, options: Fe
     if (timeout) clearTimeout(timeout);
 
     if (isImmediate || !options.debounceWait) {
-      fetcher();
+      void fetcher();
       return;
     }
 
     timeout = setTimeout(() => {
-      fetcher();
+      void fetcher();
     }, options.debounceWait);
   };
 
