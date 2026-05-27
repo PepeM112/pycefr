@@ -13,16 +13,15 @@ export function buildFileTree(fileClasses: AnalysisFilePublic[]): BuildTreeResul
 
   const treeSkeleton: Record<string, Record<string, unknown>> = {};
 
-  paths.forEach(path => {
-    const parts = path.split('/');
-    let current: Record<string, unknown> = treeSkeleton;
-    parts.forEach(part => {
+  paths.reduce((skeleton, path) => {
+    path.split('/').reduce((current, part) => {
       if (!current[part]) {
         current[part] = {};
       }
-      current = current[part] as Record<string, unknown>;
-    });
-  });
+      return current[part] as Record<string, Record<string, unknown>>;
+    }, skeleton);
+    return skeleton;
+  }, treeSkeleton);
 
   const idPathMap: Record<number, string> = {};
   const selectedIds: number[] = [];
@@ -64,10 +63,5 @@ export function buildFileTree(fileClasses: AnalysisFilePublic[]): BuildTreeResul
 }
 
 export function resolveSelectedPaths(selectedIds: number[], idPathMap: Record<number, string>): Set<string> {
-  const paths = new Set<string>();
-  selectedIds.forEach(id => {
-    const path = idPathMap[id];
-    if (path) paths.add(path);
-  });
-  return paths;
+  return new Set(selectedIds.map(id => idPathMap[id]).filter((path): path is string => !!path));
 }

@@ -207,13 +207,12 @@ export function getTopPatterns(items: AnalysisClassPublicWithLevel[]) {
 }
 
 export function getTreemapFlatData(files: ChartFileItem[]) {
-  const groups: Record<string, number> = {};
-
-  files.forEach(f => {
+  const groups = files.reduce<Record<string, number>>((acc, f) => {
     const parts = f.fullPath.split('/');
     const folder = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '/';
-    groups[folder] = (groups[folder] || 0) + f.instances;
-  });
+    acc[folder] = (acc[folder] || 0) + f.instances;
+    return acc;
+  }, {});
 
   return Object.entries(groups).map(([name, value]) => ({
     g: name,

@@ -20,22 +20,22 @@ export function useFilter(filterList: FilterItem[]) {
    * Maps filter values to their 'query' aliases defined in filterList.
    */
   const syncToUrl = () => {
-    const queryToUpdate: LocationQuery = { ...route.query };
+    const serializedEntries = filterList.flatMap(item => Object.entries(serializeFilterValue(item, filters.value)));
 
-    filterList.forEach(item => {
-      const serialized = serializeFilterValue(item, filters.value);
-      Object.entries(serialized).forEach(([key, val]) => {
+    const queryToUpdate = serializedEntries.reduce<LocationQuery>(
+      (query, [key, val]) => {
         if (val === undefined) {
-          delete queryToUpdate[key];
+          delete query[key];
         } else if (Array.isArray(val)) {
-          queryToUpdate[key] = val.map(String);
+          query[key] = val.map(String);
         } else {
-          queryToUpdate[key] = String(val);
+          query[key] = String(val);
         }
-      });
-    });
+        return query;
+      },
+      { ...route.query }
+    );
 
-    // Reset to page 1 when filters change
     queryToUpdate.p = '1';
 
     updateQuery(queryToUpdate);
@@ -47,13 +47,14 @@ export function useFilter(filterList: FilterItem[]) {
    * Maps URL aliases back to local filter values.
    */
   const hydrateFromUrl = () => {
-    const newFilters: FilterValue = { ...filters.value };
-
-    filterList.forEach(item => {
-      const deserialized = deserializeFilterValue(item, route.query);
-      if (deserialized !== undefined) newFilters[item.key] = deserialized;
-    });
-    filters.value = newFilters;
+    filters.value = filterList.reduce<FilterValue>(
+      (acc, item) => {
+        const deserialized = deserializeFilterValue(item, route.query);
+        if (deserialized !== undefined) acc[item.key] = deserialized;
+        return acc;
+      },
+      { ...filters.value }
+    );
   };
 
   hydrateFromUrl();

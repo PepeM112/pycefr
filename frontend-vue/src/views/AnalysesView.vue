@@ -50,11 +50,11 @@
                 rel="noopener noreferrer"
               >
                 <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
-                {{ $t(Enums.getLabel(Origin, item.origin)) }}
+                {{ $t(getLabel(Origin, item.origin)) }}
               </a>
               <template v-else>
                 <v-icon class="mr-2" :icon="getOriginIcon(item.origin)" />
-                {{ $t(Enums.getLabel(Origin, item.origin)) }}
+                {{ $t(getLabel(Origin, item.origin)) }}
               </template>
             </template>
             <template #item-created_at="{ item }">
@@ -188,7 +188,7 @@ import { useSnackbarStore } from '@/stores/snackbarStore';
 import { type DateFilterValue, type FilterItem, FilterType } from '@/types/filter';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
-import Enums from '@/utils/enums';
+import { buildList, getLabel } from '@/utils/enums';
 import { getOriginIcon, getStatusColor } from '@/utils/utils';
 import { usePagination } from '@/composables/usePagination';
 import { useFetchOnQuery } from '@/composables/useFetchOnQuery';
@@ -229,7 +229,7 @@ watch(viewMode, val => {
 
 const hasMoreCards = computed(() => analysesData.value.length < cardTotal.value);
 
-const statusList = Enums.buildList(AnalysisStatus);
+const statusList = buildList(AnalysisStatus);
 
 const filterList: FilterItem[] = [
   {

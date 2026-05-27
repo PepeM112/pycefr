@@ -11,23 +11,22 @@ export function groupClassesBySelection(
 ): AnalysisClassPublicWithLevel[] {
   if (fileClasses.length === 0) return [];
 
-  const groupingMap = new Map<number, AnalysisClassPublicWithLevel>();
-
-  fileClasses
+  const groupingMap = fileClasses
     .filter(file => selectedFilePaths.has(file.filename))
     .flatMap(file => file.classes ?? [])
-    .forEach(item => {
-      const existing = groupingMap.get(item.classId);
+    .reduce((map, item) => {
+      const existing = map.get(item.classId);
       if (existing) {
         existing.instances += item.instances;
       } else {
-        groupingMap.set(item.classId, {
+        map.set(item.classId, {
           classId: item.classId,
           instances: item.instances,
           level: getClassLevel(item.classId),
         });
       }
-    });
+      return map;
+    }, new Map<number, AnalysisClassPublicWithLevel>());
 
   return Array.from(groupingMap.values());
 }

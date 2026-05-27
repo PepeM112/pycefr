@@ -68,7 +68,7 @@ import {
 } from 'chart.js';
 import { TreemapController, TreemapElement, type TreemapScriptableContext } from 'chartjs-chart-treemap';
 import { Bar, Radar, Doughnut, Pie, Chart } from 'vue-chartjs';
-import Enums from '@/utils/enums';
+import { buildList, getLabel } from '@/utils/enums';
 import { ClassId, Level } from '@/client';
 import { getLevelColor } from '@/utils/utils';
 import { useThemeStore } from '@/stores/themeStore';
@@ -249,7 +249,7 @@ const charts = computed(() => [
 ]);
 
 const levelData = computed(() => {
-  const levels = Enums.buildList(Level);
+  const levels = buildList(Level);
   return {
     labels: levels.map(l => t(l.label)),
     datasets: [
@@ -300,7 +300,7 @@ const exceptionData = computed(() => ({
 const topClassesData = computed(() => {
   const top = AnalysisChartsUtils.getTopPatterns(props.data.items);
   return {
-    labels: top.map(it => t(Enums.getLabel(ClassId, it.classId))),
+    labels: top.map(it => t(getLabel(ClassId, it.classId))),
     datasets: [{ data: top.map(it => it.instances), backgroundColor: '#5CBBF6' }],
   };
 });

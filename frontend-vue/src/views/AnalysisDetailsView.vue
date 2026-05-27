@@ -49,11 +49,11 @@
             </div>
             <g-table v-model:pagination="pagination" v-model:sort="sort" :model-value="tableData" :headers="headers">
               <template #item-classId="{ item }">
-                {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
+                {{ $t(`${getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
                 <span class="level-bubble" :style="{ backgroundColor: getLevelColor(item.level as Level) }">
-                  {{ $t(Enums.getLabel(Level, item.level)) }}
+                  {{ $t(getLabel(Level, item.level)) }}
                 </span>
               </template>
             </g-table>
@@ -86,7 +86,7 @@ import { type TableHeader } from '@/types/table';
 import { buildChartData } from '@/utils/analysisCharts';
 import { filterAndSortClasses, groupClassesBySelection } from '@/utils/analysisTable';
 import { buildFileTree, resolveSelectedPaths } from '@/utils/analysisTree';
-import Enums from '@/utils/enums';
+import { buildList, getLabel } from '@/utils/enums';
 import { getLevelColor } from '@/utils/utils';
 import type { TreeNode } from '@/types/treeview';
 import type { MenuAction } from '@/types/menu';
@@ -99,7 +99,7 @@ const sort = useSorting();
 const pagination = usePagination();
 const classLabel = useClassLabel();
 
-const LEVELS = Enums.buildList(Level);
+const LEVELS = buildList(Level);
 
 const analysisId = Number(route.params.id);
 const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
@@ -134,7 +134,7 @@ const processedData = computed<AnalysisClassPublicWithLevel[]>(() => {
 
   const grouped = groupClassesBySelection(fileClasses, selectedPaths.value, classLabel.getClassLevel);
   return filterAndSortClasses(grouped, selectedLevels.value, search.value, sort.value, classId =>
-    t(Enums.getLabel(ClassId, classId))
+    t(getLabel(ClassId, classId))
   );
 });
 
