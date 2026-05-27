@@ -121,7 +121,7 @@
 import { computed, ref, watch } from 'vue';
 import defaultAvatar from '@/assets/img/default_avatar.jpg';
 import GDate from '@/components/GDate.vue';
-import type { RepoPublic, RepoCommitPublic } from '@/client';
+import type { RepoPublic } from '@/client';
 
 const INITIAL_SIZE = 10;
 const BATCH_SIZE = 20;
@@ -148,11 +148,7 @@ const commits = computed(() => props.repo.commits ?? []);
 
 const sanitizeGitHubUser = (value: string) => value.replaceAll(' ', '');
 
-const commitsByUser = computed(() => {
-  const map = new Map<string, RepoCommitPublic>();
-  commits.value.forEach(c => map.set(sanitizeGitHubUser(c.githubUser), c));
-  return map;
-});
+const commitsByUser = computed(() => new Map(commits.value.map(c => [sanitizeGitHubUser(c.githubUser), c])));
 
 const allRows = computed<ContributorRow[]>(() =>
   contributors.value.map(contributor => {

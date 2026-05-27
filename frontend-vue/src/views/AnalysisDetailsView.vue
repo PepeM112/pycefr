@@ -4,10 +4,10 @@
       <three-dots-menu :model-value="MENU_ITEMS" />
     </template>
     <generic-loader :model-value="loaderStatus">
-      <g-container class="mb-8" title="insights" expandable>
+      <g-container class="mb-8" title="insights" is-expandable>
         <analysis-charts v-if="chartData && loaderStatus === LoadingStatus.IDLE" :data="chartData" :items="tableData" />
       </g-container>
-      <g-container v-if="analysisData?.repo" class="mb-8" title="repository" expandable>
+      <g-container v-if="analysisData?.repo" class="mb-8" title="repository" is-expandable>
         <repo-section :repo="analysisData.repo" />
       </g-container>
       <g-container title="properties">
@@ -36,12 +36,12 @@
                   v-for="level in LEVELS"
                   :key="`level-${level.value}`"
                   class="level-bubble-btn"
-                  :class="{ selected: selectedLevels.includes(level.value as Level) }"
-                  :style="{ backgroundColor: getLevelColor(level.value as Level) }"
+                  :class="{ selected: selectedLevels.includes(level.value) }"
+                  :style="{ backgroundColor: getLevelColor(level.value) }"
                   size="small"
                   density="comfortable"
                   rounded="circle"
-                  @click="toggleLevel(level.value as Level)"
+                  @click="toggleLevel(level.value)"
                 >
                   {{ level.label }}
                 </v-btn>
@@ -49,11 +49,11 @@
             </div>
             <g-table v-model:pagination="pagination" v-model:sort="sort" :model-value="tableData" :headers="headers">
               <template #item-classId="{ item }">
-                {{ $t(`${Enums.getLabel(ClassId, item.classId).toLowerCase()}`) }}
+                {{ $t(`${getLabel(ClassId, item.classId).toLowerCase()}`) }}
               </template>
               <template #item-level="{ item }">
-                <span class="level-bubble" :style="{ backgroundColor: getLevelColor(item.level as Level) }">
-                  {{ $t(Enums.getLabel(Level, item.level)) }}
+                <span class="level-bubble" :style="{ backgroundColor: getLevelColor(item.level) }">
+                  {{ $t(getLabel(Level, item.level)) }}
                 </span>
               </template>
             </g-table>
@@ -75,28 +75,31 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
 import FileTree from '@/components/repo/FileTree.vue';
-import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import ThreeDotsMenu from '@/components/ThreeDotsMenu.vue';
 import { useClassLabel } from '@/composables/useClassLabel';
 import { usePagination } from '@/composables/usePagination';
 import { useSorting } from '@/composables/useSorting';
 import { RouteNames } from '@/router/route-names';
+import { useSnackbarStore } from '@/stores/snackbarStore';
 import { LoadingStatus } from '@/types/loading';
 import { type TableHeader } from '@/types/table';
 import { buildChartData } from '@/utils/analysisCharts';
 import { filterAndSortClasses, groupClassesBySelection } from '@/utils/analysisTable';
 import { buildFileTree, resolveSelectedPaths } from '@/utils/analysisTree';
-import Enums from '@/utils/enums';
+import { buildList, getLabel } from '@/utils/enums';
 import { getLevelColor } from '@/utils/utils';
-import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
 import type { TreeNode } from '@/types/treeview';
+import type { MenuAction } from '@/types/menu';
+import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
 
 const { t } = useI18n();
 const route = useRoute();
+const snackbarStore = useSnackbarStore();
 const sort = useSorting();
 const pagination = usePagination();
 const classLabel = useClassLabel();
 
-const LEVELS = Enums.buildList(Level);
+const LEVELS = buildList(Level);
 
 const analysisId = Number(route.params.id);
 const loaderStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
@@ -104,16 +107,14 @@ const search = ref<string>('');
 const analysisData = shallowRef<AnalysisPublic | undefined>(undefined);
 const selectedTreeNodeIds = ref<number[]>([]);
 const fileTreeData = ref<TreeNode[]>([]);
-const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
+const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value));
 const idPathMap = ref<Record<number, string>>({});
 
-const MENU_ITEMS: MenuProps[] = [
+const MENU_ITEMS: MenuAction[] = [
   {
     label: 'refresh_data',
     icon: 'mdi-refresh',
-    onClick: async () => {
-      await loadData();
-    },
+    onClick: () => void loadData(),
   },
 ];
 
@@ -131,7 +132,7 @@ const processedData = computed<AnalysisClassPublicWithLevel[]>(() => {
 
   const grouped = groupClassesBySelection(fileClasses, selectedPaths.value, classLabel.getClassLevel);
   return filterAndSortClasses(grouped, selectedLevels.value, search.value, sort.value, classId =>
-    t(Enums.getLabel(ClassId, classId))
+    t(getLabel(ClassId, classId))
   );
 });
 
@@ -167,11 +168,20 @@ function onUpdateSelected(value: number[] | 'all') {
 }
 
 async function loadData() {
+  if (isNaN(analysisId)) {
+    loaderStatus.value = LoadingStatus.ERROR;
+    return;
+  }
   loaderStatus.value = LoadingStatus.LOADING;
-  const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId ?? 0 } });
+  const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId } });
   if (error) {
     loaderStatus.value = LoadingStatus.ERROR;
-    console.error('error.fetching.analysis_data:', error);
+    snackbarStore.add({
+      text: 'error.fetching.analysis_data',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
     return;
   }
   analysisData.value = data;
@@ -196,7 +206,7 @@ watch(
 );
 
 onMounted(async () => {
-  classLabel.fetch();
+  void classLabel.fetch();
   await loadData();
   initializeTree();
 });

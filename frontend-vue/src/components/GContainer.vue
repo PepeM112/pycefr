@@ -1,6 +1,6 @@
 <template>
-  <section class="g-container" :class="{ 'pa-6': !expandable }">
-    <template v-if="!expandable">
+  <section class="g-container" :class="{ 'pa-6': !isExpandable }">
+    <template v-if="!isExpandable">
       <div class="d-flex mb-4">
         <h2 v-if="title" class="text-h5 font-weight-bold">{{ $t(title) }}</h2>
         <v-spacer />
@@ -31,18 +31,21 @@
   </section>
 </template>
 <script setup lang="ts">
-const props = defineProps<{
+defineProps<{
   title?: string;
-  expandable?: boolean;
+  isExpandable?: boolean;
 }>();
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
 .g-container {
   position: relative;
   background-color: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
   border-radius: var(--border-radius);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  box-shadow:
+    var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)) 0px 2px 1px -1px,
+    var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)) 0px 1px 1px 0px,
+    var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12)) 0px 1px 3px 0px;
 
   h2 {
     margin: 0 0 2rem;

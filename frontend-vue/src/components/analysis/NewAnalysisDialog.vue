@@ -12,19 +12,25 @@
             <g-input label="analysis_name">
               <v-text-field v-model="form.name" :placeholder="$t('analysis_name_placeholder')" />
             </g-input>
-            <g-input label="repository_url" required>
+            <g-input label="repository_url" is-required>
               <v-text-field v-model="form.repoUrl" :rules="[rules.required, rules.url]" />
             </g-input>
             <g-input label="tags">
               <v-combobox
                 v-model="form.tags"
-                :items="tagSuggestions"
+                :items="availableTags"
                 multiple
                 variant="outlined"
                 density="compact"
                 chips
                 closable-chips
-              />
+                hide-details
+                :hide-no-data="false"
+              >
+                <template #item="{ props: itemProps }">
+                  <v-list-item v-bind="itemProps" :prepend-icon="undefined" />
+                </template>
+              </v-combobox>
             </g-input>
             <v-checkbox
               v-model="form.includeGit"
@@ -102,14 +108,12 @@ type StepDef = {
 type Props = {
   modelValue: boolean;
   reconnectAnalysisId?: number | null;
-  reconnectAnalysisName?: string;
 };
 
 const INCLUDE_GIT_STORAGE_KEY = 'pycefr_include_git';
 
 const props = withDefaults(defineProps<Props>(), {
   reconnectAnalysisId: null,
-  reconnectAnalysisName: undefined,
 });
 
 const emit = defineEmits<{
@@ -140,12 +144,20 @@ const form = ref({
 
 const tagSuggestions = ref<string[]>([]);
 
+const availableTags = computed(() =>
+  tagSuggestions.value.filter(tag => !form.value.tags.includes(tag)).sort((a, b) => a.localeCompare(b))
+);
+
 async function fetchTagSuggestions() {
-  const { data } = await getTags({ query: { limit: 50 } });
-  if (data) tagSuggestions.value = data;
+  try {
+    const { data } = await getTags({ query: { limit: 50 } });
+    if (data) tagSuggestions.value = data;
+  } catch {
+    // Tag suggestions are non-critical — fail silently
+  }
 }
 
-fetchTagSuggestions();
+void fetchTagSuggestions();
 
 const localModel = computed({
   get: () => props.modelValue,
@@ -222,31 +234,40 @@ const visibleSteps = computed<StepDef[]>(() => {
 });
 
 async function handleSubmit() {
-  localStorage.setItem(INCLUDE_GIT_STORAGE_KEY, String(form.value.includeGit));
+  try {
+    localStorage.setItem(INCLUDE_GIT_STORAGE_KEY, String(form.value.includeGit));
 
-  const { data, error } = await createAnalysis({
-    body: {
-      name: form.value.name || undefined,
-      repoUrl: form.value.repoUrl,
-      includeGit: form.value.includeGit,
-      tags: form.value.tags,
-    },
-  });
+    const { data, error } = await createAnalysis({
+      body: {
+        name: form.value.name || undefined,
+        repoUrl: form.value.repoUrl,
+        includeGit: form.value.includeGit,
+        tags: form.value.tags,
+      },
+    });
 
-  if (error || !data) {
+    if (error || !data) {
+      snackbarStore.add({
+        text: 'error.creating.analysis',
+        color: 'error',
+        icon: 'mdi-alert-circle-outline',
+        closable: true,
+      });
+      return;
+    }
+
+    activeAnalysisId.value = data.id;
+    isRunning.value = true;
+    emit('created', data);
+    connect(data.id);
+  } catch {
     snackbarStore.add({
       text: 'error.creating.analysis',
       color: 'error',
       icon: 'mdi-alert-circle-outline',
       closable: true,
     });
-    return;
   }
-
-  activeAnalysisId.value = data.id;
-  isRunning.value = true;
-  emit('created', data);
-  connect(data.id);
 }
 
 function handleClose() {
@@ -260,7 +281,7 @@ function handleViewResults() {
   resetState();
   localModel.value = false;
   if (id) {
-    router.push({ name: RouteNames.ANALYSIS_DETAIL, params: { id } });
+    void router.push({ name: RouteNames.ANALYSIS_DETAIL, params: { id } });
   }
 }
 

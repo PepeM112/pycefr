@@ -15,6 +15,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useTheme } from 'vuetify';
 import dayjs from 'dayjs';
 import Sidebar from '@/components/Sidebar.vue';
 import Snackbar from '@/components/Snackbar.vue';
@@ -25,7 +26,7 @@ const { locale } = useI18n();
 const showSidebar = ref(true);
 const themeStore = useThemeStore();
 
-themeStore.initTheme();
+themeStore.initTheme(useTheme());
 
 watch(
   locale,

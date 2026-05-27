@@ -12,11 +12,7 @@
       <v-card-title v-if="title" class="py-3">
         <span class="font-weight-bold text-h5">{{ $t(title) }}</span>
         <br />
-        <p
-          v-if="subtitle"
-          class="mt-2 font-weight-regular"
-          style="font-size: 1rem; line-height: 1.25rem; white-space: normal"
-        >
+        <p v-if="subtitle" class="mt-2 font-weight-regular text-body-1" style="white-space: normal">
           {{ $t(subtitle) }}
         </p>
       </v-card-title>
@@ -46,7 +42,7 @@
           <v-btn
             color="primary-on-surface"
             variant="flat"
-            :disabled="props.disableConfirm || (!!confirmationKey && confirmationKeyInput !== confirmationKey)"
+            :disabled="props.isConfirmDisabled || (!!confirmationKey && confirmationKeyInput !== confirmationKey)"
             data-cy="confirm-dialog-btn-confirm"
             @click="confirm"
           >
@@ -78,7 +74,7 @@ const props = withDefaults(
     confirmLabel?: string;
     cancelLabel?: string;
     confirmationKey?: string;
-    disableConfirm?: boolean;
+    isConfirmDisabled?: boolean;
     // Will run BEFORE emitting events
     onConfirmPre?: () => Promise<void> | void;
     onClosePre?: () => Promise<void> | void;
@@ -94,7 +90,7 @@ const props = withDefaults(
     confirmationKey: undefined,
     onConfirmPre: undefined,
     onClosePre: undefined,
-    disableConfirm: false,
+    isConfirmDisabled: false,
   }
 );
 
@@ -116,8 +112,9 @@ async function confirm() {
       innerLoading.value = false;
     }
     emit('confirmPost');
+    confirmationKeyInput.value = undefined;
     localModel.value = false;
-  } catch (error) {
+  } catch {
     innerLoading.value = false;
   }
 }
@@ -130,8 +127,9 @@ async function close() {
       innerLoading.value = false;
     }
     emit('closePost');
+    confirmationKeyInput.value = undefined;
     localModel.value = false;
-  } catch (error) {
+  } catch {
     innerLoading.value = false;
   }
 }

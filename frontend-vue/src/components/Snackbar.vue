@@ -1,6 +1,6 @@
 <template>
   <v-snackbar
-    v-model="active"
+    :model-value="active"
     location="top right"
     color="transparent"
     variant="text"

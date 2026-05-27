@@ -26,6 +26,8 @@ from backend.services.analyzer.progress import create_store, get_store, schedule
 
 logger = logging.getLogger(__name__)
 
+MAX_CONCURRENT_ANALYSES = 5
+
 router = APIRouter(prefix="/analyses", tags=["Analysis"])
 
 
@@ -151,6 +153,13 @@ def create_analysis(analysis_create: AnalysisCreate, background_tasks: Backgroun
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Name cannot be blank")
     if analysis_create.name:
         analysis_create.name = analysis_create.name.strip()
+
+    if db_utils.count_in_progress_analyses() >= MAX_CONCURRENT_ANALYSES:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Maximum concurrent analyses reached (5). Wait for running analyses to complete.",
+        )
+
     analysis: AnalysisPublic | None = None
     try:
         analysis = db_utils.create_empty_analysis(analysis_create)

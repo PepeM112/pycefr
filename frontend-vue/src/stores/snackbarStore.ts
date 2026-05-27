@@ -14,7 +14,6 @@ export interface SnackbarOptions {
 
 interface SnackbarMessage extends SnackbarOptions {
   id: number;
-  show: boolean;
 }
 
 const DEFAULT_OPTIONS: Partial<SnackbarMessage> = {
@@ -35,7 +34,6 @@ export const useSnackbarStore = defineStore('snackbar', () => {
       ...DEFAULT_OPTIONS,
       ...options,
       id,
-      show: true,
     };
 
     messages.value.unshift(newMessage);

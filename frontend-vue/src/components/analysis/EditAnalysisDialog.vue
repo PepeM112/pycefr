@@ -3,11 +3,11 @@
     v-model="localModel"
     title="edit_analysis"
     width="440"
-    :disable-confirm="!form.name.trim()"
+    :is-confirm-disabled="!form.name.trim()"
     :on-confirm-pre="handleSave"
   >
     <v-form class="d-flex flex-column ga-4">
-      <g-input label="analysis_name" required>
+      <g-input label="analysis_name" is-required>
         <v-text-field v-model="form.name" :rules="[rules.required]" />
       </g-input>
       <g-input label="tags">

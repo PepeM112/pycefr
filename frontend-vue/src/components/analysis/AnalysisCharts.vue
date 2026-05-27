@@ -11,7 +11,7 @@
               v-bind="chart.type ? { type: chart.type } : {}"
             />
           </template>
-          <div v-else class="d-flex justify-center align-center flex-column h-100" style="color: #9d9d9d">
+          <div v-else class="d-flex justify-center align-center flex-column h-100 text-medium-emphasis">
             <v-icon class="mb-1" size="40">mdi-chart-arc</v-icon>
             <p class="text-grey text-body-2">{{ t('no_data') }}</p>
           </div>
@@ -19,7 +19,7 @@
       </v-col>
     </v-row>
 
-    <div v-else class="d-flex justify-center align-center flex-column" style="color: #9d9d9d; margin: 2rem auto">
+    <div v-else class="d-flex justify-center align-center flex-column text-medium-emphasis my-8 mx-auto">
       <v-icon class="mb-1" size="60">mdi-chart-box-outline</v-icon>
       <p class="text-grey">{{ t('no_data') }}</p>
     </div>
@@ -68,7 +68,7 @@ import {
 } from 'chart.js';
 import { TreemapController, TreemapElement, type TreemapScriptableContext } from 'chartjs-chart-treemap';
 import { Bar, Radar, Doughnut, Pie, Chart } from 'vue-chartjs';
-import Enums from '@/utils/enums';
+import { buildList, getLabel } from '@/utils/enums';
 import { ClassId, Level } from '@/client';
 import { getLevelColor } from '@/utils/utils';
 import { useThemeStore } from '@/stores/themeStore';
@@ -105,10 +105,10 @@ const conclusions = computed(() => {
   if (totalInstances === 0) return [];
 
   return [
-    AnalysisChartsUtils.getComplexityAbstractionInsight(items, totalInstances),
-    AnalysisChartsUtils.getPythonicDensityInsight(items),
-    AnalysisChartsUtils.getExceptionHandlingInsight(items),
-    AnalysisChartsUtils.getStructuralCompetenceInsight(items),
+    AnalysisChartsUtils.getComplexityAbstractionInsight(items, totalInstances, t),
+    AnalysisChartsUtils.getPythonicDensityInsight(items, t),
+    AnalysisChartsUtils.getExceptionHandlingInsight(items, t),
+    AnalysisChartsUtils.getStructuralCompetenceInsight(items, t),
   ];
 });
 
@@ -190,9 +190,9 @@ const treemapOptions = computed(() => ({
   },
 }));
 
-const hasNumericData = (data: { datasets: Record<string, unknown>[] }) =>
-  data.datasets.some(ds => {
-    const values = (ds.data as number[]) ?? (ds.tree as { v: number }[])?.map(d => d.v);
+const hasNumericData = (chartData: { datasets: { data?: number[]; tree?: { v: number }[] }[] }) =>
+  chartData.datasets.some(ds => {
+    const values = ds.data ?? ds.tree?.map(d => d.v);
     return Array.isArray(values) && values.some(v => v > 0);
   });
 
@@ -203,7 +203,7 @@ const charts = computed(() => [
     data: levelData.value,
     options: levelBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
-    hasData: hasNumericData(levelData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(levelData.value),
   },
   {
     title: 'charts.competency_radar',
@@ -211,7 +211,7 @@ const charts = computed(() => [
     data: radarData.value,
     options: radarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
-    hasData: hasNumericData(radarData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(radarData.value),
   },
   {
     title: 'charts.top_patterns',
@@ -219,7 +219,7 @@ const charts = computed(() => [
     data: topClassesData.value,
     options: horizontalBarOptions.value,
     grid: { cols: 12, md: 6, lg: 4 },
-    hasData: hasNumericData(topClassesData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(topClassesData.value),
   },
   {
     title: 'charts.pythonic_ratio',
@@ -227,7 +227,7 @@ const charts = computed(() => [
     data: pythonicData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
-    hasData: hasNumericData(pythonicData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(pythonicData.value),
   },
   {
     title: 'charts.exception_strategy',
@@ -235,7 +235,7 @@ const charts = computed(() => [
     data: exceptionData.value,
     options: baseOptions.value,
     grid: { cols: 12, md: 6, lg: 3 },
-    hasData: hasNumericData(exceptionData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(exceptionData.value),
   },
   {
     title: 'charts.directory_density_map',
@@ -244,18 +244,18 @@ const charts = computed(() => [
     options: treemapOptions.value,
     grid: { cols: 12, lg: 6 },
     type: 'treemap',
-    hasData: hasNumericData(treemapData.value as { datasets: Record<string, unknown>[] }),
+    hasData: hasNumericData(treemapData.value),
   },
 ]);
 
 const levelData = computed(() => {
-  const levels = Enums.buildList(Level);
+  const levels = buildList(Level);
   return {
     labels: levels.map(l => t(l.label)),
     datasets: [
       {
         data: AnalysisChartsUtils.getLevelDistributionStats(props.data.items),
-        backgroundColor: levels.map(l => getLevelColor(l.value as Level)),
+        backgroundColor: levels.map(l => getLevelColor(l.value)),
       },
     ],
   };
@@ -288,7 +288,7 @@ const pythonicData = computed(() => ({
 }));
 
 const exceptionData = computed(() => ({
-  labels: ['Error Catching (Try)', 'Error Signaling (Raise)'],
+  labels: [t('charts.error_catching'), t('charts.error_signaling')],
   datasets: [
     {
       data: AnalysisChartsUtils.getExceptionStats(props.data.items),
@@ -300,7 +300,7 @@ const exceptionData = computed(() => ({
 const topClassesData = computed(() => {
   const top = AnalysisChartsUtils.getTopPatterns(props.data.items);
   return {
-    labels: top.map(it => t(Enums.getLabel(ClassId, it.classId))),
+    labels: top.map(it => t(getLabel(ClassId, it.classId))),
     datasets: [{ data: top.map(it => it.instances), backgroundColor: '#5CBBF6' }],
   };
 });
@@ -334,9 +334,3 @@ const treemapData = computed(() => {
   };
 });
 </script>
-
-<style scoped>
-.chart-container {
-  height: 280px;
-}
-</style>

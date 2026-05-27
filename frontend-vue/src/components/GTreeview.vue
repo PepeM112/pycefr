@@ -3,12 +3,16 @@
     <v-virtual-scroll :items="flattenedItems" :height="height" item-height="34">
       <template #default="{ item }">
         <div
+          role="treeitem"
+          tabindex="0"
+          :aria-selected="isSelected(item)"
           class="g-tree-node"
           :style="{ paddingLeft: `${item.depth * 16 + 8}px` }"
-          @click="item.hasChildren ? toggleExpand(item.id) : null"
+          @click="item.hasChildren ? toggleExpand(item.id) : undefined"
+          @keydown.enter="item.hasChildren ? toggleExpand(item.id) : undefined"
         >
           <v-checkbox-btn
-            v-if="selectable"
+            v-if="isSelectable"
             class="tree-checkbox"
             :model-value="isSelected(item)"
             :indeterminate="isIndeterminate(item)"
@@ -53,14 +57,14 @@ const props = withDefaults(
   defineProps<{
     items: TreeNode[];
     selected: number[] | 'all';
-    selectable?: boolean;
+    isSelectable?: boolean;
     search?: string;
     height?: string | number;
   }>(),
   {
     items: () => [],
     selected: () => [],
-    selectable: false,
+    isSelectable: false,
     search: '',
     height: '400px',
   }
@@ -72,23 +76,20 @@ const isExpanded = (id: number) => expandedIds.value.has(id) || props.search.len
 
 function toggleExpand(id: number) {
   const newSet = new Set(expandedIds.value);
-  newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+  if (newSet.has(id)) {
+    newSet.delete(id);
+  } else {
+    newSet.add(id);
+  }
   expandedIds.value = newSet;
 }
 
-function getDescendantIds(node: TreeNode): number[] {
-  let ids = [node.id];
-  if (node.children) {
-    for (const child of node.children) {
-      ids = [...ids, ...getDescendantIds(child)];
-    }
-  }
-  return ids;
-}
+const getDescendantIds = (node: TreeNode): number[] => [node.id, ...(node.children?.flatMap(getDescendantIds) ?? [])];
 
 function isSelected(node: TreeNode): boolean {
   if (props.selected === 'all') return true;
-  const selectedIds = props.selected as number[];
+  if (!Array.isArray(props.selected)) return false;
+  const selectedIds = props.selected;
 
   if (!node.children || node.children.length === 0) {
     return selectedIds.includes(node.id);
@@ -149,7 +150,7 @@ const flattenedItems = computed<FlattenedNode[]>(() => {
       return [
         ...acc,
         { ...node, depth, hasChildren },
-        ...(hasChildren && isExpanded(node.id) ? traverse(node.children!, depth + 1) : []),
+        ...(hasChildren && isExpanded(node.id) ? traverse(node.children ?? [], depth + 1) : []),
       ];
     }, [] as FlattenedNode[]);
   };

@@ -37,7 +37,7 @@
     v-model:search="search"
     class="bg-transparent w-100"
     :items="sortedItems"
-    :loading="props.options?.fetcher?.loading.value"
+    :loading="props.options?.fetcher?.isLoading.value"
     :multiple="isMultiple"
     :chips="isMultiple"
     :closable-chips="isMultiple"
@@ -86,6 +86,7 @@ const props = defineProps<{
 }>();
 
 const search = ref('');
+const isMenuOpen = ref(false);
 
 const localModel = computed({
   get: () => props.modelValue,
@@ -157,7 +158,7 @@ const isSelectType = computed(() => [FilterType.SELECT, FilterType.MULTIPLE_SELE
 
 const sortedItems = computed<FilterEntity[]>(() => {
   if (props.options?.sortItems) {
-    return localItems.value.sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
+    return [...localItems.value].sort(props.options.sortItems).map(it => normalizeToFilterEntity(it));
   }
 
   const translatedItems = localItems.value.map(it => {
@@ -179,18 +180,18 @@ function onSelectionUpdate() {
   search.value = '';
 }
 
-/* Fetch when opening menu */
-function onMenuUpdate(isOpen: boolean) {
-  if (isOpen && props.options?.fetcher) {
-    props.options.fetcher.fetch(search.value);
+function onMenuUpdate(open: boolean) {
+  isMenuOpen.value = open;
+  if (open && props.options?.fetcher) {
+    void props.options.fetcher.fetch(search.value);
   }
 }
 
 watch(
   () => search.value,
   newValue => {
-    if (props.options?.fetcher) {
-      props.options.fetcher.fetch(newValue);
+    if (isMenuOpen.value && props.options?.fetcher) {
+      void props.options.fetcher.fetch(newValue);
     }
   }
 );

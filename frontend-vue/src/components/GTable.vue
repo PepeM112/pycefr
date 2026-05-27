@@ -19,7 +19,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(item, index) in localModel" :key="index">
+      <tr v-for="(item, index) in props.modelValue" :key="item[props.itemKey] ?? index">
         <td v-for="header in headers" :key="header.key">
           <div
             class="d-flex align-center"
@@ -44,17 +44,11 @@
   <g-pagination v-if="pagination" v-model="pagination" class="mt-4" />
 </template>
 
-<script setup lang="ts" generic="T extends Record<string, any>">
-import { computed } from 'vue';
+<script setup lang="ts" generic="T extends Record<string, unknown>">
 import { type Pagination, SortDirection } from '@/client';
 import GPagination from '@/components/GPagination.vue';
 import { type Sorting } from '@/composables/useSorting';
 import { type TableHeader } from '@/types/table';
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: T[]): void;
-  (e: 'update:sort', value: Sorting): void;
-}>();
 
 const pagination = defineModel<Pagination>('pagination');
 const sort = defineModel<Sorting>('sort', {
@@ -65,22 +59,14 @@ const props = withDefaults(
   defineProps<{
     modelValue: T[];
     headers: TableHeader[];
-    pagination?: Pagination;
+    itemKey?: string;
   }>(),
   {
     modelValue: () => [],
     headers: () => [],
+    itemKey: 'id',
   }
 );
-
-const localModel = computed<T[]>({
-  get() {
-    return props.modelValue;
-  },
-  set(value) {
-    emit('update:modelValue', value);
-  },
-});
 
 function handleSort(column: string | number) {
   sort.value = { column: String(column), direction: sort.value.direction };

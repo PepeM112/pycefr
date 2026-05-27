@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue';
 import { defineStore } from 'pinia';
-import { useTheme } from 'vuetify';
+import type { ThemeInstance } from 'vuetify';
 
 export const useThemeStore = defineStore('theme', () => {
   const savedTheme = localStorage.getItem('user-theme') as 'light' | 'dark' | null;
@@ -12,8 +12,7 @@ export const useThemeStore = defineStore('theme', () => {
     currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light';
   }
 
-  function initTheme() {
-    const vTheme = useTheme();
+  function initTheme(vTheme: ThemeInstance) {
     vTheme.global.name.value = currentTheme.value;
 
     watch(

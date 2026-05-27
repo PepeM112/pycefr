@@ -1,4 +1,4 @@
-import { getExtensionIcon, type FileExtension } from '@/utils/utils';
+import { getExtensionIcon } from '@/utils/utils';
 import type { AnalysisFilePublic } from '@/client';
 import type { TreeNode } from '@/types/treeview';
 
@@ -13,16 +13,15 @@ export function buildFileTree(fileClasses: AnalysisFilePublic[]): BuildTreeResul
 
   const treeSkeleton: Record<string, Record<string, unknown>> = {};
 
-  paths.forEach(path => {
-    const parts = path.split('/');
-    let current: Record<string, unknown> = treeSkeleton;
-    parts.forEach(part => {
+  paths.reduce((skeleton, path) => {
+    path.split('/').reduce((current, part) => {
       if (!current[part]) {
         current[part] = {};
       }
-      current = current[part] as Record<string, unknown>;
-    });
-  });
+      return current[part] as Record<string, Record<string, unknown>>;
+    }, skeleton);
+    return skeleton;
+  }, treeSkeleton);
 
   const idPathMap: Record<number, string> = {};
   const selectedIds: number[] = [];
@@ -37,8 +36,8 @@ export function buildFileTree(fileClasses: AnalysisFilePublic[]): BuildTreeResul
       let icon = 'mdi-file-outline';
       if (!hasChildren) {
         const parts = key.split('.');
-        const extension = (parts.length > 1 ? parts.pop()?.toLowerCase() : '') as FileExtension;
-        icon = getExtensionIcon(extension) || 'mdi-file-outline';
+        const extension = parts.length > 1 ? (parts.pop()?.toLowerCase() ?? '') : '';
+        icon = getExtensionIcon(extension) ?? 'mdi-file-outline';
       }
 
       const node: TreeNode = {
@@ -64,10 +63,5 @@ export function buildFileTree(fileClasses: AnalysisFilePublic[]): BuildTreeResul
 }
 
 export function resolveSelectedPaths(selectedIds: number[], idPathMap: Record<number, string>): Set<string> {
-  const paths = new Set<string>();
-  selectedIds.forEach(id => {
-    const path = idPathMap[id];
-    if (path) paths.add(path);
-  });
-  return paths;
+  return new Set(selectedIds.map(id => idPathMap[id]).filter((path): path is string => !!path));
 }

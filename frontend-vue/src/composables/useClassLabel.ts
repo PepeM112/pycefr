@@ -1,46 +1,43 @@
 import { ref } from 'vue';
-import { type ClassPublic, classLabel, Level } from '@/client';
+import { type ClassId, type ClassPublic, classLabel, Level } from '@/client';
 
 const cache = ref<Array<ClassPublic>>([]);
 
-export function useClassLabel<T = ClassPublic>(options?: { mapper?: (item: ClassPublic) => T; force?: boolean }) {
-  const items = ref<T[]>([]);
-  const loading = ref<boolean>(false);
+export function useClassLabel(options?: { isForce?: boolean }) {
+  const items = ref<ClassPublic[]>([]);
+  const isLoading = ref<boolean>(false);
 
   async function fetch() {
-    if (cache.value.length > 0 && !options?.force) {
-      applyData(cache.value);
+    if (cache.value.length > 0 && !options?.isForce) {
+      items.value = cache.value;
       return;
     }
 
     try {
-      loading.value = true;
+      isLoading.value = true;
       const { data, error } = await classLabel();
 
-      if (error) throw error;
+      if (error) throw error instanceof Error ? error : new Error('Failed to load labels');
 
       const results = data ?? [];
       cache.value = results;
-
-      applyData(results);
+      items.value = results;
     } catch (e) {
       console.error('Error loading labels:', e);
+      const { useSnackbarStore } = await import('@/stores/snackbarStore');
+      useSnackbarStore().add({ color: 'error', text: 'error.fetching.labels' });
     } finally {
-      loading.value = false;
+      isLoading.value = false;
     }
   }
 
-  function applyData(data: ClassPublic[]) {
-    items.value = options?.mapper ? data.map(options.mapper) : (data as T[]);
-  }
-
-  function getClassLevel(classId: number): Level {
+  function getClassLevel(classId: ClassId): Level {
     return cache.value.find(item => item.id === classId)?.level ?? Level.UNKNOWN;
   }
 
   return {
     items,
-    loading,
+    isLoading,
     fetch,
     getClassLevel,
   };

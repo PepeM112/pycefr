@@ -2,7 +2,7 @@
   <div class="g-input-wrapper">
     <p class="mb-2">
       {{ $t(props.label) }}
-      <span v-if="props.required" class="font-weight-bold text-error">*</span>
+      <span v-if="props.isRequired" class="font-weight-bold text-error">*</span>
     </p>
     <slot />
   </div>
@@ -11,10 +11,10 @@
 const props = withDefaults(
   defineProps<{
     label: string;
-    required?: boolean;
+    isRequired?: boolean;
   }>(),
   {
-    required: false,
+    isRequired: false,
   }
 );
 </script>

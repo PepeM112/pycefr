@@ -27,7 +27,7 @@ export default createVuetify({
       class: 'text-none',
       elevation: 0,
       rounded: 'md',
-      style: 'text-transform: none; letter-spacing: normal;',
+      style: 'letter-spacing: normal;',
       variant: 'flat',
     },
     VCard: {

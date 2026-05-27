@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex align-center justify-end" style="font-size: 0.875rem">
+  <div class="d-flex align-center justify-end text-body-2">
     <span>{{ $t('show') }}</span>
     <v-select
       class="items-per-page-select"
@@ -37,15 +37,17 @@ const props = defineProps<{
   modelValue: Pagination;
 }>();
 
-const totalPages = computed<number>(() => Math.ceil(props.modelValue.total / props.modelValue.perPage));
+const totalPages = computed<number>(() =>
+  props.modelValue.perPage > 0 ? Math.ceil(props.modelValue.total / props.modelValue.perPage) : 1
+);
 
 function onPageChange(page: number) {
   emit('update:modelValue', { ...props.modelValue, page });
 }
 
 function onPerPageChange(perPage: number) {
-  const newTotalPages = Math.ceil(props.modelValue.total / perPage);
-  const page = props.modelValue.page > newTotalPages ? newTotalPages || 1 : props.modelValue.page;
+  const newTotal = perPage > 0 ? Math.ceil(props.modelValue.total / perPage) : 1;
+  const page = props.modelValue.page > newTotal ? newTotal || 1 : props.modelValue.page;
   emit('update:modelValue', { ...props.modelValue, perPage, page });
 }
 </script>

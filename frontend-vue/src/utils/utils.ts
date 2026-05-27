@@ -14,8 +14,8 @@ const EXTENSION_ICON_MAP: Record<FileExtension, string> = {
   md: 'logos:markdown',
 };
 
-export function getExtensionIcon(extension: FileExtension): string {
-  return EXTENSION_ICON_MAP[extension];
+export function getExtensionIcon(extension: string): string | undefined {
+  return EXTENSION_ICON_MAP[extension as FileExtension];
 }
 
 const LEVEL_COLOR_MAP: Record<Level, string> = {

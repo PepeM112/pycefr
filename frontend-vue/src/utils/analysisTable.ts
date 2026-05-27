@@ -1,4 +1,4 @@
-import { type Level, SortDirection, type AnalysisFilePublic } from '@/client';
+import { type ClassId, type Level, SortDirection, type AnalysisFilePublic } from '@/client';
 import type { AnalysisClassPublicWithLevel } from '@/types/analysis';
 import type { Sorting } from '@/composables/useSorting';
 
@@ -7,27 +7,26 @@ type ClassWithLabel = AnalysisClassPublicWithLevel & { translatedLabel: string }
 export function groupClassesBySelection(
   fileClasses: AnalysisFilePublic[],
   selectedFilePaths: Set<string>,
-  getClassLevel: (classId: number) => Level
+  getClassLevel: (classId: ClassId) => Level
 ): AnalysisClassPublicWithLevel[] {
   if (fileClasses.length === 0) return [];
 
-  const groupingMap = new Map<number, AnalysisClassPublicWithLevel>();
-
-  fileClasses
+  const groupingMap = fileClasses
     .filter(file => selectedFilePaths.has(file.filename))
     .flatMap(file => file.classes ?? [])
-    .forEach(item => {
-      const existing = groupingMap.get(item.classId);
+    .reduce((map, item) => {
+      const existing = map.get(item.classId);
       if (existing) {
         existing.instances += item.instances;
       } else {
-        groupingMap.set(item.classId, {
+        map.set(item.classId, {
           classId: item.classId,
           instances: item.instances,
           level: getClassLevel(item.classId),
         });
       }
-    });
+      return map;
+    }, new Map<number, AnalysisClassPublicWithLevel>());
 
   return Array.from(groupingMap.values());
 }
@@ -47,6 +46,9 @@ export function filterAndSortClasses(
     .filter(item => !searchLower || item.translatedLabel.toLowerCase().includes(searchLower));
 
   if (sort.direction === SortDirection.UNKNOWN || !sort.column) return labeled;
+
+  const SORTABLE_COLUMNS: Set<string> = new Set<string>(['classId', 'level', 'instances']);
+  if (!SORTABLE_COLUMNS.has(sort.column)) return labeled;
 
   const sorted = [...labeled];
   sorted.sort((a, b) => {

@@ -1,8 +1,7 @@
 import { ClassId, Level, type AnalysisFilePublic, type RepoCommitPublic } from '@/client';
-import i18n from '@/plugins/i18n';
 import type { AnalysisClassPublicWithLevel, ChartCommitItem, ChartData, ChartFileItem } from '@/types/analysis';
 
-const { t } = i18n.global;
+type TranslateFn = (key: string) => string;
 
 function sumInstances(items: AnalysisClassPublicWithLevel[], classIds: ClassId[]): number {
   return items.filter(it => classIds.includes(it.classId)).reduce((s, it) => s + it.instances, 0);
@@ -65,10 +64,16 @@ const STRUCTURE_OOP = 0.3;
 
 // --- INSIGHTS ---
 
-export function getComplexityAbstractionInsight(items: AnalysisClassPublicWithLevel[], totalInstances: number): string {
+export function getComplexityAbstractionInsight(
+  items: AnalysisClassPublicWithLevel[],
+  totalInstances: number,
+  t: TranslateFn
+): string {
   const advancedCount = items
     .filter(it => it.level === Level.C1 || it.level === Level.C2)
     .reduce((s, it) => s + it.instances, 0);
+
+  if (totalInstances === 0) return t('analysis_insight.complexity_abstraction.standard');
 
   const advancedRatio = (advancedCount / totalInstances) * 100;
 
@@ -77,7 +82,7 @@ export function getComplexityAbstractionInsight(items: AnalysisClassPublicWithLe
   return t('analysis_insight.complexity_abstraction.standard');
 }
 
-export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[]): string {
+export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[], t: TranslateFn): string {
   const pyCount = sumInstances(items, [
     ClassId.LISTCOMP_SIMPLE,
     ClassId.DICTCOMP_SIMPLE,
@@ -93,7 +98,7 @@ export function getPythonicDensityInsight(items: AnalysisClassPublicWithLevel[])
   return t('analysis_insight.pythonic_density.imperative');
 }
 
-export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[]): string {
+export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[], t: TranslateFn): string {
   const exceptionBlocks = sumInstances(items, [
     ClassId.EXCEPTION_TRY_EXCEPT,
     ClassId.EXCEPTION_TRY_FINALLY,
@@ -108,7 +113,7 @@ export function getExceptionHandlingInsight(items: AnalysisClassPublicWithLevel[
   return t('analysis_insight.exception_handling.optimistic');
 }
 
-export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLevel[]): string {
+export function getStructuralCompetenceInsight(items: AnalysisClassPublicWithLevel[], t: TranslateFn): string {
   const oopCount = sumInstances(items, [
     ClassId.CLASS_SIMPLE,
     ClassId.CLASS_INHERITED,
@@ -202,13 +207,12 @@ export function getTopPatterns(items: AnalysisClassPublicWithLevel[]) {
 }
 
 export function getTreemapFlatData(files: ChartFileItem[]) {
-  const groups: Record<string, number> = {};
-
-  files.forEach(f => {
+  const groups = files.reduce<Record<string, number>>((acc, f) => {
     const parts = f.fullPath.split('/');
     const folder = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '/';
-    groups[folder] = (groups[folder] || 0) + f.instances;
-  });
+    acc[folder] = (acc[folder] || 0) + f.instances;
+    return acc;
+  }, {});
 
   return Object.entries(groups).map(([name, value]) => ({
     g: name,

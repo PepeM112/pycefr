@@ -25,13 +25,12 @@ const props = defineProps<{
 
 function navigateBack() {
   if (props.back) {
-    router.push(props.back);
+    void router.push(props.back);
   }
 }
 </script>
 <style scoped lang="scss">
 header {
-  margin-bottom: 2rem;
   background-color: rgb(var(--v-theme-primary));
   color: rgb(var(--v-theme-on-primary));
   border-radius: var(--border-radius);

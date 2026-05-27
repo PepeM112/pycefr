@@ -19,16 +19,17 @@ const props = withDefaults(
   defineProps<{
     date: string | Date | number | undefined | null;
     format?: string;
-    relative?: boolean;
+    isRelative?: boolean;
   }>(),
   {
-    relative: false,
+    format: undefined,
+    isRelative: false,
   }
 );
 
 const displayDate = computed(() => {
   void locale.value;
-  return formatDate(props.date, props.format, props.relative);
+  return formatDate(props.date, props.format, props.isRelative);
 });
 
 const tooltipDate = computed(() => {

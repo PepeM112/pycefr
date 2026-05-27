@@ -1,6 +1,7 @@
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { serializeFilterValue, deserializeFilterValue } from '@/utils/filter';
+import { FilterType } from '@/types/filter';
 import { useQuery } from './useQuery';
 import type { LocationQuery } from 'vue-router';
 import type { FilterItem, FilterValue } from '@/types/filter';
@@ -13,6 +14,14 @@ export function useFilter(filterList: FilterItem[]) {
   const { updateQuery } = useQuery();
 
   const filters = ref<FilterValue>({});
+  let isHydrating = true;
+
+  const allQueryKeys = new Set(
+    filterList.flatMap(item => {
+      const key = item.query || item.key;
+      return item.type === FilterType.DATE ? [`${key}_from`, `${key}_to`] : [key];
+    })
+  );
 
   /**
    * Updates query using filter values.
@@ -20,25 +29,30 @@ export function useFilter(filterList: FilterItem[]) {
    * Maps filter values to their 'query' aliases defined in filterList.
    */
   const syncToUrl = () => {
-    const queryToUpdate: LocationQuery = { ...route.query };
+    const serializedEntries = filterList.flatMap(item => Object.entries(serializeFilterValue(item, filters.value)));
+    const producedKeys = new Set(serializedEntries.map(([key]) => key));
 
-    filterList.forEach(item => {
-      const serialized = serializeFilterValue(item, filters.value);
-      Object.entries(serialized).forEach(([key, val]) => {
+    const queryToUpdate = serializedEntries.reduce<LocationQuery>(
+      (query, [key, val]) => {
         if (val === undefined) {
-          delete queryToUpdate[key];
+          delete query[key];
         } else if (Array.isArray(val)) {
-          queryToUpdate[key] = val.map(String);
+          query[key] = val.map(String);
         } else {
-          queryToUpdate[key] = String(val);
+          query[key] = String(val);
         }
-      });
+        return query;
+      },
+      { ...route.query }
+    );
+
+    allQueryKeys.forEach(key => {
+      if (!producedKeys.has(key)) delete queryToUpdate[key];
     });
 
-    // Reset to page 1 when filters change
     queryToUpdate.p = '1';
 
-    updateQuery(queryToUpdate);
+    void updateQuery(queryToUpdate);
   };
 
   /**
@@ -47,22 +61,32 @@ export function useFilter(filterList: FilterItem[]) {
    * Maps URL aliases back to local filter values.
    */
   const hydrateFromUrl = () => {
-    const newFilters: FilterValue = { ...filters.value };
-
-    filterList.forEach(item => {
-      const deserialized = deserializeFilterValue(item, route.query);
-      if (deserialized !== undefined) newFilters[item.key] = deserialized;
-    });
-    filters.value = newFilters;
+    filters.value = filterList.reduce<FilterValue>(
+      (acc, item) => {
+        const deserialized = deserializeFilterValue(item, route.query);
+        if (deserialized !== undefined) acc[item.key] = deserialized;
+        return acc;
+      },
+      { ...filters.value }
+    );
   };
 
   hydrateFromUrl();
+  void nextTick(() => {
+    isHydrating = false;
+  });
 
   watch(
     () => filters.value,
-    () => syncToUrl(),
+    () => {
+      if (!isHydrating) syncToUrl();
+    },
     { deep: true }
   );
 
-  return filters;
+  function getValue<R>(key: string): R | undefined {
+    return filters.value[key] as R | undefined;
+  }
+
+  return { filters, getValue };
 }

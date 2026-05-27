@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import 'dayjs/locale/en';
 import 'dayjs/locale/es';
 import { defineStore } from 'pinia';
+import i18n from '@/plugins/i18n';
 
 /*
 Multiple packs available. Right now using:
@@ -28,6 +29,7 @@ export const useLangStore = defineStore('lang', () => {
     const exists = LANGUAGE_OPTIONS.some(opt => opt.code === lang);
     if (exists) {
       currentLang.value = lang;
+      i18n.global.locale.value = lang;
       localStorage.setItem('user-lang', lang);
     }
   }

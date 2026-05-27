@@ -6,14 +6,14 @@ import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
   plugins: [
-    vue(), 
+    vue(),
     vuetify({ autoImport: true }),
     visualizer({
       filename: 'dist/stats.html',
       open: false,
       gzipSize: true,
       brotliSize: true,
-    })
+    }),
   ],
   base: '/',
   resolve: {
@@ -32,9 +32,9 @@ export default defineConfig({
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
           'vuetify-vendor': ['vuetify'],
           'chart-vendor': ['chart.js', 'vue-chartjs'],
-          'utils-vendor': ['lodash', 'uuid', '@vueuse/core'],
-        }
-      }
-    }
-  }
+          'utils-vendor': ['@vueuse/core'],
+        },
+      },
+    },
+  },
 });

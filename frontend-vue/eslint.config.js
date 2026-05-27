@@ -20,7 +20,7 @@ export default defineConfig([
   { ignores: ['dist/', 'node_modules/'] },
 
   js.configs.recommended,
-  ...configs.recommended,
+  ...configs.recommendedTypeChecked,
   ...vue.configs['flat/recommended'],
   // JS
   {
@@ -115,6 +115,13 @@ export default defineConfig([
     files: ['**/*.vue'],
     rules: {
       'import/default': 'off', // Disabled to prevent false positives when importing .vue files
+    },
+  },
+
+  {
+    files: ['vite.config.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-call': 'off', // vite-plugin-vuetify types unresolvable by eslint parser
     },
   },
 

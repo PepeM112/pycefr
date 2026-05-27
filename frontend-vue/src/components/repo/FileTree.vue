@@ -62,7 +62,7 @@
       :items="localModelValue"
       :selected="selectedNodes"
       :search="searchOptions.searchText"
-      :selectable="searchOptions.allowFilterByFiles"
+      :is-selectable="searchOptions.allowFilterByFiles"
       height="800"
       class="pa-0 pb-8"
       @update:selected="val => (selectedNodes = val)"
@@ -82,7 +82,6 @@ import GTreeview from '@/components/GTreeview.vue';
 import type { TreeNode } from '@/types/treeview';
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: TreeNode[]): void;
   (e: 'update:selected', value: number[] | 'all'): void;
 }>();
 
