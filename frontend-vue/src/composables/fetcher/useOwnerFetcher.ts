@@ -1,58 +1,12 @@
-import { ref } from 'vue';
 import { getOwners } from '@/client';
-import { useSnackbarStore } from '@/stores/snackbarStore';
-import type { ItemFetcher, FetcherOptions } from '@/types/fetcher';
-import type { FilterEntity } from '@/types/filter';
+import { createFetcher } from './createFetcher';
+import type { FetcherOptions, ItemFetcher } from '@/types/fetcher';
 
 export function useOwnerFetcher(options: FetcherOptions = {}): ItemFetcher {
-  const items = ref<FilterEntity[]>([]);
-  const isLoading = ref(false);
-
-  let timeoutId: number | null = null;
-
-  async function fetch(search?: string) {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-
-    if (options.isLazy && items.value.length > 0 && !search) {
-      return items.value;
-    }
-
-    const executeFetch = async () => {
-      try {
-        isLoading.value = true;
-        const { data, error } = await getOwners({ query: { search, limit: options.limit } });
-
-        if (error) throw error;
-
-        items.value =
-          data?.map(owner => ({
-            label: owner.label,
-            value: owner.id,
-          })) ?? [];
-
-        return items.value;
-      } catch (e) {
-        useSnackbarStore().add({ color: 'error', text: 'error.fetching.owners' });
-        return [];
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    if (search && options.debounce) {
-      return new Promise<FilterEntity[]>(resolve => {
-        timeoutId = window.setTimeout(async () => {
-          const result = await executeFetch();
-          resolve(result || []);
-        }, options.debounce);
-      });
-    }
-
-    return executeFetch();
-  }
-
-  return { items, isLoading, fetch };
+  return createFetcher(
+    getOwners,
+    owners => owners.map(owner => ({ label: owner.label, value: owner.id })),
+    'error.fetching.owners',
+    options
+  );
 }

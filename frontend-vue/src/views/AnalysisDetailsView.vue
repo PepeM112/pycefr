@@ -75,7 +75,7 @@ import GenericLoader from '@/components/GenericLoader.vue';
 import GTable from '@/components/GTable.vue';
 import PageView from '@/components/PageView.vue';
 import FileTree from '@/components/repo/FileTree.vue';
-import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import ThreeDotsMenu from '@/components/ThreeDotsMenu.vue';
 import { useClassLabel } from '@/composables/useClassLabel';
 import { usePagination } from '@/composables/usePagination';
 import { useSorting } from '@/composables/useSorting';
@@ -88,8 +88,9 @@ import { filterAndSortClasses, groupClassesBySelection } from '@/utils/analysisT
 import { buildFileTree, resolveSelectedPaths } from '@/utils/analysisTree';
 import Enums from '@/utils/enums';
 import { getLevelColor } from '@/utils/utils';
-import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
 import type { TreeNode } from '@/types/treeview';
+import type { MenuAction } from '@/types/menu';
+import type { AnalysisClassPublicWithLevel, ChartData } from '@/types/analysis';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -109,7 +110,7 @@ const fileTreeData = ref<TreeNode[]>([]);
 const selectedLevels = ref<Level[]>(LEVELS.map(level => level.value as Level));
 const idPathMap = ref<Record<number, string>>({});
 
-const MENU_ITEMS: MenuProps[] = [
+const MENU_ITEMS: MenuAction[] = [
   {
     label: 'refresh_data',
     icon: 'mdi-refresh',
@@ -177,7 +178,12 @@ async function loadData() {
   const { data, error } = await getAnalysisDetail({ path: { analysis_id: analysisId } });
   if (error) {
     loaderStatus.value = LoadingStatus.ERROR;
-    snackbarStore.add({ text: 'error.fetching.analysis_data', color: 'error', icon: 'mdi-alert-circle-outline', closable: true });
+    snackbarStore.add({
+      text: 'error.fetching.analysis_data',
+      color: 'error',
+      icon: 'mdi-alert-circle-outline',
+      closable: true,
+    });
     return;
   }
   analysisData.value = data;

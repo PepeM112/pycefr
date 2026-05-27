@@ -22,13 +22,7 @@
     <template #append>
       <div class="d-flex justify-end align-center pb-2 ga-2" :class="{ 'flex-column': !showMenu, 'pr-2': showMenu }">
         <v-btn icon variant="text" density="comfortable" @click.stop="themeStore.toggleTheme">
-          <v-icon
-            :icon="
-              themeStore.currentTheme === 'dark'
-                ? 'iconify:solar:moon-stars-bold-duotone'
-                : 'iconify:solar:sun-bold-duotone'
-            "
-          />
+          <v-icon :icon="themeIcon" />
         </v-btn>
         <language-selector />
       </div>
@@ -37,10 +31,15 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import LanguageSelector from '@/components/LanguageSelector.vue';
 import { useThemeStore } from '@/stores/themeStore';
 
 const themeStore = useThemeStore();
+
+const themeIcon = computed(() =>
+  themeStore.currentTheme === 'dark' ? 'iconify:solar:moon-stars-bold-duotone' : 'iconify:solar:sun-bold-duotone'
+);
 
 const showMenu = defineModel<boolean>('showMenu', { default: true });
 

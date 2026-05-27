@@ -16,7 +16,7 @@
             <template v-if="hasLevelData">
               <bar :data="levelChartData" :options="barOptions" />
             </template>
-            <div v-else class="d-flex justify-center align-center flex-column h-100" style="color: #9d9d9d">
+            <div v-else class="d-flex justify-center align-center flex-column h-100 text-medium-emphasis">
               <v-icon class="mb-1" size="40">mdi-chart-arc</v-icon>
               <p class="text-grey text-body-2">{{ $t('no_data') }}</p>
             </div>
@@ -27,7 +27,7 @@
             <template v-if="stats?.topConstructs?.length">
               <bar :data="topConstructsData" :options="horizontalBarOptions" />
             </template>
-            <div v-else class="d-flex justify-center align-center flex-column h-100" style="color: #9d9d9d">
+            <div v-else class="d-flex justify-center align-center flex-column h-100 text-medium-emphasis">
               <v-icon class="mb-1" size="40">mdi-chart-arc</v-icon>
               <p class="text-grey text-body-2">{{ $t('no_data') }}</p>
             </div>

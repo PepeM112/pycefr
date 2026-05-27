@@ -150,7 +150,7 @@ const flattenedItems = computed<FlattenedNode[]>(() => {
       return [
         ...acc,
         { ...node, depth, hasChildren },
-        ...(hasChildren && isExpanded(node.id) ? traverse(node.children!, depth + 1) : []),
+        ...(hasChildren && isExpanded(node.id) ? traverse(node.children ?? [], depth + 1) : []),
       ];
     }, [] as FlattenedNode[]);
   };

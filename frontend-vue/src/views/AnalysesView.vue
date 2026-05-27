@@ -122,17 +122,9 @@
       <new-analysis-dialog
         v-model="showNewAnalysisDialog"
         :reconnect-analysis-id="reconnectAnalysisId"
-        :reconnect-analysis-name="reconnectAnalysisName"
         @created="handleAnalysisCreated"
         @completed="handleAnalysisCompleted"
-        @update:model-value="
-          val => {
-            if (!val) {
-              reconnectAnalysisId = null;
-              reconnectAnalysisName = undefined;
-            }
-          }
-        "
+        @update:model-value="handleNewDialogClose"
       />
       <g-dialog-card
         v-model="showUploadDialog"
@@ -141,12 +133,8 @@
         width="400"
         show-size
         :is-confirm-disabled="fileToUpload.length === 0"
-        @confirm-pre="() => handleUpload()"
-        @close-pre="
-          () => {
-            fileToUpload = [];
-          }
-        "
+        @confirm-pre="handleUpload"
+        @close-pre="handleUploadDialogClose"
       >
         <v-file-upload v-model="fileToUpload" accept="application/json" density="comfortable" rounded="lg" clearable />
       </g-dialog-card>
@@ -189,7 +177,8 @@ import GTable from '@/components/GTable.vue';
 import EditAnalysisDialog from '@/components/analysis/EditAnalysisDialog.vue';
 import NewAnalysisDialog from '@/components/analysis/NewAnalysisDialog.vue';
 import PageView from '@/components/PageView.vue';
-import ThreeDotsMenu, { type MenuProps } from '@/components/ThreeDotsMenu.vue';
+import ThreeDotsMenu from '@/components/ThreeDotsMenu.vue';
+import type { MenuAction } from '@/types/menu';
 import { useAnalysisDelete } from '@/composables/analysis/useAnalysisDelete';
 import { useOwnerFetcher } from '@/composables/fetcher/useOwnerFetcher';
 import { useTagFetcher } from '@/composables/fetcher/useTagFetcher';
@@ -224,7 +213,6 @@ const analysisBeingDeleted = ref<number | undefined>(undefined);
 const showEditDialog = ref(false);
 const analysisBeingEdited = ref<AnalysisSummaryPublic | null>(null);
 const reconnectAnalysisId = ref<number | null>(null);
-const reconnectAnalysisName = ref<string | undefined>(undefined);
 const loadingStatus = ref<LoadingStatus>(LoadingStatus.IDLE);
 const viewMode = ref<ViewMode>((localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || 'table');
 const cardPage = ref(1);
@@ -294,7 +282,7 @@ useFetchOnQuery(loadData, {
   debounceWait: 400,
 });
 
-const menuItems: MenuProps[] = [
+const menuItems: MenuAction[] = [
   {
     label: 'new_analysis',
     icon: 'mdi-plus',
@@ -322,6 +310,21 @@ const headers: TableHeader[] = [
   { label: 'error_message', key: 'error_message' },
 ];
 
+function buildFilterQuery(page: number, perPage: number) {
+  return {
+    page,
+    per_page: perPage,
+    sort_column: Number(sorting.value.column) as AnalysisSortColumn,
+    sort_direction: sorting.value.direction,
+    name: filter.value.name as string[],
+    owner: filter.value.owner as string[],
+    status: filter.value.status as AnalysisStatus[],
+    tags: filter.value.tags as string[],
+    date_from: (filter.value.dates as DateFilterValue)?.from,
+    date_to: (filter.value.dates as DateFilterValue)?.to,
+  };
+}
+
 async function loadData() {
   if (viewMode.value === 'cards') {
     await loadCardsData(true);
@@ -330,18 +333,7 @@ async function loadData() {
 
   loadingStatus.value = LoadingStatus.LOADING;
   const { data, error } = await listAnalysis({
-    query: {
-      page: pagination.value.page,
-      per_page: pagination.value.perPage,
-      sort_column: Number(sorting.value.column) as AnalysisSortColumn,
-      sort_direction: sorting.value.direction,
-      name: filter.value.name as string[],
-      owner: filter.value.owner as string[],
-      status: filter.value.status as AnalysisStatus[],
-      tags: filter.value.tags as string[],
-      date_from: (filter.value.dates as DateFilterValue)?.from,
-      date_to: (filter.value.dates as DateFilterValue)?.to,
-    },
+    query: buildFilterQuery(pagination.value.page, pagination.value.perPage),
   });
 
   if (error) {
@@ -369,18 +361,7 @@ async function loadCardsData(reset: boolean) {
   }
 
   const { data, error } = await listAnalysis({
-    query: {
-      page: cardPage.value,
-      per_page: CARDS_PER_PAGE,
-      sort_column: Number(sorting.value.column) as AnalysisSortColumn,
-      sort_direction: sorting.value.direction,
-      name: filter.value.name as string[],
-      owner: filter.value.owner as string[],
-      status: filter.value.status as AnalysisStatus[],
-      tags: filter.value.tags as string[],
-      date_from: (filter.value.dates as DateFilterValue)?.from,
-      date_to: (filter.value.dates as DateFilterValue)?.to,
-    },
+    query: buildFilterQuery(cardPage.value, CARDS_PER_PAGE),
   });
 
   isLoadingMore.value = false;
@@ -507,13 +488,11 @@ async function handleRetry(item: AnalysisSummaryPublic) {
 
   handleAnalysisCreated(data);
   reconnectAnalysisId.value = data.id;
-  reconnectAnalysisName.value = data.name;
   showNewAnalysisDialog.value = true;
 }
 
 function handleOpenProgress(item: AnalysisSummaryPublic) {
   reconnectAnalysisId.value = item.id;
-  reconnectAnalysisName.value = item.name;
   showNewAnalysisDialog.value = true;
 }
 
@@ -552,6 +531,16 @@ function handleOpenEdit(item: AnalysisSummaryPublic) {
 
 function handleAnalysisEdited(updated: AnalysisSummaryPublic) {
   analysesData.value = analysesData.value.map(a => (a.id === updated.id ? updated : a));
+}
+
+function handleNewDialogClose(val: boolean) {
+  if (!val) {
+    reconnectAnalysisId.value = null;
+  }
+}
+
+function handleUploadDialogClose() {
+  fileToUpload.value = [];
 }
 
 async function handleDownload(id: number, name: string) {

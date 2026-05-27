@@ -31,7 +31,6 @@ function navigateBack() {
 </script>
 <style scoped lang="scss">
 header {
-  margin-bottom: 2rem;
   background-color: rgb(var(--v-theme-primary));
   color: rgb(var(--v-theme-on-primary));
   border-radius: var(--border-radius);

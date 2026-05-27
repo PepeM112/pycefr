@@ -19,18 +19,11 @@
   </v-menu>
 </template>
 <script setup lang="ts">
-import type { RouteLocationRaw } from 'vue-router';
-
-export interface MenuProps {
-  readonly label: string;
-  readonly icon?: string;
-  readonly to?: RouteLocationRaw;
-  readonly onClick?: () => void;
-}
+import type { MenuAction } from '@/types/menu';
 
 const props = withDefaults(
   defineProps<{
-    modelValue: MenuProps[];
+    modelValue: MenuAction[];
   }>(),
   {
     modelValue: () => [],

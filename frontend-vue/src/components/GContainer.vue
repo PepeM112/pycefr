@@ -31,7 +31,7 @@
   </section>
 </template>
 <script setup lang="ts">
-const props = defineProps<{
+defineProps<{
   title?: string;
   isExpandable?: boolean;
 }>();
@@ -42,7 +42,10 @@ const props = defineProps<{
   background-color: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
   border-radius: var(--border-radius);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  box-shadow:
+    var(--v-shadow-key-umbra-opacity, rgba(0, 0, 0, 0.2)) 0px 2px 1px -1px,
+    var(--v-shadow-key-penumbra-opacity, rgba(0, 0, 0, 0.14)) 0px 1px 1px 0px,
+    var(--v-shadow-key-ambient-opacity, rgba(0, 0, 0, 0.12)) 0px 1px 3px 0px;
 
   h2 {
     margin: 0 0 2rem;

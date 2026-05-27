@@ -24,6 +24,8 @@ export function useClassLabel(options?: { isForce?: boolean }) {
       items.value = results;
     } catch (e) {
       console.error('Error loading labels:', e);
+      const { useSnackbarStore } = await import('@/stores/snackbarStore');
+      useSnackbarStore().add({ color: 'error', text: 'error.fetching.labels' });
     } finally {
       isLoading.value = false;
     }

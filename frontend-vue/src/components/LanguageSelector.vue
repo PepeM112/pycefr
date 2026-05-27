@@ -1,5 +1,5 @@
 <template>
-  <v-menu v-model="isMenuOpen" class="language-selector">
+  <v-menu class="language-selector">
     <template #activator="{ props }">
       <v-btn v-bind="props" density="comfortable" :icon="`iconify:${langStore.currentFlag}`" variant="text" />
     </template>
@@ -22,17 +22,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLangStore, type LanguageCode, LANGUAGE_OPTIONS } from '@/stores/langStore';
 
 const { t } = useI18n();
 const langStore = useLangStore();
-const isMenuOpen = ref(false);
 
 function changeLanguage(code: LanguageCode) {
   langStore.setLanguage(code);
-  isMenuOpen.value = false;
 }
 </script>
 <style scoped lang="scss">

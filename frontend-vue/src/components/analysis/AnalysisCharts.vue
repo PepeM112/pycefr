@@ -11,7 +11,7 @@
               v-bind="chart.type ? { type: chart.type } : {}"
             />
           </template>
-          <div v-else class="d-flex justify-center align-center flex-column h-100" style="color: #9d9d9d">
+          <div v-else class="d-flex justify-center align-center flex-column h-100 text-medium-emphasis">
             <v-icon class="mb-1" size="40">mdi-chart-arc</v-icon>
             <p class="text-grey text-body-2">{{ t('no_data') }}</p>
           </div>
@@ -19,7 +19,7 @@
       </v-col>
     </v-row>
 
-    <div v-else class="d-flex justify-center align-center flex-column" style="color: #9d9d9d; margin: 2rem auto">
+    <div v-else class="d-flex justify-center align-center flex-column text-medium-emphasis my-8 mx-auto">
       <v-icon class="mb-1" size="60">mdi-chart-box-outline</v-icon>
       <p class="text-grey">{{ t('no_data') }}</p>
     </div>
@@ -288,7 +288,7 @@ const pythonicData = computed(() => ({
 }));
 
 const exceptionData = computed(() => ({
-  labels: ['Error Catching (Try)', 'Error Signaling (Raise)'],
+  labels: [t('charts.error_catching'), t('charts.error_signaling')],
   datasets: [
     {
       data: AnalysisChartsUtils.getExceptionStats(props.data.items),
@@ -334,9 +334,3 @@ const treemapData = computed(() => {
   };
 });
 </script>
-
-<style scoped>
-.chart-container {
-  height: 280px;
-}
-</style>

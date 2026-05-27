@@ -32,7 +32,7 @@ export default defineConfig({
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
           'vuetify-vendor': ['vuetify'],
           'chart-vendor': ['chart.js', 'vue-chartjs'],
-          'utils-vendor': ['lodash', 'uuid', '@vueuse/core'],
+          'utils-vendor': ['@vueuse/core'],
         }
       }
     }

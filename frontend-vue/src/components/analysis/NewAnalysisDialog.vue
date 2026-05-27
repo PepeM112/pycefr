@@ -108,14 +108,12 @@ type StepDef = {
 type Props = {
   modelValue: boolean;
   reconnectAnalysisId?: number | null;
-  reconnectAnalysisName?: string;
 };
 
 const INCLUDE_GIT_STORAGE_KEY = 'pycefr_include_git';
 
 const props = withDefaults(defineProps<Props>(), {
   reconnectAnalysisId: null,
-  reconnectAnalysisName: undefined,
 });
 
 const emit = defineEmits<{

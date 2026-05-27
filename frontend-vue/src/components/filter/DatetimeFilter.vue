@@ -24,7 +24,10 @@
         :time-config="{ enableTimePicker: false }"
         :dark="isDark"
       />
-      <div class="d-flex w-100 justify-end ga-2 pa-2 pb-0" style="border-top: 1px solid rgb(var(--v-theme-on-surface))">
+      <div
+        class="d-flex w-100 justify-end ga-2 pa-2 pb-0"
+        style="border-top: 1px solid rgba(var(--v-theme-on-surface), 0.12)"
+      >
         <v-btn variant="tonal" @click="showMenu = false">{{ $t('cancel') }}</v-btn>
         <v-btn color="primary-on-surface" variant="flat" @click="applyDate">{{ $t('apply') }}</v-btn>
       </div>
@@ -99,7 +102,7 @@ function clearDate() {
   border: unset;
 }
 :deep(.dp__theme_dark) {
-  --dp-background-color: rgb(var(--v-theme-primary));
+  --dp-background-color: rgb(var(--v-theme-surface));
 }
 
 :deep(.v-field) {

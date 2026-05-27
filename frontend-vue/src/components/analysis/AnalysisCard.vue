@@ -17,7 +17,7 @@
             {{ modelValue?.name || 'N/A' }}
           </span>
         </h3>
-        <span style="font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), 0.7)">
+        <span class="text-caption text-medium-emphasis">
           <g-date :date="modelValue?.createdAt" />
         </span>
       </div>
@@ -31,7 +31,7 @@
 
     <v-sheet class="repo-summary bg-background pa-3 h-100" rounded="lg">
       <template v-if="modelValue.status === AnalysisStatus.FAILED">
-        <p style="font-size: 0.875rem">
+        <p class="text-body-2">
           <v-icon class="mr-2" icon="mdi-alert-circle-outline" color="error" />
           {{ modelValue.errorMessage || $t('error_during_analysis') }}
         </p>
@@ -43,14 +43,14 @@
             <a :href="modelValue?.repo?.owner?.profileUrl" target="_blank">
               {{ getProfileNameFromUrl(modelValue?.repo?.owner?.profileUrl || modelValue?.repo?.url) }}
             </a>
-            <span style="margin: 0 2px">/</span>
+            <span class="mx-1">/</span>
             <a :href="modelValue?.repo?.url" target="_blank">{{ modelValue?.repo?.name }}</a>
           </span>
           <span v-else>{{ modelValue?.repo?.name }}</span>
         </p>
-        <dl style="font-size: 0.75rem">
+        <dl class="text-caption">
           <p class="description mb-4">
-            {{ modelValue?.repo?.description || 'No description available' }}
+            {{ modelValue?.repo?.description || $t('no_description') }}
           </p>
           <div class="d-flex justify-space-between mb-1">
             <dt class="font-weight-bold">{{ $t('creation_date') }}:</dt>
@@ -64,7 +64,7 @@
         </dl>
       </template>
       <template v-else>
-        <p style="font-size: 0.875rem; color: rgba(var(--v-theme-on-surface), 0.5)">
+        <p class="text-body-2 text-medium-emphasis">
           <v-icon class="mr-2" icon="mdi-source-branch-remove" />
           {{ $t('git_analysis_not_included') }}
         </p>
@@ -116,9 +116,9 @@ defineProps<{
 function getProfileNameFromUrl(url: string): string {
   try {
     const parsedUrl = new URL(url);
-    return parsedUrl.pathname.split('/')[1] || 'Unknown';
+    return parsedUrl.pathname.split('/')[1] || '';
   } catch {
-    return 'Unknown';
+    return '';
   }
 }
 </script>

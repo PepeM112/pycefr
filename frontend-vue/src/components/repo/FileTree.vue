@@ -82,7 +82,6 @@ import GTreeview from '@/components/GTreeview.vue';
 import type { TreeNode } from '@/types/treeview';
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: TreeNode[]): void;
   (e: 'update:selected', value: number[] | 'all'): void;
 }>();
 

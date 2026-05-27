@@ -12,11 +12,7 @@
       <v-card-title v-if="title" class="py-3">
         <span class="font-weight-bold text-h5">{{ $t(title) }}</span>
         <br />
-        <p
-          v-if="subtitle"
-          class="mt-2 font-weight-regular"
-          style="font-size: 1rem; line-height: 1.25rem; white-space: normal"
-        >
+        <p v-if="subtitle" class="mt-2 font-weight-regular text-body-1" style="white-space: normal">
           {{ $t(subtitle) }}
         </p>
       </v-card-title>

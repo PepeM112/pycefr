@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex align-center justify-end" style="font-size: 0.875rem">
+  <div class="d-flex align-center justify-end text-body-2">
     <span>{{ $t('show') }}</span>
     <v-select
       class="items-per-page-select"
