@@ -39,8 +39,13 @@ format-back: ## Format backend (ruff)
 format-front: ## Format frontend (prettier)
 	docker compose exec frontend npx prettier --write .
 
-test: ## Run backend tests
+test: test-back test-front ## Run all tests
+
+test-back: ## Run backend tests (pytest)
 	docker compose exec backend python -m pytest backend/tests/ -v
+
+test-front: ## Run frontend tests (vitest)
+	docker compose exec frontend npx vitest run
 
 lint: lint-back lint-front ## Run all linters
 
