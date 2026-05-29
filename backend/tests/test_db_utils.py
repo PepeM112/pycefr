@@ -722,9 +722,7 @@ class TestUploadAnalysisData:
             upload_analysis_data(data)
 
         conn = sqlite3.connect(str(db))
-        count = conn.execute(
-            "SELECT COUNT(*) FROM analyses WHERE id != ?", (1,)
-        ).fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM analyses WHERE id != ?", (1,)).fetchone()[0]
         conn.close()
         assert count == 0
 

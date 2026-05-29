@@ -615,11 +615,7 @@ class TestGetDefaultClassLevel:
         assert get_default_class_level(ClassId.UNKNOWN) == Level.UNKNOWN
 
     def test_every_non_unknown_classid_has_a_level(self) -> None:
-        unmapped = [
-            cid
-            for cid in ClassId
-            if cid != ClassId.UNKNOWN and get_default_class_level(cid) == Level.UNKNOWN
-        ]
+        unmapped = [cid for cid in ClassId if cid != ClassId.UNKNOWN and get_default_class_level(cid) == Level.UNKNOWN]
         assert unmapped == [], f"ClassIds without level mapping: {[c.name for c in unmapped]}"
 
     @pytest.mark.parametrize(
