@@ -75,11 +75,14 @@ describe('utils/filter.ts', () => {
         });
       });
 
-      it('should return empty object for partial range (invalid case)', () => {
-        // LOGIC: If a required property is missing from the object, ignore the filter.
+      it('should serialize partial date range with only "from"', () => {
+        // LOGIC: Partial ranges are valid — serialize the present key and set the other to undefined.
         const item = createItem({ key: 'date', type: FilterType.DATE });
         const from = new Date('2023-01-01');
-        expect(serializeFilterValue(item, fv({ date: { from } }))).toEqual({});
+        expect(serializeFilterValue(item, fv({ date: { from } }))).toEqual({
+          date_from: from.getTime(),
+          date_to: undefined,
+        });
       });
 
       it('should serialize partial date ranges if keys exist but are null', () => {
