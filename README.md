@@ -23,15 +23,30 @@ PyCEFR parses the AST of every Python file in a project and maps each language c
 - Export / import analyses as JSON
 - CLI mode for local directories and GitHub repos
 
+## Screenshots
+
+### Dashboard
+![Dashboard](docs/images/dashboard.png)
+
+### Analysis List
+![Analysis list](docs/images/list.png)
+
+### Analysis Details
+![Insights — charts and AI-generated conclusions](docs/images/details_insights.png)
+
+![Repository contributors and statistics](docs/images/details_repository.png)
+
+![Construct properties with file tree and level filters](docs/images/details_properties.png)
+
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.11+, FastAPI, Pydantic v2, SQLite |
-| Frontend | Vue 3 (Composition API), TypeScript, Vuetify 3, Chart.js |
-| Tooling | Vite, ESLint, Prettier, Stylelint, Husky, Vitest |
-| Infrastructure | Docker, Docker Compose |
-| API Client | Auto-generated from OpenAPI via `@hey-api/openapi-ts` |
+| Layer          | Technology                                               |
+| -------------- | -------------------------------------------------------- |
+| Backend        | Python 3.11+, FastAPI, Pydantic v2, SQLite               |
+| Frontend       | Vue 3 (Composition API), TypeScript, Vuetify 3, Chart.js |
+| Tooling        | Vite, ESLint, Prettier, Stylelint, Husky, Vitest         |
+| Infrastructure | Docker, Docker Compose                                   |
+| API Client     | Auto-generated from OpenAPI via `@hey-api/openapi-ts`    |
 
 ## Quick Start
 
@@ -91,14 +106,14 @@ AUTO_DISPLAY_CONSOLE=true
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
-| Variable | Description |
-|---|---|
-| `IGNORE_FOLDERS` | Comma-separated folder names excluded from analysis |
+| Variable                      | Description                                                   |
+| ----------------------------- | ------------------------------------------------------------- |
+| `IGNORE_FOLDERS`              | Comma-separated folder names excluded from analysis           |
 | `PYTHON_THRESHOLD_PERCENTAGE` | Minimum % of Python code required in a repo to allow analysis |
-| `DATABASE_PATH` | Path to the SQLite database file |
-| `ADD_LOCAL_SUFFIX` | Append `_local` suffix to result files for local analyses |
-| `AUTO_DISPLAY_CONSOLE` | Automatically print results to the console after CLI analysis |
-| `CORS_ORIGINS` | Comma-separated allowed CORS origins |
+| `DATABASE_PATH`               | Path to the SQLite database file                              |
+| `ADD_LOCAL_SUFFIX`            | Append `_local` suffix to result files for local analyses     |
+| `AUTO_DISPLAY_CONSOLE`        | Automatically print results to the console after CLI analysis |
+| `CORS_ORIGINS`                | Comma-separated allowed CORS origins                          |
 
 ---
 
