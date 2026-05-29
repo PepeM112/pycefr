@@ -37,6 +37,8 @@ class Analyzer:
         self.is_cli = is_cli
         self._on_progress = on_progress
         self._last_emitted_percent = -1
+        if is_cli:
+            logger.setLevel(logging.ERROR)
         self.analysis_result = AnalysisPublic(
             id=0,
             name="",
@@ -276,6 +278,11 @@ def clone_and_analyse(
     if include_repo and include_git:
         if on_progress:
             on_progress("GIT_ANALYSIS")
+        if is_cli:
+            if sys.stdout.isatty():
+                print("\r[ ] Fetching repository metadata\033[K", end="", flush=True)
+            else:
+                print("[ ] Fetching repository metadata")
 
         local = GitLocalManager(cloned_repo)
         repo_info = local.get_repo_info()
@@ -284,6 +291,12 @@ def clone_and_analyse(
         except Exception as e:
             logger.warning(f"Could not fetch repo description for {repo_url}: {e}")
         result.repo = repo_info
+
+        if is_cli:
+            if sys.stdout.isatty():
+                print("\r[✓] Fetching repository metadata\033[K")
+            else:
+                print("[✓] Fetching repository metadata")
 
     if on_progress:
         on_progress("SAVING")

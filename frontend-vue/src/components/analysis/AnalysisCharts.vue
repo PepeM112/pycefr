@@ -192,7 +192,7 @@ const treemapOptions = computed(() => ({
 
 const hasNumericData = (chartData: { datasets: { data?: number[]; tree?: { v: number }[] }[] }) =>
   chartData.datasets.some(ds => {
-    const values = ds.data ?? ds.tree?.map(d => d.v);
+    const values = ds.data?.length ? ds.data : ds.tree?.map(d => d.v);
     return Array.isArray(values) && values.some(v => v > 0);
   });
 
