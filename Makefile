@@ -31,8 +31,12 @@ seed: ## Seed the database with demo data
 # Quality
 # ==============================
 
-format: ## Format backend (ruff) and frontend (prettier)
+format: format-back format-front ## Format all code
+
+format-back: ## Format backend (ruff)
 	docker compose exec backend python -m ruff format .
+
+format-front: ## Format frontend (prettier)
 	docker compose exec frontend npx prettier --write .
 
 test: ## Run backend tests

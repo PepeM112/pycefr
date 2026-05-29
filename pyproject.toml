@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["types-requests", "mypy", "ruff", "pytest"]
+dev = ["types-requests", "mypy", "ruff", "pytest", "httpx"]
 
 [project.scripts]
 pycefr = "pycefr:main"
