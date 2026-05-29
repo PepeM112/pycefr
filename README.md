@@ -119,24 +119,48 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
 ## CLI Usage
 
-PyCEFR also works as a command-line tool inside the backend container:
+PyCEFR includes a standalone CLI for analysing repositories and viewing results directly in the terminal. Use `-p` to print results after analysis, or `-c` to view previously saved results.
+
+### Native (local install)
+
+```bash
+# Set up a virtual environment and install
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .
+
+# Analyse a GitHub repository
+pycefr -r https://github.com/user/repo --include-repo -p
+
+# Analyse a local directory
+pycefr -d /path/to/project -p
+
+# Analyse a GitHub user's repos (interactive selection)
+pycefr -u username --include-repo -p
+
+# List saved results
+pycefr -l
+
+# View a saved result
+pycefr -c repo-name
+```
+
+Results are saved as JSON files in `./results/`.
+
+### Via Docker
 
 ```bash
 # Analyse a GitHub repository
-docker compose exec backend pycefr --repo https://github.com/user/repo
+docker compose exec backend pycefr -r https://github.com/user/repo --include-repo -p
 
-# Analyse a GitHub user (choose from their public repos)
-docker compose exec backend pycefr --user username
+# List saved results
+docker compose exec backend pycefr -l
 
-# Analyse a local directory (must be mounted into the container)
-docker compose exec backend pycefr --directory /path/to/project
-
-# List previous results
-docker compose exec backend pycefr --list
-
-# Display results in console
-docker compose exec backend pycefr --console results/result_file.json
+# View a saved result
+docker compose exec backend pycefr -c repo-name
 ```
+
+> **Note:** When running via Docker, results are stored inside the container at `/app/results/` and won't persist across container recreations.
 
 ---
 

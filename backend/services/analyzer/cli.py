@@ -39,17 +39,6 @@ def request_url(url: str, include_repo: bool = False, print_results: bool = Fals
 
 
 def run_directory(directory: str, include_repo: bool = False, print_results: bool = False) -> None:
-    """
-    Perform a local analysis of a specific directory.
-
-    Args:
-        directory (str): The local path to the project directory.
-        include_repo (bool): Whether to include git repository info if detected.
-        print_results (bool): Whether to display the results in the console after analysis.
-
-    Raises:
-        Exception: If the directory analysis or file writing fails.
-    """
     git_url = GitHubManager.get_git_repo_url(directory)
 
     if git_url:
@@ -97,17 +86,6 @@ def run_directory(directory: str, include_repo: bool = False, print_results: boo
 
 
 def run_user(user: str, include_repo: bool = False, print_results: bool = False) -> None:
-    """
-    Search for a GitHub user's repositories and allow choosing one for analysis.
-
-    Args:
-        user (str): The GitHub username.
-        include_repo (bool): Whether to include repository metadata in the analysis.
-        print_results (bool): Whether to display the results in the console after analysis.
-
-    Raises:
-        Exception: If fetching the user or their repositories fails.
-    """
     try:
         gh = GitHubManager(user=user, is_cli=True)
         gh.fetch_user()

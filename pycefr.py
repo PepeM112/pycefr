@@ -6,7 +6,10 @@ analysis, and result management.
 """
 
 import argparse
+import json
 import os
+
+from tabulate import tabulate
 
 from backend.services.analyzer import console
 from backend.services.analyzer.cli import (
@@ -14,27 +17,42 @@ from backend.services.analyzer.cli import (
     run_directory,
     run_user,
 )
+from backend.services.analyzer.console import display_footer
 
 
 def list_results() -> None:
     """List all generated JSON result files in the results directory.
 
-    Checks for the existence of the './results/' directory and prints a
-    bulleted list of all files contained within. If the directory is missing
-    or empty, an appropriate message is displayed.
+    Reads each .json file to extract name, status, and creation date,
+    then displays them as a formatted table.
     """
     results_dir = "./results/"
     if not os.path.exists(results_dir):
         print(f"The directory {results_dir} does not exist.")
         return
 
-    files = [f for f in os.listdir(results_dir) if os.path.isfile(os.path.join(results_dir, f))]
+    files = sorted(f for f in os.listdir(results_dir) if f.endswith(".json"))
     if not files:
         print("No result files found.")
-    else:
-        print("Available results:")
-        for file in files:
-            print(f"- {file}")
+        return
+
+    table = []
+    for filename in files:
+        try:
+            with open(os.path.join(results_dir, filename)) as f:
+                data = json.load(f)
+            name = data.get("name", filename.replace(".json", ""))
+            status = data.get("status", "unknown")
+            created = data.get("createdAt") or data.get("created_at") or ""
+            if created:
+                created = created[:10]  # YYYY-MM-DD
+            table.append([name, status, created])
+        except Exception:
+            table.append([filename.replace(".json", ""), "error", ""])
+
+    headers = ["Name", "Status", "Date"]
+    print("\n" + tabulate(table, headers, tablefmt="pipe"))
+    display_footer()
 
 
 def main() -> None:
