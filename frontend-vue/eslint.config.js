@@ -125,6 +125,9 @@ export default defineConfig([
     },
   },
 
+  // Disable type-checked rules for non-TS files
+  { files: ['**/*.yml', '**/*.yaml', '**/*.json', '**/*.jsonc'], ...configs.disableTypeChecked },
+
   // YAML
   { files: ['**/*.yml', '**/*.yaml'], ...yamlPlugin.configs['flat/recommended'] },
 
