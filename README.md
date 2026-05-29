@@ -1,5 +1,12 @@
 # PyCEFR
 
+![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg)
+![Vue](https://img.shields.io/badge/Vue_3-4FC08D.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg)
+![Vuetify](https://img.shields.io/badge/Vuetify_3-1867C0.svg)
+![Docker](https://img.shields.io/badge/Docker-2496ED.svg)
+
 **Analyse Python repositories and classify code constructs using CEFR-inspired proficiency levels (A1 - C2).**
 
 PyCEFR parses the AST of every Python file in a project and maps each language construct (list comprehensions, decorators, generators, metaclasses, etc.) to a proficiency level inspired by the [Common European Framework of Reference for Languages](https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages). The result is a per-file and per-contributor breakdown showing how "advanced" the codebase is.
