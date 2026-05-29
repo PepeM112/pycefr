@@ -6,7 +6,7 @@ import type { Primitive } from 'vuetify/lib/util';
 // --- TYPE GUARDS ---
 
 export function isDateFilterValue(val: unknown): val is DateFilterValue {
-  return !!val && typeof val === 'object' && 'from' in val && 'to' in val;
+  return !!val && typeof val === 'object' && ('from' in val || 'to' in val);
 }
 
 export function isPrimitiveValue(val: unknown): val is Primitive {
@@ -226,7 +226,7 @@ function deserializeStandardValue(
 
   // Return array for multiple types, otherwise return the first element
   if (isMultiple) {
-    return mappedValues;
+    return mappedValues as Primitive[] | FilterEntity[];
   }
 
   return mappedValues.length > 0 ? mappedValues[0] : undefined;

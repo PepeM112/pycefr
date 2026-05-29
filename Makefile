@@ -1,105 +1,78 @@
-PYTHON_VENV := .venv
-UVICORN_CMD := uvicorn main:app --reload --reload-exclude backend/tmp --port 8000
-OPENAPI_URL := http://localhost:8000/openapi.json
-FRONTEND_OUTPUT := ./src/client
-VITE_DEV := npm run dev --prefix frontend
-DB_SQLITE_PATH := database/pycefr.db
-
-# ==============================
-# Main
-# ==============================
+FRONTEND_OUTPUT := frontend-vue/src/client
 
 default: help
-
-setup: ## Install backend/frontend dependencies and initialize database
-	@make install-backend
-	@make install-frontend
-	@make init-db
-
-run-all: ## Run backend and frontend in parallel with TS generation
-	@make backend-in-bg frontend-in-bg gen-ts
-
-# ==============================
-# Backend
-# ==============================
-
-test: ## Run all backend tests
-	@echo "Running tests..."
-	@$(PYTHON_VENV)/bin/pytest backend/tests/ -v
-
-
-install-backend: ## Create virtual environment and install dependencies
-	@echo "-> Creating and activating virtual environment..."
-	python -m venv $(PYTHON_VENV)
-	@echo "-> Installing Python dependencies..."
-	$(PYTHON_VENV)/bin/pip install .
-
-up-backend: ## Start FastAPI server with hot-reload
-	@echo "Running FastAPI server in http://localhost:8000 ..."
-	@$(PYTHON_VENV)/bin/$(UVICORN_CMD) --app-dir backend
-
-# ==============================
-# Database
-# ==============================
-
-init-db: ## Wipe database and create a fresh one from schema.sql
-	@mkdir -p database
-	@echo "Initializing SQLite database..."
-	@if [ -f "$(DB_SQLITE_PATH)" ]; then rm $(DB_SQLITE_PATH); fi
-	@sqlite3 $(DB_SQLITE_PATH) ".read backend/db/schema.sql"
-	@echo "Done"
-
-seed: ## Seed database with real analyses from well-known repos (backend must be running)
-	@$(PYTHON_VENV)/bin/python scripts/seed.py
-
-db-shell: ## Open SQLite interactive shell
-	@sqlite3 $(DB_SQLITE_PATH)
-
-# ==============================
-# Frontend
-# ==============================
-
-install-frontend: ## Install frontend-vue npm dependencies
-	@echo "Installing frontend dependencies..."
-	npm install --prefix frontend-vue
-
-up-frontend: ## Start Vite development server
-	@echo "Running Vite development server in http://localhost:5173 ..."
-	@npm run dev --prefix frontend-vue
-
-gen-ts: ## Generate TypeScript client from OpenAPI/Pydantic models
-	@echo "Generating TypeScript client from OpenAPI schema..."
-	@cd frontend-vue && npm run gen-client
-	@echo "Done"
 
 # ==============================
 # Docker
 # ==============================
 
-docker-up: ## Start backend + frontend dev server (HMR) with Docker
-	docker compose up --build
+up: ## Start all services
+	docker compose up
 
-docker-up-prod: ## Start all services in production mode (nginx)
-	docker compose --profile prod up --build
+build: ## Rebuild Docker images (after dependency changes)
+	docker compose build
 
-docker-down: ## Stop Docker services
-	docker compose --profile prod down
+down: ## Stop all services
+	docker compose down
 
-docker-seed: ## Seed the Docker database with demo data
+logs: ## Tail Docker logs
+	docker compose logs -f
+
+reset: ## Stop services and wipe the database volume
+	docker compose down -v
+
+shell: ## Open SQLite interactive shell inside the backend container
+	docker compose exec backend sqlite3 /app/database/pycefr.db
+
+seed: ## Seed the database with demo data
 	docker compose exec backend python scripts/seed.py
 
-docker-logs: ## Tail Docker logs
-	docker compose logs -f
+# ==============================
+# Quality
+# ==============================
+
+format: format-back format-front ## Format all code
+
+format-back: ## Format backend (ruff)
+	docker compose exec backend python -m ruff format .
+
+format-front: ## Format frontend (prettier)
+	docker compose exec frontend npx prettier --write .
+
+test: test-back test-front ## Run all tests
+
+test-back: ## Run backend tests (pytest)
+	docker compose exec backend python -m pytest backend/tests/ -v
+
+test-front: ## Run frontend tests (vitest)
+	docker compose exec frontend npx vitest run
+
+lint: lint-back lint-front ## Run all linters
+
+lint-back: ## Run backend linters (ruff + mypy)
+	docker compose exec backend python -m ruff check .
+	docker compose exec backend python -m mypy .
+
+lint-front: ## Run frontend linters (eslint + vue-tsc)
+	docker compose exec frontend npm run lint
+	docker compose exec frontend npm run type-check
+
+# ==============================
+# Code Generation
+# ==============================
+
+gen-ts: ## Regenerate TypeScript client from OpenAPI schema (backend must be running)
+	@echo "Generating TypeScript client from OpenAPI schema..."
+	@cd frontend-vue && npm run gen-client
+	@echo "Done"
 
 # ==============================
 # Maintenance
 # ==============================
 
-clean: ## Delete virtual environment, generated clients, and database
+clean: ## Delete generated TypeScript client
 	@echo "Cleaning up generated files..."
-	rm -rf $(PYTHON_VENV)
 	rm -rf $(FRONTEND_OUTPUT)/*
-	rm -f $(DB_SQLITE_PATH)
 	@echo "Cleanup complete."
 
 help: ## Show this help menu

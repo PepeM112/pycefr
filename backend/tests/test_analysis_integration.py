@@ -152,11 +152,7 @@ class TestFullAnalysisPipeline:
         analysis_id = create_resp.json()["id"]
         detail = client.get(f"{BASE}/{analysis_id}").json()
 
-        all_classes = [
-            cls
-            for f in detail["fileClasses"]
-            for cls in f["classes"]
-        ]
+        all_classes = [cls for f in detail["fileClasses"] for cls in f["classes"]]
         assert len(all_classes) > 0
 
         class_ids = {cls["classId"] for cls in all_classes}
@@ -251,6 +247,7 @@ class TestFullAnalysisPipeline:
 class TestAnalysisFailure:
     def test_invalid_repo_marks_as_failed(self, client: TestClient) -> None:
         """When GitHubManager.validate_repo_url raises, the analysis should be marked as failed."""
+
         def failing_validate(self: object) -> None:
             raise ValueError("Repository not found")
 

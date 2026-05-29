@@ -68,9 +68,9 @@ def get_class_from_ast_node(node: ast.AST) -> List[ClassId]:
     if isinstance(node, (ast.Yield, ast.YieldFrom)):
         return [ClassId.GENERATORS_FUNCTION]
     if isinstance(node, (ast.AsyncFunctionDef, ast.Await)):
-        return [ClassId.ASYNC_AWAIT] # Necesitarás crear este ClassId
+        return [ClassId.ASYNC_AWAIT]
     if isinstance(node, ast.Match):
-        return [ClassId.PATTERN_MATCHING] # Necesitarás crear este ClassId
+        return [ClassId.PATTERN_MATCHING]
     if isinstance(node, ast.AnnAssign):
         return [ClassId.TYPE_HINTING]
 

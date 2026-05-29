@@ -466,7 +466,11 @@ class AnalysisRepository:
                 cursor = conn.cursor()
                 cursor.execute(
                     "UPDATE analyses SET status = ?, error_message = ? WHERE status = ?",
-                    (AnalysisStatus.FAILED.value, "Server was restarted during analysis.", AnalysisStatus.IN_PROGRESS.value),
+                    (
+                        AnalysisStatus.FAILED.value,
+                        "Server was restarted during analysis.",
+                        AnalysisStatus.IN_PROGRESS.value,
+                    ),
                 )
                 conn.commit()
                 count = cursor.rowcount

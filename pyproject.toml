@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["types-requests", "mypy", "ruff", "pytest"]
+dev = ["types-requests", "mypy", "ruff", "pytest", "httpx2"]
 
 [project.scripts]
 pycefr = "pycefr:main"
@@ -35,14 +35,14 @@ py-modules = ["pycefr"]
 "*" = ["*.json", "*.txt"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "N", "ANN", "B"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 explicit_package_bases = true
 namespace_packages = true

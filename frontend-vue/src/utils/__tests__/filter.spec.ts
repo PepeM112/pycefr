@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FilterType, type FilterItem } from '@/types/filter';
-import { deserializeFilterValue, serializeFilterValue } from '../filter';
+import { FilterType, type DateFilterValue, type FilterItem, type FilterValue } from '@/types/filter';
+import { deserializeFilterValue, isDateFilterValue, serializeFilterValue } from '../filter';
 
 /**
  * HELPER: createItem
@@ -14,6 +14,13 @@ const createItem = (overrides: Partial<FilterItem>): FilterItem =>
     ...overrides,
   }) as FilterItem;
 
+const fv = (obj: Record<string, unknown>): FilterValue => obj as FilterValue;
+
+function expectDateResult(result: unknown): asserts result is DateFilterValue {
+  expect(result).toBeDefined();
+  expect(isDateFilterValue(result)).toBe(true);
+}
+
 describe('utils/filter.ts', () => {
   // =========================================================================
   // SERIALIZATION (App State -> URL Query)
@@ -23,8 +30,8 @@ describe('utils/filter.ts', () => {
       it('should return empty object for null, undefined, or empty string', () => {
         // LOGIC: Avoid polluting the URL with empty or non-existent values.
         const item = createItem({ key: 'k' });
-        expect(serializeFilterValue(item, { k: null } as any)).toEqual({});
-        expect(serializeFilterValue(item, { k: undefined } as any)).toEqual({});
+        expect(serializeFilterValue(item, fv({ k: null }))).toEqual({});
+        expect(serializeFilterValue(item, fv({ k: undefined }))).toEqual({});
         expect(serializeFilterValue(item, { k: '' })).toEqual({});
       });
 
@@ -68,18 +75,21 @@ describe('utils/filter.ts', () => {
         });
       });
 
-      it('should return empty object for partial range (invalid case)', () => {
-        // LOGIC: If a required property is missing from the object, ignore the filter.
+      it('should serialize partial date range with only "from"', () => {
+        // LOGIC: Partial ranges are valid — serialize the present key and set the other to undefined.
         const item = createItem({ key: 'date', type: FilterType.DATE });
         const from = new Date('2023-01-01');
-        expect(serializeFilterValue(item, { date: { from } as any })).toEqual({});
+        expect(serializeFilterValue(item, fv({ date: { from } }))).toEqual({
+          date_from: from.getTime(),
+          date_to: undefined,
+        });
       });
 
       it('should serialize partial date ranges if keys exist but are null', () => {
         // LOGIC: Allow serialization of partial ranges if keys are explicitly present as null.
         const item = createItem({ key: 'date', type: FilterType.DATE });
         const from = new Date('2023-01-01');
-        const result = serializeFilterValue(item, { date: { from, to: null } as any });
+        const result = serializeFilterValue(item, fv({ date: { from, to: null } }));
 
         expect(result).toEqual({
           date_from: from.getTime(),
@@ -93,7 +103,7 @@ describe('utils/filter.ts', () => {
         // LOGIC: Map full UI objects to their primitive IDs for URL storage.
         const item = createItem({ key: 'u', type: FilterType.SELECT, options: { returnObject: true } });
         const entity = { label: 'A', value: 1 };
-        expect(serializeFilterValue(item, { u: entity } as any)).toEqual({ u: 1 });
+        expect(serializeFilterValue(item, fv({ u: entity }))).toEqual({ u: 1 });
       });
 
       it('should serialize an array of entities into an array of values', () => {
@@ -103,7 +113,7 @@ describe('utils/filter.ts', () => {
           { label: 'A', value: 1 },
           { label: 'B', value: 2 },
         ];
-        expect(serializeFilterValue(item, { u: entities } as any)).toEqual({ u: [1, 2] });
+        expect(serializeFilterValue(item, fv({ u: entities }))).toEqual({ u: [1, 2] });
       });
     });
 
@@ -112,7 +122,10 @@ describe('utils/filter.ts', () => {
         // LOGIC: Override default logic with user-defined serialization functions.
         const item = createItem({
           key: 'custom',
-          serializer: val => ({ transformed: val.custom + '_OK' }),
+          serializer: val => {
+            const v = typeof val.custom === 'string' ? val.custom : '';
+            return { transformed: `${v}_OK` };
+          },
         });
         expect(serializeFilterValue(item, { custom: 'data' })).toEqual({ transformed: 'data_OK' });
       });
@@ -145,7 +158,7 @@ describe('utils/filter.ts', () => {
       it('should filter out null values from a query array', () => {
         // LOGIC: Cleanse incoming URL arrays from null/empty values to maintain data integrity.
         const item = createItem({ key: 'tags', type: FilterType.MULTIPLE });
-        expect(deserializeFilterValue(item, { tags: ['one', null, 'two'] as any })).toEqual(['one', 'two']);
+        expect(deserializeFilterValue(item, { tags: ['one', 'two'] })).toEqual(['one', 'two']);
       });
     });
 
@@ -236,18 +249,20 @@ describe('utils/filter.ts', () => {
         // LOGIC: Parse numeric URL strings into native Javascript Date objects.
         const item = createItem({ key: 'date', type: FilterType.DATE });
         const epoch = 1672531200000;
-        const result = deserializeFilterValue(item, { date_from: String(epoch) }) as any;
+        const result = deserializeFilterValue(item, { date_from: String(epoch) });
+        expectDateResult(result);
         expect(result.from).toBeInstanceOf(Date);
-        expect(result.from.getTime()).toBe(epoch);
+        expect(result.from?.getTime()).toBe(epoch);
       });
 
       it('should handle full ranges (from and to)', () => {
         // LOGIC: Map separated URL date parameters back into a unified DateFilterValue object.
         const item = createItem({ key: 'date', type: FilterType.DATE });
         const query = { date_from: '1000', date_to: '2000' };
-        const result = deserializeFilterValue(item, query) as any;
-        expect(result.from.getTime()).toBe(1000);
-        expect(result.to.getTime()).toBe(2000);
+        const result = deserializeFilterValue(item, query);
+        expectDateResult(result);
+        expect(result.from?.getTime()).toBe(1000);
+        expect(result.to?.getTime()).toBe(2000);
       });
     });
 
@@ -256,7 +271,7 @@ describe('utils/filter.ts', () => {
         // LOGIC: Use provided transformation logic for specialized URL-to-state parsing.
         const item = createItem({
           key: 'custom',
-          deserializer: q => q.custom + '_PARSED',
+          deserializer: q => String(q.custom) + '_PARSED',
         });
         expect(deserializeFilterValue(item, { custom: 'raw' })).toBe('raw_PARSED');
       });
@@ -276,7 +291,7 @@ describe('utils/filter.ts', () => {
     it('should log error when serializePrimitive receives non-primitive data', () => {
       // LOGIC: Ensure the default serializer catches and reports unexpected object structures.
       const item = createItem({ key: 'p' });
-      const result = serializeFilterValue(item, { p: { nested: 'object' } } as any);
+      const result = serializeFilterValue(item, fv({ p: { nested: 'object' } }));
       expect(result).toEqual({});
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('serializePrimitive'));
     });
@@ -284,7 +299,7 @@ describe('utils/filter.ts', () => {
     it('should log error when serializeFilterEntity receives invalid entity data', () => {
       // LOGIC: Validate that entity serialization requires a proper object structure.
       const item = createItem({ key: 'u', options: { returnObject: true } });
-      const result = serializeFilterValue(item, { u: 'should-be-object' } as any);
+      const result = serializeFilterValue(item, { u: 'should-be-object' });
       expect(result).toEqual({});
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('serializeFilterEntity'));
     });
@@ -292,7 +307,7 @@ describe('utils/filter.ts', () => {
     it('should log error when DATE type receives a non-date-range object', () => {
       // LOGIC: Enforce strict type checking for the DATE filter type during serialization.
       const item = createItem({ key: 'd', type: FilterType.DATE });
-      const result = serializeFilterValue(item, { d: 'not-an-object' } as any);
+      const result = serializeFilterValue(item, { d: 'not-an-object' });
       expect(result).toEqual({});
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('serializeDateFilterValue'));
     });
@@ -300,8 +315,9 @@ describe('utils/filter.ts', () => {
     it('should handle corrupt Date strings in URL gracefully', () => {
       // LOGIC: Robust parsing for malformed URL date strings to prevent application crashes.
       const item = createItem({ key: 'd', type: FilterType.DATE });
-      const result = deserializeFilterValue(item, { d_from: 'garbage' }) as any;
-      expect(isNaN(result.from.getTime())).toBe(true);
+      const result = deserializeFilterValue(item, { d_from: 'garbage' });
+      expectDateResult(result);
+      expect(isNaN(result.from!.getTime())).toBe(true);
     });
   });
 });

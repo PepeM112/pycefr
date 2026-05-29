@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.app.json",
   "include": ["src/**/*", "src/**/*.vue", "**/*.ts", "**/*.js"],
-  "exclude": [".prettierrc.yml"],
+  "exclude": [".prettierrc.yml", "src/client/**/*"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

@@ -21,6 +21,7 @@ root_logger.handlers = []
 root_logger.addHandler(console_handler)
 root_logger.setLevel(logging.INFO)
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     db_utils.mark_orphaned_analyses_as_failed()

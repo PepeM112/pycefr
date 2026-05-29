@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 _COMMIT_MARKER = "PYCEFR_COMMIT:"
 
 
-
-
 class GitLocalManager:
     """
     Extracts repository metadata from a locally cloned git repository.
@@ -149,7 +147,7 @@ class GitLocalManager:
 
         for line in output.splitlines():
             if line.startswith(_COMMIT_MARKER):
-                rest = line[len(_COMMIT_MARKER):]
+                rest = line[len(_COMMIT_MARKER) :]
                 parts = rest.split("|")
                 if len(parts) < 4:
                     continue

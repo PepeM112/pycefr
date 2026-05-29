@@ -14,9 +14,7 @@ from backend.services.analyzer.github_manager import GitHubManager
 def request_url(url: str, include_repo: bool = False, print_results: bool = False) -> None:
     clone_id = uuid.uuid4().hex[:8]
     try:
-        analysis_result = clone_and_analyse(
-            repo_url=url, clone_id=clone_id, is_cli=True, include_repo=include_repo
-        )
+        analysis_result = clone_and_analyse(repo_url=url, clone_id=clone_id, is_cli=True, include_repo=include_repo)
 
         url_name_fallback = url.rstrip("/").split("/")[-1]
         repo_name = analysis_result.repo.name or url_name_fallback if analysis_result.repo else url_name_fallback
