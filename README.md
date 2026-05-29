@@ -43,7 +43,7 @@ PyCEFR parses the AST of every Python file in a project and maps each language c
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/<your-org>/pycefr.git
+git clone https://github.com/PepeM112/pycefr.git
 cd pycefr
 cp .env.example .env
 # Edit .env and set your GitHub token:
@@ -158,11 +158,15 @@ pycefr/
     db/                # SQLite schema, seed data, CRUD utilities
     models/schemas/    # Pydantic models (analysis, repo, common)
     services/analyzer/ # Core analysis engine
-      analyzer.py        # CLI orchestrator
-      analyzer_class.py  # AST walker and file scanner
-      levels.py          # AST node -> CEFR level mapping
-      git_local_manager.py  # Local .git metadata reader
+      analyzer.py          # AST walker and file scanner
+      cli.py               # CLI orchestrator
+      console.py           # Console output formatting
+      git_local_manager.py # Local .git metadata reader
+      git_utils.py         # Git helper utilities
       github_manager.py    # GitHub REST API client
+      levels.py            # AST node -> CEFR level mapping
+      progress.py          # SSE progress streaming
+    tests/             # pytest test suite
     main.py            # FastAPI app entry point
     Dockerfile         # Backend container definition
     docker-entrypoint.sh  # DB initialization on first run
@@ -193,4 +197,4 @@ pycefr/
 
 ## Licence
 
-<!-- TODO: Add licence -->
+This project is licensed under the [MIT License](LICENSE).
