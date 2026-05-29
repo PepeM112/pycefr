@@ -12,12 +12,12 @@ from backend.models.schemas.repo import RepoPublic
 from backend.services.analyzer.levels import get_default_class_level
 
 _LEVEL_ANSI: dict[int, str] = {
-    1: "\033[38;5;204m",   # A1 — pink
-    2: "\033[38;5;208m",   # A2 — orange
-    3: "\033[38;5;220m",   # B1 — yellow
-    4: "\033[38;5;43m",    # B2 — teal
-    5: "\033[38;5;39m",    # C1 — blue
-    6: "\033[38;5;135m",   # C2 — purple
+    1: "\033[38;5;204m",  # A1 — pink
+    2: "\033[38;5;208m",  # A2 — orange
+    3: "\033[38;5;220m",  # B1 — yellow
+    4: "\033[38;5;43m",  # B2 — teal
+    5: "\033[38;5;39m",  # C1 — blue
+    6: "\033[38;5;135m",  # C2 — purple
 }
 _RESET = "\033[0m"
 
